@@ -19,7 +19,13 @@ import {
   Image as ImageIcon,
   Copy,
   Save,
+  Plus,
+  Share2,
 } from "lucide-react";
+import {
+  MatchGameShareModal,
+  getShareableGameOptionsForSubType,
+} from "./MatchGameShareModal";
 import {
   getTeacherLibrarySetsAction,
   renameTeacherLibrarySetAction,
@@ -44,6 +50,8 @@ interface CompatibleGameOption {
   badgeColor: string;
   descVi: string;
   descEn: string;
+  imageUrl?: string;
+  videoId?: string;
   buildHref: (setId: string) => string;
 }
 
@@ -59,6 +67,8 @@ function getCompatibleGamesForSubType(subType: LibrarySubType): CompatibleGameOp
         badgeColor: "bg-orange-500",
         descVi: "Học sinh lật/chọn ghép thẻ hình ảnh với từ vựng tương ứng.",
         descEn: "Students pair illustration cards with matching words.",
+        videoId: "pe7grSyHL0g",
+        imageUrl: "/images/games/flashcard-quiz.png",
         buildHref: (id) => `/teacher/games/match-image-text/create?type=image-text&gameMode=match&librarySetId=${id}`,
       },
       {
@@ -70,6 +80,7 @@ function getCompatibleGamesForSubType(subType: LibrarySubType): CompatibleGameOp
         badgeColor: "bg-violet-500",
         descVi: "Học sinh kẻ dây nối từ hình ảnh sang từ vựng tương ứng.",
         descEn: "Students draw lines connecting images to matching words.",
+        videoId: "qkE6qYZ-DDU",
         buildHref: (id) => `/teacher/games/match-image-text/create?type=image-text&gameMode=line&librarySetId=${id}`,
       },
       {
@@ -81,6 +92,8 @@ function getCompatibleGamesForSubType(subType: LibrarySubType): CompatibleGameOp
         badgeColor: "bg-rose-500",
         descVi: "Học sinh chém đứt dây thừng để thả ảnh rơi trúng từ vựng.",
         descEn: "Students slice ropes to drop images onto matching words.",
+        videoId: "Dsb7Rm9Je4Y",
+        imageUrl: "/images/games/cut-rope.png",
         buildHref: (id) => `/teacher/games/match-image-text/create?type=image-text&gameMode=cut-rope&librarySetId=${id}`,
       },
       {
@@ -92,6 +105,8 @@ function getCompatibleGamesForSubType(subType: LibrarySubType): CompatibleGameOp
         badgeColor: "bg-amber-500",
         descVi: "Học sinh kéo thả từ vựng lên đúng toa tàu mang hình ảnh.",
         descEn: "Students load vocabulary cards onto matching train carriages.",
+        videoId: "Tb2nH6nprXk",
+        imageUrl: "/images/games/train-vocab.png",
         buildHref: (id) => `/teacher/games/match-image-text/create?type=image-text&gameMode=train&librarySetId=${id}`,
       },
       {
@@ -103,6 +118,7 @@ function getCompatibleGamesForSubType(subType: LibrarySubType): CompatibleGameOp
         badgeColor: "bg-cyan-500",
         descVi: "Học sinh thả khối hình rơi xuống đúng ô trên băng chuyền đang chạy.",
         descEn: "Students drop blocks onto matching slots along a moving conveyor belt.",
+        videoId: "JTMQ83gi9wo",
         buildHref: (id) => `/teacher/games/conveyor-drop/create?librarySetId=${id}`,
       },
       {
@@ -114,6 +130,7 @@ function getCompatibleGamesForSubType(subType: LibrarySubType): CompatibleGameOp
         badgeColor: "bg-pink-500",
         descVi: "Học sinh lật mở các ô thẻ úp để tìm cặp Hình ảnh và Từ vựng trùng khớp.",
         descEn: "Students flip memory cards to pair illustrations with words.",
+        videoId: "30Ov93AvLwY",
         buildHref: (id) => `/teacher/games/flip/create?type=FLIP_IMAGE_TEXT&gameMode=flip-image-text&librarySetId=${id}`,
       },
     ];
@@ -130,6 +147,7 @@ function getCompatibleGamesForSubType(subType: LibrarySubType): CompatibleGameOp
         badgeColor: "bg-emerald-500",
         descVi: "Học sinh ghép 2 hình ảnh giống nhau hoặc liên quan với nhau.",
         descEn: "Students match 2 identical or visually related images.",
+        videoId: "XSLnexaHxHM",
         buildHref: (id) => `/teacher/games/match-image-text/create?type=image-image&gameMode=match&librarySetId=${id}`,
       },
       {
@@ -141,6 +159,7 @@ function getCompatibleGamesForSubType(subType: LibrarySubType): CompatibleGameOp
         badgeColor: "bg-violet-500",
         descVi: "Học sinh kẻ đường nối giữa 2 hàng hình ảnh tương ứng.",
         descEn: "Students draw lines to connect matching images between rows.",
+        videoId: "wO2Q6tGhfLM",
         buildHref: (id) => `/teacher/games/match-image-text/create?type=image-image&gameMode=line&librarySetId=${id}`,
       },
       {
@@ -152,6 +171,7 @@ function getCompatibleGamesForSubType(subType: LibrarySubType): CompatibleGameOp
         badgeColor: "bg-cyan-500",
         descVi: "Học sinh canh thời gian thả kiện hàng hình ảnh trên băng chuyền xuống ống đích.",
         descEn: "Students drop moving image crates from a conveyor belt into target tubes.",
+        videoId: "JTMQ83gi9wo",
         buildHref: (id) => `/teacher/games/conveyor-drop/create?librarySetId=${id}`,
       },
       {
@@ -163,6 +183,7 @@ function getCompatibleGamesForSubType(subType: LibrarySubType): CompatibleGameOp
         badgeColor: "bg-rose-500",
         descVi: "Học sinh lật thẻ rèn trí nhớ để tìm 2 hình ảnh khớp nhau.",
         descEn: "Students flip memory cards to find matching image pairs.",
+        videoId: "ZgE2PaGdvFU",
         buildHref: (id) => `/teacher/games/flip/create?type=FLIP_IMAGE_IMAGE&gameMode=flip-image-image&librarySetId=${id}`,
       },
     ];
@@ -179,6 +200,8 @@ function getCompatibleGamesForSubType(subType: LibrarySubType): CompatibleGameOp
         badgeColor: "bg-pink-500",
         descVi: "Trả lời câu hỏi trắc nghiệm 4 đáp án trong thế giới kẹo ngọt rực rỡ.",
         descEn: "Answer 4-option multiple choice questions in a lively Candy World.",
+        videoId: "m6_CohSIXpo",
+        imageUrl: "/images/games/candy-quiz.jpg",
         buildHref: (id) => `/teacher/games/candy-quiz/create?librarySetId=${id}`,
       },
       {
@@ -190,6 +213,8 @@ function getCompatibleGamesForSubType(subType: LibrarySubType): CompatibleGameOp
         badgeColor: "bg-amber-500",
         descVi: "Trả lời câu hỏi trắc nghiệm để lật mở ô bí ẩn trên bản đồ kho báu.",
         descEn: "Answer quiz questions to unlock mystery tiles and find gold chests.",
+        videoId: "9juS0TQRyHw",
+        imageUrl: "/games/mystery-treasure-grid-assets/assets/webp/background-stage.webp",
         buildHref: (id) => `/teacher/games/treasure-hunt/create?librarySetId=${id}`,
       },
       {
@@ -201,6 +226,8 @@ function getCompatibleGamesForSubType(subType: LibrarySubType): CompatibleGameOp
         badgeColor: "bg-cyan-500",
         descVi: "Điều khiển pháo năng lượng bắn vào quả cầu mang đáp án trắc nghiệm đúng.",
         descEn: "Fire neon lasers at energy orbs carrying the correct quiz answer.",
+        videoId: "MxrxyO1a8gM",
+        imageUrl: "/images/games/shooter-quiz.jpg",
         buildHref: (id) => `/teacher/games/shooter-quiz/create?librarySetId=${id}`,
       },
     ];
@@ -217,6 +244,7 @@ function getCompatibleGamesForSubType(subType: LibrarySubType): CompatibleGameOp
         badgeColor: "bg-emerald-500",
         descVi: "Ngắm bắn các quả cầu mang kết quả phép tính đúng trong không gian Sci-Fi.",
         descEn: "Aim and shoot energy orbs carrying the right math answers.",
+        videoId: "vyQ8QBQ1m4E",
         buildHref: (id) => `/teacher/games/choice-shooter/create?librarySetId=${id}`,
       },
       {
@@ -228,6 +256,7 @@ function getCompatibleGamesForSubType(subType: LibrarySubType): CompatibleGameOp
         badgeColor: "bg-amber-500",
         descVi: "Đập vỡ những quả trứng mang đáp án đúng để nhận xu và sao.",
         descEn: "Crack open eggs showing the correct math answers to earn coins.",
+        videoId: "R6fn9PnMmog",
         buildHref: (id) => `/teacher/games/choice-egg/create?librarySetId=${id}`,
       },
     ];
@@ -243,6 +272,8 @@ function getCompatibleGamesForSubType(subType: LibrarySubType): CompatibleGameOp
       badgeColor: "bg-sky-500",
       descVi: "Ghép 2 từ vựng hoặc câu tương ứng với nhau.",
       descEn: "Match corresponding words or sentences together.",
+      videoId: "qkE6qYZ-DDU",
+      imageUrl: "/images/games/word-match.png",
       buildHref: (id) => `/teacher/games/match-image-text/create?type=text-text&gameMode=match&librarySetId=${id}`,
     },
   ];
@@ -272,6 +303,7 @@ export function MyLibraryList({ category }: { category: LibraryCategory | "all" 
 
   // Modals state
   const [selectedSetForGame, setSelectedSetForGame] = useState<LibrarySetItem | null>(null);
+  const [sharingSet, setSharingSet] = useState<LibrarySetItem | null>(null);
   const [selectedSetForView, setSelectedSetForView] = useState<LibrarySetItem | null>(null);
   const [editingName, setEditingName] = useState("");
   const [editingItems, setEditingItems] = useState<LibraryQuestionItem[]>([]);
@@ -287,6 +319,10 @@ export function MyLibraryList({ category }: { category: LibraryCategory | "all" 
   const cacheSetForInstantStudioLoad = (setObj: LibrarySetItem) => {
     if (typeof window === "undefined") return;
     try {
+      // Guard: Never cache partial preview data (items.length < totalItems)
+      if (setObj.totalItems && Array.isArray(setObj.items) && setObj.items.length < setObj.totalItems) {
+        return;
+      }
       sessionStorage.setItem(`cached_library_set_${setObj.id}`, JSON.stringify(setObj));
     } catch {}
   };
@@ -702,21 +738,68 @@ export function MyLibraryList({ category }: { category: LibraryCategory | "all" 
 
                 {/* Actions Footer */}
                 <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      trackEvent("teacher_library_action", {
-                        action: "open_create_game_modal",
-                        setId: setItem.id,
-                        subType: setItem.subType,
-                      });
-                      setSelectedSetForGame(setItem);
-                    }}
-                    className="flex-1 h-8 px-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-500/20 transition-all flex items-center justify-center gap-1.5 whitespace-nowrap active:scale-95 cursor-pointer"
-                  >
-                    <Gamepad2 className="w-3.5 h-3.5 shrink-0" />
-                    <span className="whitespace-nowrap">{t.library.createGameBtn}</span>
-                  </button>
+                  {/* Left: Tạo Game (Secondary) */}
+                  <div className="relative group/btn flex-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        trackEvent("teacher_library_action", {
+                          action: "open_create_game_modal",
+                          setId: setItem.id,
+                          subType: setItem.subType,
+                        });
+                        setSelectedSetForGame(setItem);
+                      }}
+                      className="w-full h-8 px-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200/90 dark:border-slate-700 font-bold text-xs rounded-xl shadow-2xs transition-all flex items-center justify-center gap-1 whitespace-nowrap active:scale-95 cursor-pointer hover:border-slate-300"
+                    >
+                      <Gamepad2 className="w-3.5 h-3.5 shrink-0 text-slate-500 dark:text-slate-400" />
+                      <span className="whitespace-nowrap">{t.library.createGameBtn}</span>
+                    </button>
+                    <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/btn:flex flex-col items-center z-30 transition-all duration-200 animate-in fade-in zoom-in-95">
+                      <div className="bg-slate-900 text-white text-[11px] py-1.5 px-3 rounded-xl shadow-xl whitespace-nowrap flex flex-col gap-0.5 border border-slate-700 text-left">
+                        <div className="flex items-center gap-1.5 font-bold text-slate-100">
+                          <span>🎮</span>
+                          <span>
+                            {isVi
+                              ? "Chỉnh sửa nội dung & chọn mẫu game"
+                              : "Customize questions & choose game format"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 font-medium text-slate-400 text-[10px]">
+                          <span>📁</span>
+                          <span>
+                            {isVi
+                              ? "Game sau khi tạo sẽ nằm trong mục Game của tôi"
+                              : "Created games will be saved in 'My games'"}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="w-2 h-2 bg-slate-900 border-r border-b border-slate-700 rotate-45 -mt-1" />
+                    </div>
+                  </div>
+
+                  {/* Right: Chia sẻ Game (Primary, Emerald Gradient & Glow) */}
+                  <div className="relative group/btn flex-1">
+                    <button
+                      type="button"
+                      onClick={() => setSharingSet(setItem)}
+                      className="w-full h-8 px-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-500/25 hover:shadow-lg hover:shadow-emerald-500/35 border border-emerald-400/30 transition-all flex items-center justify-center gap-1 whitespace-nowrap active:scale-95 cursor-pointer"
+                    >
+                      <Share2 className="w-3.5 h-3.5 shrink-0 text-emerald-100" />
+                      <span className="whitespace-nowrap">{isVi ? "Chia sẻ Game" : "Share Game"}</span>
+                    </button>
+                    <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/btn:flex flex-col items-center z-30 transition-all duration-200 animate-in fade-in zoom-in-95">
+                      <div className="bg-slate-900 text-white text-[10px] font-semibold py-1 px-2.5 rounded-lg shadow-xl whitespace-nowrap flex items-center gap-1 border border-slate-700">
+                        <span>⚡</span>
+                        <span>
+                          {isVi
+                            ? "Lấy link & mã QR cho học sinh chơi ngay"
+                            : "Get link & QR for students to play instantly"}
+                        </span>
+                      </div>
+                      <div className="w-2 h-2 bg-slate-900 border-r border-b border-slate-700 rotate-45 -mt-1" />
+                    </div>
+                  </div>
 
                   <button
                     type="button"
@@ -776,77 +859,123 @@ export function MyLibraryList({ category }: { category: LibraryCategory | "all" 
       {/* MODAL 1: SELECT COMPATIBLE GAME TO CREATE */}
       {selectedSetForGame && (
         <div
-          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-200"
           onClick={() => setSelectedSetForGame(null)}
         >
           <div
-            className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full p-6 sm:p-7 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-5 max-h-[90vh] flex flex-col"
+            className="bg-white dark:bg-slate-900 rounded-3xl max-w-5xl w-full p-5 sm:p-7 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-5 max-h-[90vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start justify-between gap-4 shrink-0">
               <div>
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[11px] font-black uppercase tracking-wider mb-2">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400 text-xs font-black uppercase tracking-wider mb-2">
                   <Gamepad2 className="w-3.5 h-3.5" />
                   <span>{selectedSetForGame.name}</span>
                 </div>
-                <h3 className="font-headline font-black text-xl text-slate-800 dark:text-white">
+                <h3 className="font-headline font-black text-xl sm:text-2xl text-slate-800 dark:text-white">
                   {t.library.selectGameTitle}
                 </h3>
-                <p className="text-xs font-medium text-slate-500 mt-1">
+                <p className="text-xs sm:text-sm font-medium text-slate-500 mt-1">
                   {t.library.selectGameDesc}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setSelectedSetForGame(null)}
-                className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-500 cursor-pointer shrink-0"
+                className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white cursor-pointer shrink-0 transition-colors"
+                aria-label="Close"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-y-auto pr-1">
-              {getCompatibleGamesForSubType(selectedSetForGame.subType).map((gameOpt) => (
-                <button
-                  key={gameOpt.id}
-                  type="button"
-                  onClick={() => {
-                    cacheSetForInstantStudioLoad(selectedSetForGame);
-                    const targetUrl = withLangParam(
-                      gameOpt.buildHref(selectedSetForGame.id),
-                      locale
-                    );
-                    const pickedName = selectedSetForGame.name;
-                    const pickedGameTitle = isVi ? gameOpt.titleVi : gameOpt.titleEn;
-                    setSelectedSetForGame(null);
-                    setRedirectModal({
-                      title: isVi
-                        ? `Đang mở ${pickedGameTitle}...`
-                        : `Opening ${pickedGameTitle}...`,
-                      subtitle: pickedName,
-                    });
-                    router.push(targetUrl);
-                  }}
-                  className="text-left p-4 rounded-2xl border-2 border-slate-100 hover:border-emerald-400 bg-slate-50/70 hover:bg-emerald-50/40 dark:bg-slate-800/60 dark:border-slate-700 dark:hover:border-emerald-500 transition-all group flex flex-col justify-between gap-3 cursor-pointer"
-                >
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <span
-                        className={`px-2 py-0.5 rounded-md text-[9px] font-black text-white uppercase tracking-wider ${gameOpt.badgeColor}`}
-                      >
-                        {isVi ? gameOpt.badgeVi : gameOpt.badgeEn}
-                      </span>
-                      <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 group-hover:translate-x-1 transition-all" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 overflow-y-auto pr-1 pb-1">
+              {getCompatibleGamesForSubType(selectedSetForGame.subType).map((gameOpt) => {
+                const thumbSrc =
+                  gameOpt.imageUrl ||
+                  (gameOpt.videoId
+                    ? `https://img.youtube.com/vi/${gameOpt.videoId}/maxresdefault.jpg`
+                    : "/images/games/flashcard-quiz.png");
+                const badgeLabel = isVi ? gameOpt.badgeVi : gameOpt.badgeEn;
+                const titleLabel = isVi ? gameOpt.titleVi : gameOpt.titleEn;
+                const descLabel = isVi ? gameOpt.descVi : gameOpt.descEn;
+
+                return (
+                  <button
+                    key={gameOpt.id}
+                    type="button"
+                    onClick={() => {
+                      cacheSetForInstantStudioLoad(selectedSetForGame);
+                      const targetUrl = withLangParam(
+                        gameOpt.buildHref(selectedSetForGame.id),
+                        locale
+                      );
+                      const pickedName = selectedSetForGame.name;
+                      const pickedGameTitle = titleLabel;
+                      setSelectedSetForGame(null);
+                      setRedirectModal({
+                        title: isVi
+                          ? `Đang mở ${pickedGameTitle}...`
+                          : `Opening ${pickedGameTitle}...`,
+                        subtitle: pickedName,
+                      });
+                      router.push(targetUrl);
+                    }}
+                    className="group text-left rounded-2xl border-2 border-slate-200/80 dark:border-slate-800 hover:border-emerald-500 dark:hover:border-emerald-500 bg-white dark:bg-slate-800/80 hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden cursor-pointer"
+                  >
+                    {/* Visual 16:9 Gameplay Thumbnail */}
+                    <div className="relative aspect-video w-full overflow-hidden bg-slate-900">
+                      <img
+                        src={thumbSrc}
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          if (gameOpt.videoId && !target.dataset.fallback) {
+                            target.dataset.fallback = "true";
+                            target.src = `https://img.youtube.com/vi/${gameOpt.videoId}/hqdefault.jpg`;
+                          } else if (gameOpt.imageUrl && target.src !== gameOpt.imageUrl) {
+                            target.src = gameOpt.imageUrl;
+                          } else {
+                            target.src = "/images/games/flashcard-quiz.png";
+                          }
+                        }}
+                        alt={titleLabel}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 pointer-events-none" />
+
+                      {/* Badge top-left */}
+                      <div className="absolute top-2.5 left-2.5 z-10">
+                        <span
+                          className={`px-2.5 py-1 rounded-full text-[10px] font-black text-white uppercase tracking-wider shadow-md ${gameOpt.badgeColor}`}
+                        >
+                          {badgeLabel}
+                        </span>
+                      </div>
                     </div>
-                    <h4 className="font-headline font-black text-sm text-slate-800 dark:text-white group-hover:text-emerald-700">
-                      {isVi ? gameOpt.titleVi : gameOpt.titleEn}
-                    </h4>
-                    <p className="text-[11px] font-medium text-slate-500 leading-relaxed">
-                      {isVi ? gameOpt.descVi : gameOpt.descEn}
-                    </p>
-                  </div>
-                </button>
-              ))}
+
+                    {/* Card Content & Action */}
+                    <div className="p-4 flex-1 flex flex-col justify-between gap-3">
+                      <div>
+                        <h4 className="font-headline font-black text-sm text-slate-800 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors line-clamp-1">
+                          {titleLabel}
+                        </h4>
+                        <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 line-clamp-2 mt-1 leading-relaxed">
+                          {descLabel}
+                        </p>
+                      </div>
+
+                      <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs font-bold text-emerald-600 dark:text-emerald-400 group-hover:translate-x-0.5 transition-transform">
+                        <span className="flex items-center gap-1.5">
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>{isVi ? "Tạo game này" : "Create game"}</span>
+                        </span>
+                        <ArrowRight className="w-4 h-4 text-emerald-500 group-hover:translate-x-1 transition-transform" />
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -1029,19 +1158,73 @@ export function MyLibraryList({ category }: { category: LibraryCategory | "all" 
                 <span>{t.library.saveChangesBtn}</span>
               </button>
 
-              <button
-                type="button"
-                onClick={async () => {
-                  const saved = await handleSaveSetChanges();
-                  const target = saved || selectedSetForView;
-                  setSelectedSetForView(null);
-                  setSelectedSetForGame(target);
-                }}
-                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-md whitespace-nowrap cursor-pointer"
-              >
-                <Gamepad2 className="w-4 h-4" />
-                <span>{t.library.createGameBtn}</span>
-              </button>
+              <div className="flex items-center gap-2 shrink-0">
+                {/* Left: Tạo Game (Secondary) */}
+                <div className="relative group/modal-btn">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const saved = await handleSaveSetChanges();
+                      const target = saved || selectedSetForView;
+                      setSelectedSetForView(null);
+                      setSelectedSetForGame(target);
+                    }}
+                    className="px-4 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200/90 dark:border-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95 shadow-2xs hover:border-slate-300"
+                  >
+                    <Gamepad2 className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+                    <span>{t.library.createGameBtn}</span>
+                  </button>
+                  <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/modal-btn:flex flex-col items-center z-30 transition-all duration-200 animate-in fade-in zoom-in-95">
+                    <div className="bg-slate-900 text-white text-[11px] py-1.5 px-3 rounded-xl shadow-xl whitespace-nowrap flex flex-col gap-0.5 border border-slate-700 text-left">
+                      <div className="flex items-center gap-1.5 font-bold text-slate-100">
+                        <span>🎮</span>
+                        <span>
+                          {isVi
+                            ? "Chỉnh sửa nội dung & chọn mẫu game"
+                            : "Customize questions & choose game format"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 font-medium text-slate-400 text-[10px]">
+                        <span>📁</span>
+                        <span>
+                          {isVi
+                            ? "Game sau khi tạo sẽ nằm trong mục Game của tôi"
+                            : "Created games will be saved in 'My games'"}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="w-2 h-2 bg-slate-900 border-r border-b border-slate-700 rotate-45 -mt-1" />
+                  </div>
+                </div>
+
+                {/* Right: Chia sẻ Game (Primary, Emerald Gradient & Glow) */}
+                <div className="relative group/modal-btn">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const saved = await handleSaveSetChanges();
+                      const target = saved || selectedSetForView;
+                      setSelectedSetForView(null);
+                      setSharingSet(target);
+                    }}
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold text-xs shadow-md shadow-emerald-500/25 hover:shadow-lg hover:shadow-emerald-500/35 border border-emerald-400/30 flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95"
+                  >
+                    <Share2 className="w-4 h-4 text-emerald-100" />
+                    <span>{isVi ? "Chia sẻ Game" : "Share Game"}</span>
+                  </button>
+                  <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/modal-btn:flex flex-col items-center z-30 transition-all duration-200 animate-in fade-in zoom-in-95">
+                    <div className="bg-slate-900 text-white text-[10px] font-semibold py-1 px-2.5 rounded-lg shadow-xl whitespace-nowrap flex items-center gap-1 border border-slate-700">
+                      <span>⚡</span>
+                      <span>
+                        {isVi
+                          ? "Lấy link & mã QR cho học sinh chơi ngay"
+                          : "Get link & QR for students to play instantly"}
+                      </span>
+                    </div>
+                    <div className="w-2 h-2 bg-slate-900 border-r border-b border-slate-700 rotate-45 -mt-1" />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1065,6 +1248,20 @@ export function MyLibraryList({ category }: { category: LibraryCategory | "all" 
             </div>
           </div>
         </div>
+      )}
+      {/* MODAL 4: SHARE PRE-BUILT GAME DIRECTLY */}
+      {sharingSet && (
+        <MatchGameShareModal
+          isOpen={Boolean(sharingSet)}
+          onClose={() => setSharingSet(null)}
+          topicName={sharingSet.name}
+          topicId={sharingSet.id}
+          gamePath={getShareableGameOptionsForSubType(sharingSet.subType)[0]?.gamePath}
+          gameOptions={getShareableGameOptionsForSubType(sharingSet.subType)}
+          isGlobalSuccess={false}
+          gradeLevel={sharingSet.gradeLevel}
+          subType={sharingSet.subType}
+        />
       )}
     </div>
   );

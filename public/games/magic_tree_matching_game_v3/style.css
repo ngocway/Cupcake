@@ -529,6 +529,13 @@ button { font: inherit; }
   transition: transform 0.18s ease;
 }
 
+.letter-space {
+  display: inline-block;
+  width: 0.45em;
+  min-width: 0.35em;
+  flex-shrink: 0;
+}
+
 .mascot-area {
   position: absolute;
   left: 31.8%;

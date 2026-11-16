@@ -721,20 +721,59 @@ export function ConveyorDropCreatorUI() {
       setTitleError(false);
     }
 
-    const incomingPairs: CardPair[] = (setItem.items || []).map((it, idx) => ({
-      id: `pair-lib-${Date.now()}-${idx}`,
-      word: it.word || it.labelB || "",
-      imageUrl: it.imageUrl || it.imageBUrl || undefined,
-      audioUrl: it.audioUrl || undefined,
-    }));
-
-    if (incomingPairs.length === 0) return;
+    const items = setItem.items || [];
+    if (items.length === 0) return;
 
     const isSingleEmptyInitial =
       rounds.length === 1 &&
       rounds[0].pairs.length === 1 &&
       !rounds[0].pairs[0].word.trim() &&
       !rounds[0].pairs[0].imageUrl;
+
+    // Check if the set already has distinct rounds defined by author
+    const hasMultipleRounds = items.some((it) => (it.roundIndex ?? 0) > 0);
+
+    if (hasMultipleRounds && (mode === "replace" || isSingleEmptyInitial)) {
+      const roundsMap: Record<number, typeof items> = {};
+      items.forEach((item) => {
+        const rIdx = item.roundIndex ?? 0;
+        if (!roundsMap[rIdx]) roundsMap[rIdx] = [];
+        roundsMap[rIdx].push(item);
+      });
+      const roundIndices = Object.keys(roundsMap).map(Number).sort((a, b) => a - b);
+      const loadedRounds: GameRound[] = [];
+      roundIndices.forEach((rIdx) => {
+        if (loadedRounds.length >= MAX_ROUNDS) return;
+        const roundItems = roundsMap[rIdx];
+        for (let c = 0; c < roundItems.length; c += MAX_PAIRS_PER_ROUND) {
+          if (loadedRounds.length >= MAX_ROUNDS) break;
+          const chunk = roundItems.slice(c, c + MAX_PAIRS_PER_ROUND);
+          const roundPairs: CardPair[] = chunk.map((item, idx) => ({
+            id: item.id || `pair-lib-${Date.now()}-${loadedRounds.length}-${idx}`,
+            word: item.word || item.labelB || "",
+            imageUrl: item.imageUrl || item.imageBUrl || undefined,
+            audioUrl: item.audioUrl || undefined,
+          }));
+          loadedRounds.push({
+            id: `round-lib-${loadedRounds.length}-${Date.now()}`,
+            title: `Vòng ${loadedRounds.length + 1}`,
+            pairs: roundPairs,
+          });
+        }
+      });
+      if (loadedRounds.length > 0) {
+        setRounds(loadedRounds);
+        setActiveRoundIndex(0);
+        return;
+      }
+    }
+
+    const incomingPairs: CardPair[] = items.map((it, idx) => ({
+      id: `pair-lib-${Date.now()}-${idx}`,
+      word: it.word || it.labelB || "",
+      imageUrl: it.imageUrl || it.imageBUrl || undefined,
+      audioUrl: it.audioUrl || undefined,
+    }));
 
     let updatedRounds: GameRound[] =
       mode === "replace" || isSingleEmptyInitial

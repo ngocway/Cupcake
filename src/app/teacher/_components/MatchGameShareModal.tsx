@@ -23,6 +23,68 @@ export interface ShareableGameOption {
   gamePath: string;
 }
 
+export function getShareableGameOptionsForSubType(subType?: string): ShareableGameOption[] {
+  if (subType === "image-text") {
+    return [
+      {
+        id: "train-vocab",
+        labelVi: "🚂 Đoàn Tàu",
+        labelEn: "🚂 Vocabulary Train",
+        gamePath: "/student/game/train",
+      },
+      {
+        id: "conveyor-drop",
+        labelVi: "📦 Băng Chuyền",
+        labelEn: "📦 Conveyor",
+        gamePath: "/student/game/conveyor-drop",
+      },
+    ];
+  }
+
+  if (subType === "quiz") {
+    return [
+      {
+        id: "candy-quiz",
+        labelVi: "🍬 Kẹo Ngọt",
+        labelEn: "🍬 Candy Quiz",
+        gamePath: "/student/game/candy-quiz",
+      },
+      {
+        id: "treasure-hunt",
+        labelVi: "🏴‍☠️ Kho Báu",
+        labelEn: "🏴‍☠️ Treasure Hunt",
+        gamePath: "/game/treasure-grid",
+      },
+      {
+        id: "shooter-quiz",
+        labelVi: "🚀 Bắn Súng",
+        labelEn: "🚀 Space Shooter",
+        gamePath: "/game/shooter-quiz",
+      },
+    ];
+  }
+
+  if (subType === "image-image") {
+    return [
+      {
+        id: "conveyor-drop",
+        labelVi: "📦 Băng Chuyền",
+        labelEn: "📦 Conveyor",
+        gamePath: "/student/game/conveyor-drop",
+      },
+    ];
+  }
+
+  return [
+    {
+      id: "match-text-text",
+      labelVi: "🔤 Nối Chữ - Chữ",
+      labelEn: "🔤 Match Word - Word",
+      gamePath: "/student/game/match-text-text",
+    },
+  ];
+}
+
 interface MatchGameShareModalProps {
   isOpen: boolean;
   onClose: () => void;

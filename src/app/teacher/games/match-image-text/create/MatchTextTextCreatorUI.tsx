@@ -202,7 +202,8 @@ export function MatchTextTextCreatorUI() {
         const cachedRaw = sessionStorage.getItem(`cached_library_set_${targetSetId}`);
         if (cachedRaw) {
           const parsed = JSON.parse(cachedRaw) as LibrarySetItem;
-          if (parsed && Array.isArray(parsed.items) && parsed.items.length > 0) {
+          const isComplete = !parsed.totalItems || (Array.isArray(parsed.items) && parsed.items.length >= parsed.totalItems);
+          if (parsed && Array.isArray(parsed.items) && parsed.items.length > 0 && isComplete) {
             applyLoadedSet(parsed);
             return;
           }

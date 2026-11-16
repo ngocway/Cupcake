@@ -452,26 +452,36 @@ const letterPalette = [
 function render3DPromptWord(word) {
   if (!promptWord) return;
   promptWord.innerHTML = '';
-  const text = (word || '').toUpperCase();
+  const text = (word || '').trim().toUpperCase();
 
-  // Dynamic font sizing for longer words
-  if (text.length > 8) {
+  // Dynamic font sizing for longer words/phrases
+  if (text.length > 15) {
+    promptWord.style.fontSize = 'clamp(9px, 1.1vw, 18px)';
+  } else if (text.length > 10) {
     promptWord.style.fontSize = 'clamp(10px, 1.25vw, 22px)';
-  } else if (text.length > 5) {
+  } else if (text.length > 6) {
     promptWord.style.fontSize = 'clamp(12px, 1.55vw, 28px)';
   } else {
     promptWord.style.fontSize = 'clamp(14px, 1.8vw, 36px)';
   }
 
+  let letterIndex = 0;
   const letters = text.split('');
-  letters.forEach((char, index) => {
+  letters.forEach((char) => {
     const span = document.createElement('span');
+    if (char === ' ') {
+      span.className = 'letter-space';
+      span.innerHTML = '&nbsp;';
+      promptWord.appendChild(span);
+      return;
+    }
     span.className = 'letter-3d';
     span.textContent = char;
-    const item = letterPalette[index % letterPalette.length];
+    const item = letterPalette[letterIndex % letterPalette.length];
     span.style.setProperty('--letter-color', item.color);
     span.style.setProperty('--letter-shadow', item.shadow);
     promptWord.appendChild(span);
+    letterIndex++;
   });
 }
 

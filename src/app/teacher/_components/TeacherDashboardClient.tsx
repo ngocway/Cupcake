@@ -29,7 +29,7 @@ export function TeacherDashboardClient({
   initialTab = "match",
   isAuthenticated,
 }: TeacherDashboardClientProps) {
-  const { t } = useTeacherLocale();
+  const { t, locale, setLocale } = useTeacherLocale();
   const normalizeTab = (tab: string) => (tab === "lib-flip" ? "lib-match" : tab);
   const normalizedInitialTab = normalizeTab(initialTab);
   const isProtectedTab = (tab: string) => tab.startsWith("my-") || tab.startsWith("lib-");
@@ -119,6 +119,10 @@ export function TeacherDashboardClient({
       return;
     }
 
+    if (tab === "lib-global") {
+      setLocale("vi");
+    }
+
     setActiveTab(tab);
     setVisitedTabs((prev) => {
       if (prev.has(tab)) return prev;
@@ -131,9 +135,28 @@ export function TeacherDashboardClient({
     if (typeof window !== "undefined") {
       const url = new URL(window.location.href);
       url.searchParams.set("tab", tab);
+      if (tab === "lib-global") {
+        url.searchParams.set("lang", "vi");
+      }
       window.history.pushState(null, "", url.pathname + url.search);
     }
   };
+
+  // Ensure Global Success tab defaults to "vi" unless user explicitly specified lang=en in URL
+  useEffect(() => {
+    if (activeTab === "lib-global") {
+      if (typeof window !== "undefined") {
+        const urlParams = new URLSearchParams(window.location.search);
+        const explicitLang = urlParams.get("lang")?.toLowerCase();
+        if (explicitLang !== "en" && locale !== "vi") {
+          setLocale("vi");
+          urlParams.set("lang", "vi");
+          const newUrl = `${window.location.pathname}?${urlParams.toString()}`;
+          window.history.replaceState(null, "", newUrl);
+        }
+      }
+    }
+  }, [activeTab, locale, setLocale]);
 
   // Sync with browser Back / Forward buttons
   useEffect(() => {
@@ -143,6 +166,12 @@ export function TeacherDashboardClient({
       if (isProtectedTab(tab) && !isAuthenticated) {
         handleRequireAuth(`/teacher?tab=${tab}`);
         return;
+      }
+      if (tab === "lib-global") {
+        const explicitLang = url.searchParams.get("lang")?.toLowerCase();
+        if (explicitLang !== "en") {
+          setLocale("vi");
+        }
       }
       setActiveTab(tab);
       setVisitedTabs((prev) => {
@@ -155,7 +184,7 @@ export function TeacherDashboardClient({
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [isAuthenticated]);
+  }, [isAuthenticated, setLocale]);
 
   // Background pre-warm Global Success & My Library caches so clicking tabs is instant (0ms)
   useEffect(() => {

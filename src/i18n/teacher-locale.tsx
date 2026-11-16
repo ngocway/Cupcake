@@ -663,11 +663,20 @@ export const TEACHER_DICT = {
 export function getStoredTeacherLocale(): TeacherLocale {
   if (typeof window === "undefined") return "en";
   try {
-    const urlLang = new URLSearchParams(window.location.search).get("lang")?.toLowerCase();
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlLang = urlParams.get("lang")?.toLowerCase();
     if (urlLang === "vi" || urlLang === "en") {
       localStorage.setItem("preferred-locale", urlLang);
       document.cookie = `NEXT_LOCALE=${urlLang};path=/;max-age=31536000;SameSite=Lax`;
       return urlLang;
+    }
+    // SPECIAL RULE FOR GLOBAL SUCCESS:
+    // If on Global Success tab (?tab=lib-global) without explicit ?lang=en, default immediately to "vi" without checking IP
+    const tab = urlParams.get("tab")?.toLowerCase();
+    if (tab === "lib-global") {
+      localStorage.setItem("preferred-locale", "vi");
+      document.cookie = `NEXT_LOCALE=vi;path=/;max-age=31536000;SameSite=Lax`;
+      return "vi";
     }
   } catch {}
   const saved = localStorage.getItem("preferred-locale");
@@ -703,6 +712,11 @@ export function setGlobalTeacherLocale(nextLocale: TeacherLocale) {
   if (typeof window === "undefined") return;
   document.cookie = `NEXT_LOCALE=${nextLocale};path=/;max-age=31536000;SameSite=Lax`;
   localStorage.setItem("preferred-locale", nextLocale);
+  try {
+    const url = new URL(window.location.href);
+    url.searchParams.set("lang", nextLocale);
+    window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+  } catch {}
   window.dispatchEvent(new CustomEvent("locale-change", { detail: nextLocale }));
   fetch("/api/locale", {
     method: "POST",

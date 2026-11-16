@@ -934,21 +934,61 @@ export function MatchImageImageCreatorUI() {
     }
     setBrokenImages({});
 
-    const incomingPairs: ImageCardPair[] = (setItem.items || []).map((it, idx) => ({
-      id: `pair-lib-${Date.now()}-${idx}`,
-      imageAUrl: it.imageUrl || undefined,
-      labelA: it.word || undefined,
-      imageBUrl: it.imageBUrl || it.imageUrl || undefined,
-      labelB: it.labelB || it.word || undefined,
-    }));
-
-    if (incomingPairs.length === 0) return;
+    const items = setItem.items || [];
+    if (items.length === 0) return;
 
     const isSingleEmptyInitial =
       rounds.length === 1 &&
       rounds[0].pairs.length === 1 &&
       !rounds[0].pairs[0].imageAUrl &&
       !rounds[0].pairs[0].imageBUrl;
+
+    // Check if the set already has distinct rounds defined by author
+    const hasMultipleRounds = items.some((it) => (it.roundIndex ?? 0) > 0);
+
+    if (hasMultipleRounds && (mode === "replace" || isSingleEmptyInitial)) {
+      const roundsMap: Record<number, typeof items> = {};
+      items.forEach((item) => {
+        const rIdx = item.roundIndex ?? 0;
+        if (!roundsMap[rIdx]) roundsMap[rIdx] = [];
+        roundsMap[rIdx].push(item);
+      });
+      const roundIndices = Object.keys(roundsMap).map(Number).sort((a, b) => a - b);
+      const loadedRounds: GameRound[] = [];
+      roundIndices.forEach((rIdx) => {
+        if (loadedRounds.length >= MAX_ROUNDS) return;
+        const roundItems = roundsMap[rIdx];
+        for (let c = 0; c < roundItems.length; c += MAX_PAIRS_PER_ROUND) {
+          if (loadedRounds.length >= MAX_ROUNDS) break;
+          const chunk = roundItems.slice(c, c + MAX_PAIRS_PER_ROUND);
+          const roundPairs: ImageCardPair[] = chunk.map((item, idx) => ({
+            id: item.id || `pair-lib-${Date.now()}-${loadedRounds.length}-${idx}`,
+            imageAUrl: item.imageUrl || undefined,
+            labelA: item.word || undefined,
+            imageBUrl: item.imageBUrl || item.imageUrl || undefined,
+            labelB: item.labelB || item.word || undefined,
+          }));
+          loadedRounds.push({
+            id: `round-lib-${loadedRounds.length}-${Date.now()}`,
+            title: `Vòng ${loadedRounds.length + 1}`,
+            pairs: roundPairs,
+          });
+        }
+      });
+      if (loadedRounds.length > 0) {
+        setRounds(loadedRounds);
+        setActiveRoundIndex(0);
+        return;
+      }
+    }
+
+    const incomingPairs: ImageCardPair[] = items.map((it, idx) => ({
+      id: `pair-lib-${Date.now()}-${idx}`,
+      imageAUrl: it.imageUrl || undefined,
+      labelA: it.word || undefined,
+      imageBUrl: it.imageBUrl || it.imageUrl || undefined,
+      labelB: it.labelB || it.word || undefined,
+    }));
 
     let updatedRounds: GameRound[] =
       mode === "replace" || isSingleEmptyInitial
