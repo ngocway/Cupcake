@@ -52,7 +52,7 @@ function MatchWordsGameContent() {
         )}
 
         <iframe
-          src={`/games/match-words/index.html?${queryParams.toString()}`}
+          src={`https://media.dolcake.com/games/match-words/index.html?${queryParams.toString()}`}
           className={`w-full h-full border-none transition-opacity duration-700 ${
             isLoading ? "opacity-0" : "opacity-100"
           }`}

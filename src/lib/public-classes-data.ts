@@ -169,7 +169,7 @@ export const CLASS_DETAIL_UI_LABELS = {
 export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
   'cmuvbigbg0001vta43ikcsjbk': {
     id: 'cmuvbigbg0001vta43ikcsjbk',
-    thumbnail: '/assests/Classes/thumbnails/class-thumb-grammar-45-days.png',
+    thumbnail: 'https://media.dolcake.com/assests/Classes/thumbnails/class-thumb-grammar-45-days.png',
     subjectBadgeClass: 'bg-[#ede9fe] text-[#4338ca] border-[#c7d2fe]',
     audienceBadgeClass: 'bg-[#e0e7ff] text-[#3730a3] border-[#c7d2fe]',
     typeBadgeClass: 'bg-[#fef3c7] text-[#92400e] border-[#fde68a]',
@@ -220,7 +220,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
       teacher: {
         name: 'Dolcake Teacher',
         role: 'Lead English Instructor & Curriculum Specialist',
-        avatar: '/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
+        avatar: 'https://media.dolcake.com/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
         degree: 'Master of English Linguistics & TESOL Certified',
         experience: 'Over 10 years guiding thousands of learners from basic to advanced English mastery',
         quote: '“Grammar is the skeleton of language. Master it step-by-step each day, and you will speak and write English with total confidence.”',
@@ -229,7 +229,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
         {
           id: 'r1',
           author: 'Minh Chau (Learner)',
-          avatar: '/images/avatars/grade_3.png',
+          avatar: 'https://media.dolcake.com/images/avatars/grade_3.png',
           stars: 5,
           timeAgo: '2 days ago',
           content: '“The 5-exercise daily structure is unbelievable! The spaced review questions help me remember grammar points effortlessly without cramming.”',
@@ -237,7 +237,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
         {
           id: 'r2',
           author: 'Duc Anh (Grade 8 Student)',
-          avatar: '/images/avatars/adult.png',
+          avatar: 'https://media.dolcake.com/images/avatars/adult.png',
           stars: 5,
           timeAgo: '5 days ago',
           content: '“From zero grammar knowledge, I now clearly understand tenses, passive voice, and relative clauses. Best grammar course ever!”',
@@ -245,7 +245,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
         {
           id: 'r3',
           author: 'Thu Huong (Parent)',
-          avatar: '/images/avatars/adult.png',
+          avatar: 'https://media.dolcake.com/images/avatars/adult.png',
           stars: 5,
           timeAgo: '1 week ago',
           content: '“My child does the exercises every single evening. The bite-sized lessons keep him motivated without feeling overwhelmed.”',
@@ -295,7 +295,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
       teacher: {
         name: 'Dolcake Teacher',
         role: 'Giáo viên phụ trách & Thiết kế chương trình',
-        avatar: '/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
+        avatar: 'https://media.dolcake.com/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
         degree: 'Thạc sĩ Ngôn ngữ Anh & Chứng chỉ Giảng dạy TESOL',
         experience: 'Hơn 10 năm kinh nghiệm đồng hành cùng học viên xây dựng nền tảng ngữ pháp vững chắc',
         quote: '“Ngữ pháp không phải là những quy tắc khô khan, mà là chiếc chìa khóa giúp các em diễn đạt suy nghĩ của mình một cách rõ ràng và tự tin nhất.”',
@@ -304,7 +304,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
         {
           id: 'r1',
           author: 'Minh Châu (Học viên)',
-          avatar: '/images/avatars/grade_3.png',
+          avatar: 'https://media.dolcake.com/images/avatars/grade_3.png',
           stars: 5,
           timeAgo: '2 ngày trước',
           content: '“Cấu trúc 5 bài mỗi ngày cực kỳ vừa sức và hiệu quả! Phần ôn tập lặp lại ngắt quãng giúp em không bao giờ bị quên kiến thức cũ.”',
@@ -312,7 +312,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
         {
           id: 'r2',
           author: 'Đức Anh (Học sinh Lớp 8)',
-          avatar: '/images/avatars/adult.png',
+          avatar: 'https://media.dolcake.com/images/avatars/adult.png',
           stars: 5,
           timeAgo: '5 ngày trước',
           content: '“Từ một người mất gốc ngữ pháp, sau khóa học em đã tự tin làm đúng các câu về thì và câu bị động trên lớp. Em cảm ơn thầy cô rất nhiều!”',
@@ -320,7 +320,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
         {
           id: 'r3',
           author: 'Chị Thu Hương (Phụ huynh)',
-          avatar: '/images/avatars/adult.png',
+          avatar: 'https://media.dolcake.com/images/avatars/adult.png',
           stars: 5,
           timeAgo: '1 tuần trước',
           content: '“Bé nhà mình tự giác vào học mỗi tối. Giao diện trực quan, bài tập phân hóa rõ ràng nên con học rất hào hứng và tiến bộ trông thấy.”',
@@ -347,7 +347,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
 
   'tiny-vocab-wonders': {
     id: 'tiny-vocab-wonders',
-    thumbnail: '/assests/Classes/thumbnails/class-thumb-vocab-45-days.png',
+    thumbnail: 'https://media.dolcake.com/assests/Classes/thumbnails/class-thumb-vocab-45-days.png',
     subjectBadgeClass: 'bg-[#fef3c7] text-[#92400e] border-[#fde68a]',
     audienceBadgeClass: 'bg-[#ffedd5] text-[#c2410c] border-[#fed7aa]',
     typeBadgeClass: 'bg-[#fee2e2] text-[#991b1b] border-[#fca5a5]',
@@ -398,7 +398,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
       teacher: {
         name: 'Ms. Jessica Nguyen',
         role: 'Early Childhood English Instructor',
-        avatar: '/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
+        avatar: 'https://media.dolcake.com/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
         degree: 'Bachelor of English & TESOL Young Learners Certified',
         experience: 'Over 8 years inspiring early learners with joyful storybook and gamified learning methods',
         quote: '“For young kids, learning English is an exciting adventure filled with colors, sounds, and laughter. Let every flashcard and story bring a smile to their faces!”',
@@ -407,7 +407,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
         {
           id: 'tv-r1',
           author: 'Thu Thao (Parent of 5yo)',
-          avatar: '/images/avatars/grade_3.png',
+          avatar: 'https://media.dolcake.com/images/avatars/grade_3.png',
           stars: 5,
           timeAgo: '1 day ago',
           content: '“My 5-year-old daughter absolutely adores the cute pictures and audio. She eagerly sits down for 8 minutes every afternoon without being told!”',
@@ -415,7 +415,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
         {
           id: 'tv-r2',
           author: 'Minh Tuan (Parent of 1st Grader)',
-          avatar: '/images/avatars/adult.png',
+          avatar: 'https://media.dolcake.com/images/avatars/adult.png',
           stars: 5,
           timeAgo: '3 days ago',
           content: '“The 3-step routine (Flashcard -> Story -> Game) is brilliant. My son remembers words in full sentences instead of isolated translations.”',
@@ -423,7 +423,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
         {
           id: 'tv-r3',
           author: 'Hoang Lan (Kindergarten Teacher)',
-          avatar: '/images/avatars/adult.png',
+          avatar: 'https://media.dolcake.com/images/avatars/adult.png',
           stars: 5,
           timeAgo: '1 week ago',
           content: '“Warm audio voice, gentle pace, and beautiful child-friendly design. Perfectly tuned for preschool and grade 1 focus span.”',
@@ -473,7 +473,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
       teacher: {
         name: 'Ms. Jessica Nguyen',
         role: 'Giáo viên phụ trách khối Mầm non & Lớp 1',
-        avatar: '/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
+        avatar: 'https://media.dolcake.com/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
         degree: 'Cử nhân Ngôn ngữ Anh & Chứng chỉ Sư phạm Quốc tế TESOL-YL',
         experience: 'Hơn 8 năm kinh nghiệm giảng dạy tiếng Anh sớm qua phương pháp tranh truyện và game tương tác',
         quote: '“Ở lứa tuổi mầm non và lớp 1, học tiếng Anh là một chuyến phiêu lưu ngập tràn màu sắc và tiếng cười. Hãy để mỗi chiếc Flashcard và mẩu chuyện mang lại niềm vui cho bé!”',
@@ -482,7 +482,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
         {
           id: 'tv-r1',
           author: 'Mẹ Thu Thảo (Bé 5 tuổi)',
-          avatar: '/images/avatars/grade_3.png',
+          avatar: 'https://media.dolcake.com/images/avatars/grade_3.png',
           stars: 5,
           timeAgo: '1 ngày trước',
           content: '“Bé nhà mình thích mê giọng đọc và tranh vẽ ngộ nghĩnh. Mỗi chiều đi học về là tự giác xin học 8 phút cùng bạn robot.”',
@@ -490,7 +490,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
         {
           id: 'tv-r2',
           author: 'Bố Minh Tuấn (Bé Lớp 1)',
-          avatar: '/images/avatars/adult.png',
+          avatar: 'https://media.dolcake.com/images/avatars/adult.png',
           stars: 5,
           timeAgo: '3 ngày trước',
           content: '“Cách phối hợp Flashcard rồi đọc truyện ngắn và chơi game rất hay. Bé nhớ từ theo câu hoàn chỉnh chứ không học vẹt.”',
@@ -498,7 +498,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
         {
           id: 'tv-r3',
           author: 'Cô Hoàng Lan (Giáo viên Mầm non)',
-          avatar: '/images/avatars/adult.png',
+          avatar: 'https://media.dolcake.com/images/avatars/adult.png',
           stars: 5,
           timeAgo: '1 tuần trước',
           content: '“Giọng audio ấm, tốc độ vừa phải, giao diện rất thân thiện với trẻ nhỏ. Phù hợp hoàn hảo với độ tập trung của lứa tuổi 4-6 tuổi.”',
@@ -525,7 +525,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
 
   'english-adventure-club': {
     id: 'english-adventure-club',
-    thumbnail: '/assests/Classes/thumbnails/class-thumb-english-adventure-club.png',
+    thumbnail: 'https://media.dolcake.com/assests/Classes/thumbnails/class-thumb-english-adventure-club.png',
     subjectBadgeClass: 'bg-[#dcfce7] text-[#14532d] border-[#86efac]',
     audienceBadgeClass: 'bg-[#ecfdf5] text-[#047857] border-[#a7f3d0]',
     typeBadgeClass: 'bg-[#fef3c7] text-[#92400e] border-[#fde68a]',
@@ -685,7 +685,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
       teacher: {
         name: 'Ms. Jessica Nguyen',
         role: 'Head Homeroom Teacher',
-        avatar: '/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
+        avatar: 'https://media.dolcake.com/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
         degree: 'Bachelor of English Pedagogy - International TESOL Certificate',
         experience: '6 years of primary English teaching experience',
         quote: '“Every lesson with Ms. Jessica is a wonderful adventure! When children feel happy and encouraged, learning English becomes as natural and effortless as their mother tongue.”',
@@ -694,7 +694,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
         {
           id: 'r1',
           author: 'Mrs. Bao An’s Mom (Grade 2A)',
-          avatar: '/images/avatars/adult.png',
+          avatar: 'https://media.dolcake.com/images/avatars/adult.png',
           stars: 5,
           timeAgo: '3 days ago',
           content: '“My child absolutely loves Ms. Jessica! The gamified interface makes my little one self-motivated to study every evening without any reminders.”',
@@ -702,7 +702,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
         {
           id: 'r2',
           author: 'Student Minh Khang',
-          avatar: '/images/avatars/kid.png',
+          avatar: 'https://media.dolcake.com/images/avatars/kid.png',
           stars: 5,
           timeAgo: '1 week ago',
           content: '“My favorite game is the puppy flashcard match where I earned 3 golden stars! Ms. Jessica teaches pronunciation so clearly.”',
@@ -861,7 +861,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
       teacher: {
         name: 'Ms. Jessica Nguyen',
         role: 'Giáo viên chủ nhiệm lớp',
-        avatar: '/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
+        avatar: 'https://media.dolcake.com/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
         degree: 'Cử nhân Sư phạm Tiếng Anh - Chứng chỉ TESOL Quốc tế',
         experience: '6 năm kinh nghiệm giảng dạy tiếng Anh Tiểu học',
         quote: '“Mỗi ngày học cùng cô Jessica là một chuyến phiêu lưu kỳ thú! Cô tin rằng khi các con cảm thấy vui vẻ và được khích lệ, việc học tiếng Anh sẽ trở nên tự nhiên và dễ dàng như tiếng mẹ đẻ.”',
@@ -870,7 +870,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
         {
           id: 'r1',
           author: 'Mẹ bé Bảo An (Lớp 2A)',
-          avatar: '/images/avatars/adult.png',
+          avatar: 'https://media.dolcake.com/images/avatars/adult.png',
           stars: 5,
           timeAgo: '3 ngày trước',
           content: '“Bé nhà mình thích mê cô Jessica! Giao diện học như chơi game nên bạn nhỏ tự giác mở máy học mỗi tối không cần mẹ nhắc.”',
@@ -878,7 +878,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
         {
           id: 'r2',
           author: 'Bé Minh Khang',
-          avatar: '/images/avatars/kid.png',
+          avatar: 'https://media.dolcake.com/images/avatars/kid.png',
           stars: 5,
           timeAgo: '1 tuần trước',
           content: '“Con thích nhất trò lật thẻ Flashcard tìm chú cún và được thưởng 3 sao vàng! Cô Jessica dạy phát âm rất dễ hiểu.”',
@@ -905,7 +905,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
 
   'phonics-happy-reading': {
     id: 'phonics-happy-reading',
-    thumbnail: '/assests/Classes/thumbnails/class-thumb-phonics-happy-reading.png',
+    thumbnail: 'https://media.dolcake.com/assests/Classes/thumbnails/class-thumb-phonics-happy-reading.png',
     subjectBadgeClass: 'bg-[#ffedd5] text-[#9a3412] border-[#fed7aa]',
     audienceBadgeClass: 'bg-[#fef3c7] text-[#92400e] border-[#fde68a]',
     typeBadgeClass: 'bg-[#ffe4e6] text-[#be123c] border-[#fecdd3]',
@@ -1065,7 +1065,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
       teacher: {
         name: 'Ms. Anna Pham',
         role: 'Head Homeroom Teacher',
-        avatar: '/assests/Classes/avatars/teacher-avatar-ms-anna.png',
+        avatar: 'https://media.dolcake.com/assests/Classes/avatars/teacher-avatar-ms-anna.png',
         degree: 'Master of Applied Linguistics & TESOL - University of Melbourne',
         experience: '8 years specializing in Early Phonics & Early Reading Skills',
         quote: '“Phonics is the golden key that unlocks independent reading. When children can read their very first books by themselves, the love of learning stays with them for a lifetime.”',
@@ -1074,7 +1074,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
         {
           id: 'r1',
           author: 'Tue Lam’s Parent (6 years old)',
-          avatar: '/images/avatars/adult.png',
+          avatar: 'https://media.dolcake.com/images/avatars/adult.png',
           stars: 5,
           timeAgo: '2 days ago',
           content: '“My daughter used to be afraid of reading English, but after just 3 weeks with Ms. Anna, she was reading the cat story fluently! Thank you so much.”',
@@ -1082,7 +1082,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
         {
           id: 'r2',
           author: 'Nhat Nam’s Mom (Grade 1)',
-          avatar: '/images/avatars/grade_1.png',
+          avatar: 'https://media.dolcake.com/images/avatars/grade_1.png',
           stars: 5,
           timeAgo: '5 days ago',
           content: '“Ms. Anna’s teaching method is so visual with adorable graphics and crystal-clear audio. My son feels like he is watching cartoons while learning.”',
@@ -1241,7 +1241,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
       teacher: {
         name: 'Ms. Anna Pham',
         role: 'Giáo viên chủ nhiệm lớp',
-        avatar: '/assests/Classes/avatars/teacher-avatar-ms-anna.png',
+        avatar: 'https://media.dolcake.com/assests/Classes/avatars/teacher-avatar-ms-anna.png',
         degree: 'Thạc sĩ Giảng dạy Tiếng Anh (MA TESOL) - Đại học Melbourne',
         experience: '8 năm chuyên sâu luyện Phonics & Kỹ năng Đọc sớm cho trẻ nhỏ',
         quote: '“Phonics là chìa khóa vàng mở cánh cửa đọc sách độc lập. Khi các con tự tin đọc được từng trang sách đầu tiên, niềm yêu thích học tập sẽ theo con suốt cả cuộc đời.”',
@@ -1250,7 +1250,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
         {
           id: 'r1',
           author: 'Phụ huynh bé Tuệ Lâm (6 tuổi)',
-          avatar: '/images/avatars/adult.png',
+          avatar: 'https://media.dolcake.com/images/avatars/adult.png',
           stars: 5,
           timeAgo: '2 ngày trước',
           content: '“Bé nhà mình trước đây rất sợ đọc tiếng Anh, nhưng từ khi học cô Anna chỉ 3 tuần đã tự đánh vần đọc vanh vách truyện chú mèo! Cảm ơn cô rất nhiều.”',
@@ -1258,7 +1258,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
         {
           id: 'r2',
           author: 'Mẹ bé Nhật Nam (Lớp 1)',
-          avatar: '/images/avatars/grade_1.png',
+          avatar: 'https://media.dolcake.com/images/avatars/grade_1.png',
           stars: 5,
           timeAgo: '5 ngày trước',
           content: '“Phương pháp của cô Anna cực kỳ trực quan, hình vẽ dễ thương và âm thanh to rõ. Con học mà cứ ngỡ đang xem hoạt hình vậy.”',
@@ -1285,7 +1285,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
 
   'little-speaking-stars': {
     id: 'little-speaking-stars',
-    thumbnail: '/assests/Classes/thumbnails/class-thumb-little-speaking-stars.png',
+    thumbnail: 'https://media.dolcake.com/assests/Classes/thumbnails/class-thumb-little-speaking-stars.png',
     subjectBadgeClass: 'bg-[#ede9fe] text-[#4c1d95] border-[#c4b5fd]',
     audienceBadgeClass: 'bg-[#f3e8ff] text-[#6b21a8] border-[#e9d5ff]',
     typeBadgeClass: 'bg-[#fef3c7] text-[#92400e] border-[#fde68a]',
@@ -1445,7 +1445,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
       teacher: {
         name: 'Mr. David Wilson',
         role: 'Head Homeroom Teacher',
-        avatar: '/assests/Classes/avatars/teacher-avatar-mr-david.png',
+        avatar: 'https://media.dolcake.com/assests/Classes/avatars/teacher-avatar-mr-david.png',
         degree: 'Bachelor of Linguistics - Cambridge CELTA International Teaching Certificate',
         experience: '7 years coaching Presentation & Communication for international students',
         quote: '“Never be afraid of making mistakes! Every time you speak English out loud is a giant leap forward. My classroom is always a welcoming space for you to shine and be proud.”',
@@ -1454,7 +1454,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
         {
           id: 'r1',
           author: 'Hoang Nam’s Parent (Grade 4)',
-          avatar: '/images/avatars/adult.png',
+          avatar: 'https://media.dolcake.com/images/avatars/adult.png',
           stars: 5,
           timeAgo: '4 days ago',
           content: '“Mr. David is so funny and energetic! Nam was shy before, but after 2 weeks he was standing in front of the mirror recording his own self-introduction video with great confidence.”',
@@ -1462,7 +1462,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
         {
           id: 'r2',
           author: 'Student Thao Chi (Grade 5)',
-          avatar: '/images/avatars/grade_3.png',
+          avatar: 'https://media.dolcake.com/images/avatars/grade_3.png',
           stars: 5,
           timeAgo: '1 week ago',
           content: '“My favorite activity is roleplaying ordering food at the supermarket! Mr. David has perfect pronunciation and teaches phrasing pauses so well.”',
@@ -1621,7 +1621,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
       teacher: {
         name: 'Mr. David Wilson',
         role: 'Giáo viên chủ nhiệm lớp',
-        avatar: '/assests/Classes/avatars/teacher-avatar-mr-david.png',
+        avatar: 'https://media.dolcake.com/assests/Classes/avatars/teacher-avatar-mr-david.png',
         degree: 'Cử nhân Ngôn ngữ học - Chứng chỉ Giảng dạy Quốc tế CELTA Cambridge',
         experience: '7 năm chuyên huấn luyện kỹ năng Thuyết trình & Giao tiếp cho học sinh quốc tế',
         quote: '“Đừng ngại nói sai! Mỗi lần con cất tiếng nói tiếng Anh là một bước tiến vượt bậc. Lớp học của thầy David luôn là nơi con được tự do tỏa sáng và tự hào về chính mình.”',
@@ -1630,7 +1630,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
         {
           id: 'r1',
           author: 'Phụ huynh bé Hoàng Nam (Lớp 4)',
-          avatar: '/images/avatars/adult.png',
+          avatar: 'https://media.dolcake.com/images/avatars/adult.png',
           stars: 5,
           timeAgo: '4 ngày trước',
           content: '“Thầy David rất vui tính và năng lượng! Bạn Nam vốn nhút nhát nhưng sau 2 tuần học đã dám đứng trước gương tự quay video giới thiệu bản thân bằng tiếng Anh rất tự tin.”',
@@ -1638,7 +1638,7 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
         {
           id: 'r2',
           author: 'Bé Thảo Chi (Lớp 5)',
-          avatar: '/images/avatars/grade_3.png',
+          avatar: 'https://media.dolcake.com/images/avatars/grade_3.png',
           stars: 5,
           timeAgo: '1 tuần trước',
           content: '“Con thích nhất phần đóng vai đi siêu thị và gọi món ăn! Thầy David phát âm cực chuẩn và hướng dẫn cách ngắt nghỉ câu rất hay ạ.”',

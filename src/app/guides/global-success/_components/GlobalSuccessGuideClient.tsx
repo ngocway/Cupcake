@@ -136,9 +136,9 @@ export function GlobalSuccessGuideClient() {
             {/* Responsive animated picture */}
             <div className="relative rounded-2xl overflow-hidden bg-slate-900 border border-slate-200/80 shadow-inner aspect-[16/10] sm:aspect-[16/9]">
               <picture>
-                <source srcSet="/guides/global-success/walkthrough-grade-unit.webp" type="image/webp" />
+                <source srcSet="https://media.dolcake.com/guides/global-success/walkthrough-grade-unit.webp" type="image/webp" />
                 <img
-                  src="/guides/global-success/walkthrough-grade-unit.gif"
+                  src="https://media.dolcake.com/guides/global-success/walkthrough-grade-unit.gif"
                   alt="10-second animated walkthrough showing how to click Global Success Books, pick Grade 5, and view Unit 1 question sets"
                   className="w-full h-full object-contain block select-none"
                 />
@@ -186,7 +186,7 @@ export function GlobalSuccessGuideClient() {
                 {/* Focused Sidebar screenshot */}
                 <div className="mt-5 max-w-sm">
                   <AnnotatedFigure
-                    src="/guides/global-success/step1-sidebar-global-success.png"
+                    src="https://media.dolcake.com/guides/global-success/step1-sidebar-global-success.png"
                     alt="Focused screenshot of the left navigation sidebar highlighting Question Library and Global Success Books"
                     figureNumber="Figure 1"
                     screenLabel="Teacher Portal Navigation Sidebar"
@@ -251,7 +251,7 @@ export function GlobalSuccessGuideClient() {
                 {/* Focused Grade Grid screenshot */}
                 <div className="mt-5">
                   <AnnotatedFigure
-                    src="/guides/global-success/step2-choose-grade-grid.png"
+                    src="https://media.dolcake.com/guides/global-success/step2-choose-grade-grid.png"
                     alt="Focused screenshot showing the 12 Grade cards grouped by Primary, Lower Secondary, and Upper Secondary"
                     figureNumber="Figure 2"
                     screenLabel="Grade Selection Grid"
@@ -344,7 +344,7 @@ export function GlobalSuccessGuideClient() {
                 {/* Focused Unit 1 screenshot */}
                 <div className="mt-5">
                   <AnnotatedFigure
-                    src="/guides/global-success/step3-grade5-unit1-sets.png"
+                    src="https://media.dolcake.com/guides/global-success/step3-grade5-unit1-sets.png"
                     alt="Focused screenshot showing Grade 5 Unit 1 with all 4 question sets: Conversations, Vocabulary, Practice Quiz, and English - Vietnamese"
                     figureNumber="Figure 3"
                     screenLabel="Unit 1 Question Sets View"
@@ -377,7 +377,7 @@ export function GlobalSuccessGuideClient() {
                   </p>
                   <div className="mt-3">
                     <AnnotatedFigure
-                      src="/guides/global-success/step3b-unit-dropdown.png"
+                      src="https://media.dolcake.com/guides/global-success/step3b-unit-dropdown.png"
                       alt="Close-up of the expanded Unit dropdown showing Units 1 to 7"
                       figureNumber="Figure 3B"
                       screenLabel="Quick Unit Selector Menu"

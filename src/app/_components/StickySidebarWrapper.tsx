@@ -86,7 +86,7 @@ export function StickySidebarWrapper({ children }: { children: React.ReactNode }
         >
           {/* Drawer header: logo + close button */}
           <div className="flex items-center justify-between mb-1">
-            <Image src="/images/logo.png" alt="Dolcake" width={36} height={36} priority className="w-9 h-9 object-contain" />
+            <Image src="https://media.dolcake.com/images/logo.png" alt="Dolcake" width={36} height={36} priority className="w-9 h-9 object-contain" />
             <button
               onClick={() => setMobileSidebarOpen(false)}
               className="w-8 h-8 flex items-center justify-center rounded-full bg-primary/8 hover:bg-primary/15 text-primary transition-all active:scale-90"

@@ -95,7 +95,7 @@ export function FloatingZaloWidget({
           className="relative flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-2xl transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer"
         >
           <img
-            src="/images/icons/zalo-icon.png?v=2"
+            src="https://media.dolcake.com/images/icons/zalo-icon.png?v=2"
             alt="Zalo"
             className="w-12 h-12 sm:w-14 sm:h-14 object-contain drop-shadow-[0_6px_14px_rgba(0,85,212,0.4)] transition-transform group-hover:scale-105"
             draggable={false}

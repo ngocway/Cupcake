@@ -25,7 +25,7 @@ export function ClassCommunityLinks({
 
   const ZaloIcon = ({ className = 'w-4 h-4' }: { className?: string }) => (
     <img
-      src="/images/icons/zalo-icon.png?v=2"
+      src="https://media.dolcake.com/images/icons/zalo-icon.png?v=2"
       alt="Zalo"
       className={`${className} object-contain shrink-0 drop-shadow-xs`}
       draggable={false}
@@ -105,7 +105,7 @@ export function ClassCommunityLinks({
           aria-label="Tham gia nhóm Zalo lớp học"
         >
           <img
-            src="/images/icons/zalo-icon.png?v=2"
+            src="https://media.dolcake.com/images/icons/zalo-icon.png?v=2"
             alt="Zalo"
             className="w-8 h-8 sm:w-9 sm:h-9 object-contain drop-shadow-[0_3px_8px_rgba(0,70,180,0.45)] shrink-0"
             draggable={false}

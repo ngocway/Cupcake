@@ -26,7 +26,7 @@ export function StudentClassHeader({ session }: StudentClassHeaderProps) {
         title="Về trang chủ Dolcake"
       >
         <img 
-          src="/images/logo.png" 
+          src="https://media.dolcake.com/images/logo.png" 
           alt="Dolcake" 
           className="w-7 h-7 sm:w-8 sm:h-8 object-contain transition-transform duration-300 group-hover:scale-110" 
         />

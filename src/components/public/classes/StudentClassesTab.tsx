@@ -62,11 +62,11 @@ const PUBLIC_CLASSES: PublicClassItem[] = [
     audienceBadgeClass: 'bg-[#ffedd5]/95 text-[#c2410c] border-[#fed7aa]/70',
     typeBadge: '🔥 Free',
     typeBadgeClass: 'bg-[#fef9c3]/95 text-[#78350f] border-[#fde047]/70',
-    thumbnail: '/assests/Classes/thumbnails/class-thumb-vocab-45-days.png',
+    thumbnail: 'https://media.dolcake.com/assests/Classes/thumbnails/class-thumb-vocab-45-days.png',
     joinCode: 'VOCAB45',
     teacher: {
       name: 'Ms. Jessica Nguyen',
-      avatar: '/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
+      avatar: 'https://media.dolcake.com/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
       role: 'Teacher',
     },
     lessonsCount: 45,
@@ -83,11 +83,11 @@ const PUBLIC_CLASSES: PublicClassItem[] = [
     audienceBadgeClass: 'bg-[#e0e7ff]/95 text-[#3730a3] border-[#c7d2fe]/70',
     typeBadge: '🔥 Free',
     typeBadgeClass: 'bg-[#fef9c3]/95 text-[#78350f] border-[#fde047]/70',
-    thumbnail: '/assests/Classes/thumbnails/class-thumb-grammar-45-days.png',
+    thumbnail: 'https://media.dolcake.com/assests/Classes/thumbnails/class-thumb-grammar-45-days.png',
     joinCode: 'GM45VN',
     teacher: {
       name: 'Dolcake Teacher',
-      avatar: '/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
+      avatar: 'https://media.dolcake.com/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
       role: 'Teacher',
     },
     lessonsCount: 268,
@@ -104,11 +104,11 @@ const PUBLIC_CLASSES: PublicClassItem[] = [
     audienceBadgeClass: 'bg-[#ecfdf5]/95 text-[#047857] border-[#a7f3d0]/70',
     typeBadge: '🔥 Free',
     typeBadgeClass: 'bg-[#fef9c3]/95 text-[#78350f] border-[#fde047]/70',
-    thumbnail: '/assests/Classes/thumbnails/class-thumb-english-adventure-club.png',
+    thumbnail: 'https://media.dolcake.com/assests/Classes/thumbnails/class-thumb-english-adventure-club.png',
     joinCode: 'EAC23',
     teacher: {
       name: 'Ms. Jessica Nguyen',
-      avatar: '/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
+      avatar: 'https://media.dolcake.com/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
       role: 'Teacher',
     },
     lessonsCount: 20,
@@ -125,11 +125,11 @@ const PUBLIC_CLASSES: PublicClassItem[] = [
     audienceBadgeClass: 'bg-[#fef3c7]/95 text-[#92400e] border-[#fde68a]/70',
     typeBadge: '🔥 Hot',
     typeBadgeClass: 'bg-[#fee2e2]/95 text-[#991b1b] border-[#fca5a5]/70',
-    thumbnail: '/assests/Classes/thumbnails/class-thumb-phonics-happy-reading.png',
+    thumbnail: 'https://media.dolcake.com/assests/Classes/thumbnails/class-thumb-phonics-happy-reading.png',
     joinCode: 'PHON12',
     teacher: {
       name: 'Ms. Anna Pham',
-      avatar: '/assests/Classes/avatars/teacher-avatar-ms-anna.png',
+      avatar: 'https://media.dolcake.com/assests/Classes/avatars/teacher-avatar-ms-anna.png',
       role: 'Teacher',
     },
     lessonsCount: 12,
@@ -146,11 +146,11 @@ const PUBLIC_CLASSES: PublicClassItem[] = [
     audienceBadgeClass: 'bg-[#f3e8ff]/95 text-[#6b21a8] border-[#e9d5ff]/70',
     typeBadge: '✨ Free',
     typeBadgeClass: 'bg-[#fef9c3]/95 text-[#78350f] border-[#fde047]/70',
-    thumbnail: '/assests/Classes/thumbnails/class-thumb-little-speaking-stars.png',
+    thumbnail: 'https://media.dolcake.com/assests/Classes/thumbnails/class-thumb-little-speaking-stars.png',
     joinCode: 'STAR35',
     teacher: {
       name: 'Mr. David Tran',
-      avatar: '/assests/Classes/avatars/teacher-avatar-mr-david.png',
+      avatar: 'https://media.dolcake.com/assests/Classes/avatars/teacher-avatar-mr-david.png',
       role: 'Teacher',
     },
     lessonsCount: 18,
@@ -262,10 +262,10 @@ function findMatchingPublicClass(clsItem: { id?: string; name?: string; teacherN
     audienceBadgeClass: 'bg-[#ecfdf5]/95 text-[#047857] border-[#a7f3d0]/70',
     typeBadge: '',
     typeBadgeClass: '',
-    thumbnail: '/assests/Classes/thumbnails/class-thumb-neutral-default.jpg',
+    thumbnail: 'https://media.dolcake.com/assests/Classes/thumbnails/class-thumb-neutral-default.jpg',
     teacher: {
       name: clsItem.teacherName || 'Giáo viên Dolcake',
-      avatar: '/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
+      avatar: 'https://media.dolcake.com/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
       role: 'Giáo viên',
     },
     lessonsCount: 15,
@@ -304,18 +304,18 @@ function EnrolledClassRowCard({
   const classUrl = `/student/classes/${targetClassId}`;
 
   const resolvedThumbnail =
-    item.class.thumbnail && item.class.thumbnail !== '/assests/Classes/thumbnails/class-thumb-neutral-default.jpg'
+    item.class.thumbnail && item.class.thumbnail !== 'https://media.dolcake.com/assests/Classes/thumbnails/class-thumb-neutral-default.jpg'
       ? item.class.thumbnail
-      : matched.thumbnail || item.class.thumbnail || '/assests/Classes/thumbnails/class-thumb-neutral-default.jpg';
+      : matched.thumbnail || item.class.thumbnail || 'https://media.dolcake.com/assests/Classes/thumbnails/class-thumb-neutral-default.jpg';
 
   // Real thumbnail from database with defensive error fallback
   const [thumbSrc, setThumbSrc] = useState(resolvedThumbnail);
 
   useEffect(() => {
     const nextThumb =
-      item.class.thumbnail && item.class.thumbnail !== '/assests/Classes/thumbnails/class-thumb-neutral-default.jpg'
+      item.class.thumbnail && item.class.thumbnail !== 'https://media.dolcake.com/assests/Classes/thumbnails/class-thumb-neutral-default.jpg'
         ? item.class.thumbnail
-        : matched.thumbnail || item.class.thumbnail || '/assests/Classes/thumbnails/class-thumb-neutral-default.jpg';
+        : matched.thumbnail || item.class.thumbnail || 'https://media.dolcake.com/assests/Classes/thumbnails/class-thumb-neutral-default.jpg';
     setThumbSrc(nextThumb);
   }, [item.class.thumbnail, matched.thumbnail]);
 
@@ -337,7 +337,7 @@ function EnrolledClassRowCard({
           fill
           sizes="(max-width: 768px) 100vw, 180px"
           className="object-cover group-hover:scale-105 transition-transform duration-500"
-          onError={() => setThumbSrc('/assests/Classes/thumbnails/class-thumb-neutral-default.jpg')}
+          onError={() => setThumbSrc('https://media.dolcake.com/assests/Classes/thumbnails/class-thumb-neutral-default.jpg')}
         />
         {/* Floating badge for mobile */}
         <div className="absolute top-2 left-2 flex items-center gap-1 z-10 pointer-events-none md:hidden">
@@ -635,7 +635,7 @@ function JoinWithCodeCard({ onOpen }: { onOpen: () => void }) {
       <div className="w-full flex justify-center pt-2 sm:pt-4 mb-2">
         <div className="relative w-28 h-28 sm:w-32 sm:h-32 transition-transform duration-300 group-hover:scale-105">
           <Image
-            src="/assests/Classes/icons/join-with-code-key.png"
+            src="https://media.dolcake.com/assests/Classes/icons/join-with-code-key.png"
             alt="Join with Code"
             fill
             className="object-contain"
@@ -1188,7 +1188,7 @@ export function StudentClassesTab({ isLoggedIn, locale = 'vi', classesPromise }:
               <div className="flex items-start gap-3.5 mb-4">
                 <div className="relative size-12 sm:size-14 rounded-2xl bg-white dark:bg-purple-900/40 shadow-sm border border-purple-100 dark:border-purple-800/60 flex items-center justify-center shrink-0 p-2 group-hover:scale-105 transition-transform duration-300">
                   <Image
-                    src="/assests/Classes/icons/join-with-code-key.png"
+                    src="https://media.dolcake.com/assests/Classes/icons/join-with-code-key.png"
                     alt="Class Code"
                     fill
                     className="object-contain p-1.5"

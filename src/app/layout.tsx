@@ -63,7 +63,7 @@ export const metadata: Metadata = {
       "Interactive English learning for kids and teens. Explore lessons, flashcards, quizzes, and games on Dolcake.",
     images: [
       {
-        url: "/images/og-image-v2.png",
+        url: "https://media.dolcake.com/images/og-image-v2.png",
         width: 1200,
         height: 630,
         alt: "Dolcake – Interactive English Learning Platform",
@@ -76,7 +76,7 @@ export const metadata: Metadata = {
     title: "Dolcake – Learn English with Fun Lessons & Games",
     description:
       "Interactive English learning for kids and teens. Explore lessons, flashcards, quizzes, and games on Dolcake.",
-    images: ["/images/og-image-v2.png"],
+    images: ["https://media.dolcake.com/images/og-image-v2.png"],
     site: "@dolcake",
   },
   robots: {

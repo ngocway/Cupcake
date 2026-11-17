@@ -41,7 +41,7 @@ interface GoalCardItem {
   mobileImgEn: string;
 }
 
-const BASE_PATH = "/images/assest/Choose%20ages";
+const BASE_PATH = "https://media.dolcake.com/images/assest/Choose%20ages";
 
 const GOAL_ITEMS: GoalCardItem[] = [
   {

@@ -310,7 +310,7 @@ export function StudentGamesHub({ systemGames, teacherGames, locale = "vi" }: St
                         ? game.imageUrl!
                         : (game.videoId
                             ? `https://img.youtube.com/vi/${game.videoId}/maxresdefault.jpg`
-                            : (game.imageUrl || "/images/games/flashcard-quiz.png"));
+                            : (game.imageUrl || "https://media.dolcake.com/images/games/flashcard-quiz.png"));
 
                       return (
                         <img

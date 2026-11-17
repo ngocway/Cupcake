@@ -82,21 +82,21 @@ export interface GrammarDayStation {
 
 /** 15 Transparent PNG Badges for 45 Grammar Stage 1 (Days 1 - 15) */
 export const GRAMMAR_STAGE_1_ISLAND_IMAGES: Record<number, string> = {
-  1: '/assests/45 grammar/Map/Day_01.png',
-  2: '/assests/45 grammar/Map/Day_02.png',
-  3: '/assests/45 grammar/Map/Day_03.png',
-  4: '/assests/45 grammar/Map/Day_04.png',
-  5: '/assests/45 grammar/Map/Day_05.png',
-  6: '/assests/45 grammar/Map/Day_06.png',
-  7: '/assests/45 grammar/Map/Day_07.png',
-  8: '/assests/45 grammar/Map/Day_08.png',
-  9: '/assests/45 grammar/Map/Day_09.png',
-  10: '/assests/45 grammar/Map/Day_10.png',
-  11: '/assests/45 grammar/Map/Day_11.png',
-  12: '/assests/45 grammar/Map/Day_12.png',
-  13: '/assests/45 grammar/Map/Day_13.png',
-  14: '/assests/45 grammar/Map/Day_14.png',
-  15: '/assests/45 grammar/Map/Day_15.png',
+  1: 'https://media.dolcake.com/assests/45 grammar/Map/Day_01.png',
+  2: 'https://media.dolcake.com/assests/45 grammar/Map/Day_02.png',
+  3: 'https://media.dolcake.com/assests/45 grammar/Map/Day_03.png',
+  4: 'https://media.dolcake.com/assests/45 grammar/Map/Day_04.png',
+  5: 'https://media.dolcake.com/assests/45 grammar/Map/Day_05.png',
+  6: 'https://media.dolcake.com/assests/45 grammar/Map/Day_06.png',
+  7: 'https://media.dolcake.com/assests/45 grammar/Map/Day_07.png',
+  8: 'https://media.dolcake.com/assests/45 grammar/Map/Day_08.png',
+  9: 'https://media.dolcake.com/assests/45 grammar/Map/Day_09.png',
+  10: 'https://media.dolcake.com/assests/45 grammar/Map/Day_10.png',
+  11: 'https://media.dolcake.com/assests/45 grammar/Map/Day_11.png',
+  12: 'https://media.dolcake.com/assests/45 grammar/Map/Day_12.png',
+  13: 'https://media.dolcake.com/assests/45 grammar/Map/Day_13.png',
+  14: 'https://media.dolcake.com/assests/45 grammar/Map/Day_14.png',
+  15: 'https://media.dolcake.com/assests/45 grammar/Map/Day_15.png',
 };
 
 /** Metadata for Stage 1 Day Topics */
@@ -457,7 +457,7 @@ export function GrammarAgentMap({
           ══════════════════════════════════════════════════════════════════ */}
       <div
         className="absolute inset-0 w-full h-full flex flex-col items-center justify-between pt-16 sm:pt-20 pb-4 sm:pb-6 overflow-hidden bg-cover bg-center select-none"
-        style={{ backgroundImage: `url('/assests/45 grammar/Map/background.png')` }}
+        style={{ backgroundImage: `url('https://media.dolcake.com/assests/45 grammar/Map/background.png')` }}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
@@ -517,7 +517,7 @@ export function GrammarAgentMap({
             const isCompleted = station.isCompleted;
             const isLocked = isDecorativePreview || station.isLocked;
             const isShaking = shakingDay === dayNum;
-            const islandImg = GRAMMAR_STAGE_1_ISLAND_IMAGES[dayNum] || '/assests/45 grammar/Map/Day_01.png';
+            const islandImg = GRAMMAR_STAGE_1_ISLAND_IMAGES[dayNum] || 'https://media.dolcake.com/assests/45 grammar/Map/Day_01.png';
 
             const isOffscreen = absOffset > 2;
             const direction = offset >= 0 ? 1 : -1;

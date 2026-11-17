@@ -194,7 +194,7 @@ function EmptySearchState({ keyword, onClear }: { keyword: string, onClear: () =
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center animate-in fade-in zoom-in-95 duration-500">
       <div className="relative w-48 h-48 mb-8">
-        <img src="/images/bird.png" alt="No results" className="w-full h-full object-contain drop-shadow-xl opacity-60 grayscale" />
+        <img src="https://media.dolcake.com/images/bird.png" alt="No results" className="w-full h-full object-contain drop-shadow-xl opacity-60 grayscale" />
       </div>
       <h3 className="text-2xl font-headline font-black text-primary mb-3">Oops! No results found.</h3>
       <p className="text-on-surface-variant max-w-md mx-auto mb-8">
@@ -603,7 +603,7 @@ const ALL_GAMES_DATA: Record<string, any[]> = {
       title: "Flashcard Match",
       href: "/student/game/flashcard-match/select?level=kindergarten",
       gradient: "from-blue-200 to-indigo-405",
-      thumbnail: "/images/games/flashcard-match.png",
+      thumbnail: "https://media.dolcake.com/images/games/flashcard-match.png",
       emoji: "🎴",
       tag: "Vocabulary",
       desc: "Flip and match words with their correct images from your flashcards. Simple, fun and engaging memory game!",
@@ -614,7 +614,7 @@ const ALL_GAMES_DATA: Record<string, any[]> = {
       title: "Sentence Builder (Flashcards)",
       href: "/student/game/flashcard-sentence-builder/select?level=kindergarten",
       gradient: "from-violet-200 to-purple-400",
-      thumbnail: "/images/games/flashcard-sentence-builder.png",
+      thumbnail: "https://media.dolcake.com/images/games/flashcard-sentence-builder.png",
       emoji: "🧩",
       tag: "Grammar",
       desc: "Arrange words to build sentences matching your flashcard images and examples. Practice writing and speaking!",
@@ -625,7 +625,7 @@ const ALL_GAMES_DATA: Record<string, any[]> = {
       title: "Flashcard Quiz",
       href: "/student/game/flashcard-quiz/select?age=2-5",
       gradient: "from-pink-250 to-rose-400",
-      thumbnail: "/images/games/flashcard-quiz.png",
+      thumbnail: "https://media.dolcake.com/images/games/flashcard-quiz.png",
       emoji: "❓",
       tag: "Quiz",
       desc: "Listen to the questions, look at the images, and choose the correct words. Fun and engaging quiz games!",
@@ -638,7 +638,7 @@ const ALL_GAMES_DATA: Record<string, any[]> = {
       title: "Flashcard Match",
       href: "/student/game/flashcard-match/select?level=kid",
       gradient: "from-blue-200 to-indigo-405",
-      thumbnail: "/images/games/flashcard-match.png",
+      thumbnail: "https://media.dolcake.com/images/games/flashcard-match.png",
       emoji: "🎴",
       tag: "Vocabulary",
       desc: "Flip and match words with their correct images from your flashcards. Simple, fun and engaging memory game!",
@@ -649,7 +649,7 @@ const ALL_GAMES_DATA: Record<string, any[]> = {
       title: "Sentence Builder (Flashcards)",
       href: "/student/game/flashcard-sentence-builder/select?level=kid",
       gradient: "from-violet-200 to-purple-400",
-      thumbnail: "/images/games/flashcard-sentence-builder.png",
+      thumbnail: "https://media.dolcake.com/images/games/flashcard-sentence-builder.png",
       emoji: "🧩",
       tag: "Grammar",
       desc: "Arrange words to build sentences matching your flashcard images and examples. Practice writing and speaking!",
@@ -660,7 +660,7 @@ const ALL_GAMES_DATA: Record<string, any[]> = {
       title: "Flashcard Quiz",
       href: "/student/game/flashcard-quiz/select?age=6-12",
       gradient: "from-pink-250 to-rose-400",
-      thumbnail: "/images/games/flashcard-quiz.png",
+      thumbnail: "https://media.dolcake.com/images/games/flashcard-quiz.png",
       emoji: "❓",
       tag: "Quiz",
       desc: "Listen to the questions, look at the images, and choose the correct words. Fun and engaging quiz games!",
@@ -683,7 +683,7 @@ const ALL_GAMES_DATA: Record<string, any[]> = {
       title: "Flashcard Match",
       href: "/student/game/flashcard-match/select?level=teen",
       gradient: "from-blue-200 to-indigo-405",
-      thumbnail: "/images/games/flashcard-match.png",
+      thumbnail: "https://media.dolcake.com/images/games/flashcard-match.png",
       emoji: "🎴",
       tag: "Vocabulary",
       desc: "Flip and match words with their correct images from your flashcards. Simple, fun and engaging memory game!",
@@ -694,7 +694,7 @@ const ALL_GAMES_DATA: Record<string, any[]> = {
       title: "Sentence Builder (Flashcards)",
       href: "/student/game/flashcard-sentence-builder/select?level=teen",
       gradient: "from-violet-200 to-purple-400",
-      thumbnail: "/images/games/flashcard-sentence-builder.png",
+      thumbnail: "https://media.dolcake.com/images/games/flashcard-sentence-builder.png",
       emoji: "🧩",
       tag: "Grammar",
       desc: "Arrange words to build sentences matching your flashcard images and examples. Practice writing and speaking!",
@@ -705,7 +705,7 @@ const ALL_GAMES_DATA: Record<string, any[]> = {
       title: "Flashcard Quiz",
       href: "/student/game/flashcard-quiz/select?age=teen",
       gradient: "from-pink-250 to-rose-400",
-      thumbnail: "/images/games/flashcard-quiz.png",
+      thumbnail: "https://media.dolcake.com/images/games/flashcard-quiz.png",
       emoji: "❓",
       tag: "Quiz",
       desc: "Listen to the questions, look at the images, and choose the correct words. Fun and engaging quiz games!",
@@ -728,7 +728,7 @@ const ALL_GAMES_DATA: Record<string, any[]> = {
       title: "Flashcard Match",
       href: "/student/game/flashcard-match/select?level=learner",
       gradient: "from-blue-200 to-indigo-405",
-      thumbnail: "/images/games/flashcard-match.png",
+      thumbnail: "https://media.dolcake.com/images/games/flashcard-match.png",
       emoji: "🎴",
       tag: "Vocabulary",
       desc: "Flip and match words with their correct images from your flashcards. Simple, fun and engaging memory game!",
@@ -739,7 +739,7 @@ const ALL_GAMES_DATA: Record<string, any[]> = {
       title: "Sentence Builder (Flashcards)",
       href: "/student/game/flashcard-sentence-builder/select?level=learner",
       gradient: "from-violet-200 to-purple-400",
-      thumbnail: "/images/games/flashcard-sentence-builder.png",
+      thumbnail: "https://media.dolcake.com/images/games/flashcard-sentence-builder.png",
       emoji: "🧩",
       tag: "Grammar",
       desc: "Arrange words to build sentences matching your flashcard images and examples. Practice writing and speaking!",
@@ -750,7 +750,7 @@ const ALL_GAMES_DATA: Record<string, any[]> = {
       title: "Flashcard Quiz",
       href: "/student/game/flashcard-quiz/select?age=readers",
       gradient: "from-pink-250 to-rose-400",
-      thumbnail: "/images/games/flashcard-quiz.png",
+      thumbnail: "https://media.dolcake.com/images/games/flashcard-quiz.png",
       emoji: "❓",
       tag: "Quiz",
       desc: "Listen to the questions, look at the images, and choose the correct words. Fun and engaging quiz games!",
@@ -924,11 +924,11 @@ const GameList = memo(function GameList({ games, locale }: { games: any[]; local
 // ─── Mobile Subject Bar ───────────────────────────────────────────────────────
 
 const subjectStyleMap: Record<string, { bg: string; activeBg: string; border: string; activeBorder: string; text: string; activeText: string; icon: string }> = {
-  english: { bg: "bg-emerald-50", activeBg: "bg-emerald-500", border: "border-emerald-200", activeBorder: "border-emerald-500", text: "text-emerald-800", activeText: "text-white", icon: "/images/english.png" },
-  math: { bg: "bg-orange-50", activeBg: "bg-orange-500", border: "border-orange-200", activeBorder: "border-orange-500", text: "text-orange-800", activeText: "text-white", icon: "/images/math.png" },
-  global: { bg: "bg-sky-50", activeBg: "bg-sky-500", border: "border-sky-200", activeBorder: "border-sky-500", text: "text-sky-800", activeText: "text-white", icon: "/images/global.png" },
+  english: { bg: "bg-emerald-50", activeBg: "bg-emerald-500", border: "border-emerald-200", activeBorder: "border-emerald-500", text: "text-emerald-800", activeText: "text-white", icon: "https://media.dolcake.com/images/english.png" },
+  math: { bg: "bg-orange-50", activeBg: "bg-orange-500", border: "border-orange-200", activeBorder: "border-orange-500", text: "text-orange-800", activeText: "text-white", icon: "https://media.dolcake.com/images/math.png" },
+  global: { bg: "bg-sky-50", activeBg: "bg-sky-500", border: "border-sky-200", activeBorder: "border-sky-500", text: "text-sky-800", activeText: "text-white", icon: "https://media.dolcake.com/images/global.png" },
 };
-const defaultSubjectStyle = { bg: "bg-purple-50", activeBg: "bg-purple-500", border: "border-purple-200", activeBorder: "border-purple-500", text: "text-purple-800", activeText: "text-white", icon: "/images/english.png" };
+const defaultSubjectStyle = { bg: "bg-purple-50", activeBg: "bg-purple-500", border: "border-purple-200", activeBorder: "border-purple-500", text: "text-purple-800", activeText: "text-white", icon: "https://media.dolcake.com/images/english.png" };
 
 function MobileSubjectBar({ subjects, activeSubject, onSelect, isPending }: { subjects: any[]; activeSubject: string; onSelect: (id: string) => void; isPending: boolean }) {
   return (
@@ -1399,10 +1399,10 @@ export function LandingPage({ promises, searchParams, initialUserType = "learner
 
   // Avatar lookup map for landing page summary
   const avatarMap: Record<string, { label: string; src: string }> = {
-    kindergarten: { label: "KINDERGARTEN", src: "/images/avatars/kid.png" },
-    kid: { label: "KID", src: "/images/avatars/kid.png" },
-    teen: { label: "TEEN", src: "/images/avatars/teen.png" },
-    learner: { label: "LEARNER", src: "/images/avatars/adult.png" },
+    kindergarten: { label: "KINDERGARTEN", src: "https://media.dolcake.com/images/avatars/kid.png" },
+    kid: { label: "KID", src: "https://media.dolcake.com/images/avatars/kid.png" },
+    teen: { label: "TEEN", src: "https://media.dolcake.com/images/avatars/teen.png" },
+    learner: { label: "LEARNER", src: "https://media.dolcake.com/images/avatars/adult.png" },
   };
   const activeAvatar = avatarMap[userType] || avatarMap.learner;
 

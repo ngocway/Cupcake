@@ -61,7 +61,7 @@ export function useQuizAudioEngine({
   useEffect(() => {
     if (typeof window === "undefined" || isEmbeddedInCanvas) return;
 
-    const bgMusic = new Audio("/sounds/bg-music.mp3?v=2");
+    const bgMusic = new Audio("https://media.dolcake.com/sounds/bg-music.mp3?v=2");
     bgMusic.loop = true;
     bgMusic.volume = isMuted ? 0 : 0.1;
     bgMusicRef.current = bgMusic;
@@ -211,7 +211,7 @@ export function useQuizAudioEngine({
           }
         }
         if (idx < parts.length - 1) {
-          list.push({ type: "sound", src: "/sounds/ting_chime.wav" });
+          list.push({ type: "sound", src: "https://media.dolcake.com/sounds/ting_chime.wav" });
         }
       });
     } else {
@@ -445,7 +445,7 @@ export function useQuizAudioEngine({
 
   const playClickSound = useCallback(() => {
     if (typeof window !== "undefined" && !isMuted) {
-      const snd = new Audio("/sounds/click.wav");
+      const snd = new Audio("https://media.dolcake.com/sounds/click.wav");
       snd.play().catch(() => {});
     }
   }, [isMuted]);

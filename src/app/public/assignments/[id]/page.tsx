@@ -31,7 +31,7 @@ export async function generateMetadata(
   const description =
     assignment.shortDescription ||
     `Practice English with "${assignment.title}" — an interactive exercise on Dolcake, the fun English learning platform.`;
-  const thumbnail = assignment.thumbnail ?? "/images/og-image.png";
+  const thumbnail = assignment.thumbnail ?? "https://media.dolcake.com/images/og-image.png";
   const canonicalPath = `/public/assignments/${assignment.slug ?? assignment.id}`;
 
   return {

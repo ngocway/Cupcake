@@ -54,8 +54,8 @@ function CandyQuizGameContent() {
   }, [topicId]);
 
   const gameSrc = topicId
-    ? `/games/candy-grammar-sugar-jelly/index.html?topicId=${encodeURIComponent(topicId)}`
-    : `/games/candy-grammar-sugar-jelly/index.html`;
+    ? `https://media.dolcake.com/games/candy-grammar-sugar-jelly/index.html?topicId=${encodeURIComponent(topicId)}`
+    : `https://media.dolcake.com/games/candy-grammar-sugar-jelly/index.html`;
 
   return (
     <ForcedLandscapeWrapper

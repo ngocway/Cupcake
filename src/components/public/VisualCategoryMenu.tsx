@@ -39,9 +39,9 @@ export function VisualCategoryMenu({
   }, [categoryTree, activeCategoryId]);
 
   const solarpunkStyles = [
-    { icon: "/images/english.png", color: "text-emerald-900", bg: "bg-emerald-100", border: "border-emerald-300", iconBg: "bg-emerald-200", shadow: "shadow-emerald-900/10" },
-    { icon: "/images/math.png", color: "text-orange-900", bg: "bg-orange-100", border: "border-orange-300", iconBg: "bg-orange-200", shadow: "shadow-orange-900/10" },
-    { icon: "/images/global.png", color: "text-sky-900", bg: "bg-sky-100", border: "border-sky-300", iconBg: "bg-sky-200", shadow: "shadow-sky-900/10" },
+    { icon: "https://media.dolcake.com/images/english.png", color: "text-emerald-900", bg: "bg-emerald-100", border: "border-emerald-300", iconBg: "bg-emerald-200", shadow: "shadow-emerald-900/10" },
+    { icon: "https://media.dolcake.com/images/math.png", color: "text-orange-900", bg: "bg-orange-100", border: "border-orange-300", iconBg: "bg-orange-200", shadow: "shadow-orange-900/10" },
+    { icon: "https://media.dolcake.com/images/global.png", color: "text-sky-900", bg: "bg-sky-100", border: "border-sky-300", iconBg: "bg-sky-200", shadow: "shadow-sky-900/10" },
     { icon: Atom, color: "text-purple-900", bg: "bg-purple-100", border: "border-purple-300", iconBg: "bg-purple-200", shadow: "shadow-purple-900/10" },
     { icon: Palette, color: "text-rose-900", bg: "bg-rose-100", border: "border-rose-300", iconBg: "bg-rose-200", shadow: "shadow-rose-900/10" },
     { icon: Sparkles, color: "text-amber-900", bg: "bg-amber-100", border: "border-amber-300", iconBg: "bg-amber-200", shadow: "shadow-amber-900/10" },

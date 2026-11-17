@@ -559,21 +559,21 @@ export async function getCachedPublicClasses(): Promise<PublicClassItemType[]> {
           typeBadgeClass: 'bg-[#fef3c7] text-[#b45309] border-[#fde68a]',
           typeBadge: '🔥 Miễn phí',
           btnGradient: 'from-[#06b6d4] to-[#0ea5e9] hover:from-[#0891b2] hover:to-[#0284c7] shadow-cyan-500/25',
-          fallbackThumb: '/assests/Classes/thumbnails/class-thumb-neutral-default.jpg',
+          fallbackThumb: 'https://media.dolcake.com/assests/Classes/thumbnails/class-thumb-neutral-default.jpg',
         },
         {
           subjectBadgeClass: 'bg-[#ffedd5] text-[#c2410c] border-[#fdba74]',
           typeBadgeClass: 'bg-[#fee2e2] text-[#b91c1c] border-[#fca5a5]',
           typeBadge: '🔥 Hot',
           btnGradient: 'from-[#f97316] to-[#f43f5e] hover:from-[#ea580c] hover:to-[#e11d48] shadow-rose-500/25',
-          fallbackThumb: '/assests/Classes/thumbnails/class-thumb-neutral-default.jpg',
+          fallbackThumb: 'https://media.dolcake.com/assests/Classes/thumbnails/class-thumb-neutral-default.jpg',
         },
         {
           subjectBadgeClass: 'bg-[#ede9fe] text-[#6d28d9] border-[#c4b5fd]',
           typeBadgeClass: 'bg-[#fef3c7] text-[#b45309] border-[#fde68a]',
           typeBadge: '🔥 Mới mở',
           btnGradient: 'from-[#8b5cf6] to-[#6366f1] hover:from-[#7c3aed] hover:to-[#4f46e5] shadow-indigo-500/25',
-          fallbackThumb: '/assests/Classes/thumbnails/class-thumb-neutral-default.jpg',
+          fallbackThumb: 'https://media.dolcake.com/assests/Classes/thumbnails/class-thumb-neutral-default.jpg',
         },
       ];
 
@@ -597,7 +597,7 @@ export async function getCachedPublicClasses(): Promise<PublicClassItemType[]> {
 
         const grade = c.gradeLevel ? `Lớp ${c.gradeLevel}` : 'Tiểu học';
         const teacherName = c.teacher?.name || 'Giáo viên Dolcake';
-        const teacherAvatar = c.teacher?.image || '/assests/Classes/avatars/teacher-avatar-ms-jessica.png';
+        const teacherAvatar = c.teacher?.image || 'https://media.dolcake.com/assests/Classes/avatars/teacher-avatar-ms-jessica.png';
 
         return {
           id: c.id,

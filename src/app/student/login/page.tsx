@@ -23,7 +23,7 @@ export default function LoginPage() {
 
         <div className="relative z-10 max-w-md text-center">
           <img 
-            src="/images/logo.png" 
+            src="https://media.dolcake.com/images/logo.png" 
             alt="Dolcake" 
             className="w-24 h-24 object-contain mb-10 animate-float" 
           />

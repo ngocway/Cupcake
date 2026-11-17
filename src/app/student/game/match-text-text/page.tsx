@@ -48,7 +48,7 @@ function MatchTextTextGameContent() {
         </div>
       )}
       <iframe
-        src={`/games/match-text-text/index.html${topicId ? `?topicId=${topicId}` : ""}`}
+        src={`https://media.dolcake.com/games/match-text-text/index.html${topicId ? `?topicId=${topicId}` : ""}`}
         className={`w-full h-full flex-1 border-none block transition-opacity duration-700 ${
           isLoading ? "opacity-0" : "opacity-100"
         }`}

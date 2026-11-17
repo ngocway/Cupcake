@@ -50,7 +50,7 @@ function FlashcardSentenceBuilderGameContent() {
           </div>
         )}
         <iframe 
-          src={`/games/flashcard-sentence-builder/index.html?topicId=${topicId}&age=${age}`} 
+          src={`https://media.dolcake.com/games/flashcard-sentence-builder/index.html?topicId=${topicId}&age=${age}`} 
           className={`w-full h-full border-none transition-opacity duration-700 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
           title="Flashcard Sentence Builder Game"
           sandbox="allow-scripts allow-same-origin"

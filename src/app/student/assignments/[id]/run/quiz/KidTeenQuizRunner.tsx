@@ -653,7 +653,7 @@ export default function KidTeenQuizRunner({
       {/* Main Content Area */}
       <div
         className="flex-1 flex flex-col items-center justify-start lg:justify-center pt-14 lg:pt-16 p-2 lg:p-6 w-full relative bg-cover bg-center bg-no-repeat"
-        style={isHighLevel ? {} : { backgroundImage: "url(/images/background/cartoon-background-children.jpg)" }}
+        style={isHighLevel ? {} : { backgroundImage: "url(https://media.dolcake.com/images/background/cartoon-background-children.jpg)" }}
       >
         {/* Floating Top-Left Controls */}
         <div className="absolute top-4 left-4 sm:left-6 z-30 flex items-center gap-2 sm:gap-2.5">
@@ -664,7 +664,7 @@ export default function KidTeenQuizRunner({
               title="Về trang chủ"
             >
               <img
-                src="/images/logo.png"
+                src="https://media.dolcake.com/images/logo.png"
                 alt="Dolcake"
                 className="w-7 h-7 object-contain group-hover:rotate-12 transition-transform duration-700 shrink-0"
               />

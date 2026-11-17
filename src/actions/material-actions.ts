@@ -1849,7 +1849,7 @@ export async function getAssignableLibraryContentAction(): Promise<{
       level: mapAgeGroupToLevel(g.ageGroup),
       itemCount: g._count?.items || 0,
       itemUnit: 'từ/câu',
-      thumbnail: g.thumbnailUrl || (g.gameMode === 'shooter-quiz' ? '/images/games/shooter-quiz.jpg' : '/images/games/candy-quiz.jpg'),
+      thumbnail: g.thumbnailUrl || (g.gameMode === 'shooter-quiz' ? 'https://media.dolcake.com/images/games/shooter-quiz.jpg' : 'https://media.dolcake.com/images/games/candy-quiz.jpg'),
       createdAt: g.createdAt ? g.createdAt.toISOString() : new Date().toISOString(),
       isAssignment: false,
       previewUrl: getGamePlayUrl(g),
@@ -1868,7 +1868,7 @@ export async function getAssignableLibraryContentAction(): Promise<{
       level: mapAgeGroupToLevel(g.ageGroup),
       itemCount: g._count?.items || 0,
       itemUnit: 'từ/câu',
-      thumbnail: g.thumbnailUrl || (g.gameMode === 'shooter-quiz' ? '/images/games/shooter-quiz.jpg' : '/images/games/candy-quiz.jpg'),
+      thumbnail: g.thumbnailUrl || (g.gameMode === 'shooter-quiz' ? 'https://media.dolcake.com/images/games/shooter-quiz.jpg' : 'https://media.dolcake.com/images/games/candy-quiz.jpg'),
       createdAt: g.createdAt ? g.createdAt.toISOString() : new Date().toISOString(),
       isAssignment: false,
       previewUrl: getGamePlayUrl(g),
@@ -1929,8 +1929,8 @@ async function resolveItemThumbnail(item: { type: string; rawId: string; thumbna
       select: { thumbnailUrl: true, gameMode: true }
     });
     if (t?.thumbnailUrl) return t.thumbnailUrl;
-    if (t?.gameMode === 'shooter-quiz') return '/images/games/shooter-quiz.jpg';
-    return '/images/games/candy-quiz.jpg';
+    if (t?.gameMode === 'shooter-quiz') return 'https://media.dolcake.com/images/games/shooter-quiz.jpg';
+    return 'https://media.dolcake.com/images/games/candy-quiz.jpg';
   } else if (typeUpper === 'FLASHCARD') {
     const f = await prisma.flashcardTopic.findUnique({
       where: { id: item.rawId },
@@ -2935,7 +2935,7 @@ export async function resolveInternalLinkForAssignmentAction(
           level: mapAgeGroupToLevel(gTopic.ageGroup),
           itemCount: gTopic._count?.items || 0,
           itemUnit: 'từ/câu',
-          thumbnail: gTopic.thumbnailUrl || (gTopic.gameMode === 'shooter-quiz' ? '/images/games/shooter-quiz.jpg' : '/images/games/candy-quiz.jpg'),
+          thumbnail: gTopic.thumbnailUrl || (gTopic.gameMode === 'shooter-quiz' ? 'https://media.dolcake.com/images/games/shooter-quiz.jpg' : 'https://media.dolcake.com/images/games/candy-quiz.jpg'),
           createdAt: gTopic.createdAt ? gTopic.createdAt.toISOString() : new Date().toISOString(),
           isAssignment: false,
           previewUrl: getGamePlayUrl(gTopic),
@@ -3017,7 +3017,7 @@ export async function resolveInternalLinkForAssignmentAction(
         level: mapAgeGroupToLevel(g.ageGroup),
         itemCount: g._count?.items || 0,
         itemUnit: 'từ/câu',
-        thumbnail: g.thumbnailUrl || (g.gameMode === 'shooter-quiz' ? '/images/games/shooter-quiz.jpg' : '/images/games/candy-quiz.jpg'),
+        thumbnail: g.thumbnailUrl || (g.gameMode === 'shooter-quiz' ? 'https://media.dolcake.com/images/games/shooter-quiz.jpg' : 'https://media.dolcake.com/images/games/candy-quiz.jpg'),
         createdAt: g.createdAt ? g.createdAt.toISOString() : new Date().toISOString(),
         isAssignment: false,
         previewUrl: getGamePlayUrl(g),
@@ -3436,7 +3436,7 @@ export async function searchAssignableContentAction(
             level: mapAgeGroupToLevel(g.ageGroup),
             itemCount: g._count?.items || 0,
             itemUnit: 'từ/câu',
-            thumbnail: g.thumbnailUrl || (g.gameMode === 'shooter-quiz' || g.gameMode === 'choice-shooter' ? '/images/games/shooter-quiz.jpg' : g.gameMode === 'train' ? '/images/games/train-vocab.png' : '/images/games/candy-quiz.jpg'),
+            thumbnail: g.thumbnailUrl || (g.gameMode === 'shooter-quiz' || g.gameMode === 'choice-shooter' ? 'https://media.dolcake.com/images/games/shooter-quiz.jpg' : g.gameMode === 'train' ? 'https://media.dolcake.com/images/games/train-vocab.png' : 'https://media.dolcake.com/images/games/candy-quiz.jpg'),
             createdAt: g.createdAt ? g.createdAt.toISOString() : new Date().toISOString(),
             isAssignment: false,
             previewUrl: getGamePlayUrl(g),
@@ -3501,7 +3501,7 @@ export async function searchAssignableContentAction(
             level: lvl,
             itemCount: count,
             itemUnit: 'thẻ từ',
-            thumbnail: f.iconUrl || '/images/games/flashcard-match.png',
+            thumbnail: f.iconUrl || 'https://media.dolcake.com/images/games/flashcard-match.png',
             createdAt: created,
             isAssignment: false,
             previewUrl: `/student/game/flashcard-match?topicId=${f.id}`,
@@ -3519,7 +3519,7 @@ export async function searchAssignableContentAction(
             level: lvl,
             itemCount: count,
             itemUnit: 'câu',
-            thumbnail: '/images/games/flashcard-sentence-builder.png',
+            thumbnail: 'https://media.dolcake.com/images/games/flashcard-sentence-builder.png',
             createdAt: created,
             isAssignment: false,
             previewUrl: `/student/game/flashcard-sentence-builder?topicId=${f.id}&age=${ageParam}`,
@@ -3537,7 +3537,7 @@ export async function searchAssignableContentAction(
             level: lvl,
             itemCount: count,
             itemUnit: 'câu hỏi',
-            thumbnail: '/images/games/flashcard-quiz.png',
+            thumbnail: 'https://media.dolcake.com/images/games/flashcard-quiz.png',
             createdAt: created,
             isAssignment: false,
             previewUrl: `/student/game/flashcard-quiz?age=${ageParam}&topicId=${f.id}`,
@@ -3578,7 +3578,7 @@ export async function searchAssignableContentAction(
             level: mapAgeGroupToLevel(sb.ageGroup),
             itemCount: sb._count?.questions || 0,
             itemUnit: 'câu',
-            thumbnail: sb.thumbnailUrl || '/images/games/sentence-builder.png',
+            thumbnail: sb.thumbnailUrl || 'https://media.dolcake.com/images/games/sentence-builder.png',
             createdAt: sb.createdAt ? sb.createdAt.toISOString() : new Date().toISOString(),
             isAssignment: false,
             previewUrl: `/student/game/sentence-builder/${sb.id}?age=${sb.ageGroup || '6-12'}`,

@@ -26,7 +26,7 @@ const QUIZ_GAMES: GameCard[] = [
     badge: "KẸO NGỌT",
     badgeBg: "bg-gradient-to-r from-pink-500 to-rose-500 text-white",
     desc: "Học sinh tham gia trả lời các câu hỏi và 4 đáp án dạng câu văn dài trên giao diện Xứ sở Kẹo Ngọt (Candy World) đầy màu sắc và âm thanh vui nhộn.",
-    imageUrl: "/images/games/candy-quiz.jpg",
+    imageUrl: "https://media.dolcake.com/images/games/candy-quiz.jpg",
     videoId: "m6_CohSIXpo",
     guideVideoId: "kzlPlOYLZUg",
     createHref: "/teacher/games/candy-quiz/create",
@@ -38,7 +38,7 @@ const QUIZ_GAMES: GameCard[] = [
     badge: "KHO BÁU",
     badgeBg: "bg-gradient-to-r from-amber-500 to-yellow-600 text-white",
     desc: "Học sinh tham gia trả lời các câu hỏi trắc nghiệm để mở khóa các ô bí ẩn trên bản đồ hải tặc kỳ bí và thu thập các rương vàng quý giá.",
-    imageUrl: "/games/mystery-treasure-grid-assets/assets/webp/background-stage.webp",
+    imageUrl: "https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/webp/background-stage.webp",
     videoId: "9juS0TQRyHw",
     guideVideoId: "cd1fmkugmxY",
     createHref: "/teacher/games/treasure-hunt/create",
@@ -50,7 +50,7 @@ const QUIZ_GAMES: GameCard[] = [
     badge: "BẮN SÚNG",
     badgeBg: "bg-gradient-to-r from-cyan-500 to-blue-600 text-white",
     desc: "Học sinh điều khiển nòng pháo không gian, bắn đạn laser neon vào các quả cầu năng lượng chứa đáp án đúng giữa vũ trụ huyền ảo.",
-    imageUrl: "/images/games/shooter-quiz.jpg",
+    imageUrl: "https://media.dolcake.com/images/games/shooter-quiz.jpg",
     videoId: "MxrxyO1a8gM",
     createHref: "/teacher/games/shooter-quiz/create",
     titleColor: "text-cyan-600 dark:text-cyan-400",
@@ -115,7 +115,7 @@ function QuizGameCardItem({
             src={
               game.videoId
                 ? `https://img.youtube.com/vi/${game.videoId}/maxresdefault.jpg`
-                : (game.imageUrl || "/images/games/flashcard-quiz.png")
+                : (game.imageUrl || "https://media.dolcake.com/images/games/flashcard-quiz.png")
             }
             onError={(e) => {
               const target = e.currentTarget;

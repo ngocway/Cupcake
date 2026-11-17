@@ -398,7 +398,7 @@ function launchPreloadItem(entry: QueueEntry) {
     (meta.playUrl && (
       meta.playUrl.includes('flashcard-match') ||
       meta.playUrl.includes('/student/game/') ||
-      meta.playUrl.includes('/games/')
+      meta.playUrl.includes('https://media.dolcake.com/games/')
     )) ||
     meta.gameMode === 'match' ||
     (item.assignment.instructions && (
@@ -431,7 +431,7 @@ function launchPreloadItem(entry: QueueEntry) {
       matType === 'GAME' ||
       (item.assignment.instructions && (
         item.assignment.instructions.includes('/game/') ||
-        item.assignment.instructions.includes('/games/')
+        item.assignment.instructions.includes('https://media.dolcake.com/games/')
       ))
     ))
   );
@@ -772,7 +772,7 @@ export async function loadAssignmentUrgent(
     (meta.playUrl && (
       meta.playUrl.includes('flashcard-match') ||
       meta.playUrl.includes('/student/game/') ||
-      meta.playUrl.includes('/games/')
+      meta.playUrl.includes('https://media.dolcake.com/games/')
     )) ||
     meta.gameMode === 'match' ||
     (item.assignment.instructions && (
@@ -802,7 +802,7 @@ export async function loadAssignmentUrgent(
       matType === 'GAME' ||
       (item.assignment.instructions && (
         item.assignment.instructions.includes('/game/') ||
-        item.assignment.instructions.includes('/games/')
+        item.assignment.instructions.includes('https://media.dolcake.com/games/')
       ))
     ))
   );

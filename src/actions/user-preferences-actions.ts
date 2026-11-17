@@ -134,12 +134,12 @@ const DEFAULT_CONFIG = {
     {
       id: "english",
       label: "English",
-      icon: "/images/english.png",
+      icon: "https://media.dolcake.com/images/english.png",
       ageGroups: [
         {
           id: "kid",
           label: "Kid (6-10 years)",
-          avatar: "/images/avatars/kid.png",
+          avatar: "https://media.dolcake.com/images/avatars/kid.png",
           levels: [
             { id: "pre-a1-a1", label: "Beginner (Pre-A1, A1)" },
             { id: "a2", label: "Elementary (A2)" }
@@ -148,7 +148,7 @@ const DEFAULT_CONFIG = {
         {
           id: "teen",
           label: "Teen (11-16 years)",
-          avatar: "/images/avatars/teen.png",
+          avatar: "https://media.dolcake.com/images/avatars/teen.png",
           levels: [
             { id: "pre-a1-a1", label: "Beginner (Pre-A1, A1)" },
             { id: "a2", label: "Elementary (A2)" },
@@ -158,7 +158,7 @@ const DEFAULT_CONFIG = {
         {
           id: "learner",
           label: "Learner (16+)",
-          avatar: "/images/avatars/adult.png",
+          avatar: "https://media.dolcake.com/images/avatars/adult.png",
           levels: [
             { id: "pre-a1-a1", label: "Beginner (Pre-A1, A1)" },
             { id: "a2", label: "Elementary (A2)" },
@@ -171,12 +171,12 @@ const DEFAULT_CONFIG = {
     {
       id: "math",
       label: "Math",
-      icon: "/images/math.png",
+      icon: "https://media.dolcake.com/images/math.png",
       ageGroups: [
         {
           id: "kid",
           label: "Kid (6-10 years)",
-          avatar: "/images/avatars/kid.png",
+          avatar: "https://media.dolcake.com/images/avatars/kid.png",
           levels: []
         }
       ]
@@ -184,12 +184,12 @@ const DEFAULT_CONFIG = {
     {
       id: "science",
       label: "Science",
-      icon: "/images/global.png",
+      icon: "https://media.dolcake.com/images/global.png",
       ageGroups: [
         {
           id: "kid",
           label: "Kid (6-10 years)",
-          avatar: "/images/avatars/kid.png",
+          avatar: "https://media.dolcake.com/images/avatars/kid.png",
           levels: []
         }
       ]

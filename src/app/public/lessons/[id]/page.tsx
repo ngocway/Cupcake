@@ -82,7 +82,7 @@ export async function generateMetadata(
   const description =
     lesson.description ||
     `Learn English with "${lesson.title}" — an interactive lesson on Dolcake, the fun English learning platform for kids and teens.`;
-  const thumbnail = lesson.assignment?.thumbnail ?? "/images/og-image.png";
+  const thumbnail = lesson.assignment?.thumbnail ?? "https://media.dolcake.com/images/og-image.png";
   const canonicalPath = `/public/lessons/${lesson.slug ?? lesson.id}`;
 
   return {

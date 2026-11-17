@@ -27,7 +27,7 @@ export function SidebarHeroSentence({ config }: Props) {
   const ageGroupLabel = (rawAgeGroupLabel?.toUpperCase() === "KINDERGARTEN (< 6 YEARS)" || rawAgeGroupLabel?.toLowerCase() === "kindergarten")
     ? "Kindergarten"
     : rawAgeGroupLabel;
-  const avatarSrc = ageGroupData?.avatar || "/images/avatars/adult.png";
+  const avatarSrc = ageGroupData?.avatar || "https://media.dolcake.com/images/avatars/adult.png";
 
   return (
     <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-left duration-1000">

@@ -185,7 +185,7 @@ export function PublicHeader({ session, search, setSearch, isPendingSearch }: Pu
       <div className="flex items-center gap-2 sm:gap-4 min-w-0">
         <Link href="/" className="hidden lg:flex items-center gap-1.5 sm:gap-3 group">
           <img 
-            src="/images/logo.png" 
+            src="https://media.dolcake.com/images/logo.png" 
             alt="Dolcake" 
             width={36}
             height={36}

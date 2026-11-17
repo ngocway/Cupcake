@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/images/teacher-og-banner.jpg",
+        url: "https://media.dolcake.com/images/teacher-og-banner.jpg",
         width: 1200,
         height: 630,
         alt: "Dolcake Teacher Portal – Công cụ Tạo Trò Chơi Dạy Học Tương Tác Miễn Phí Cho Giáo Viên",
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
     title: "Dolcake Teacher Portal – Công cụ Tạo Trò Chơi Dạy Học Tương Tác Miễn Phí",
     description:
       "Nền tảng tạo game học tập tương tác & kho câu hỏi Global Success 1–12 miễn phí cho giáo viên.",
-    images: ["/images/teacher-og-banner.jpg"],
+    images: ["https://media.dolcake.com/images/teacher-og-banner.jpg"],
   },
 };
 

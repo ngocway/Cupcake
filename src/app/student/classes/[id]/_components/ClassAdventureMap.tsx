@@ -152,17 +152,17 @@ interface StageMapConfig {
 
 const STAGE_MAP_CONFIGS: Record<number, StageMapConfig> = {
   1: {
-    bgImage: '/assests/Vocab/dolcake_15_islands/background_2to1.jpg',
+    bgImage: 'https://media.dolcake.com/assests/Vocab/dolcake_15_islands/background_2to1.jpg',
     coordinates: STAGE_1_COORDINATES,
     finishTitle: 'Lâu đài Cổ tích',
   },
   2: {
-    bgImage: '/assests/Vocab/Whimsical Treehouse Kingdom Valley.png',
+    bgImage: 'https://media.dolcake.com/assests/Vocab/Whimsical Treehouse Kingdom Valley.png',
     coordinates: STAGE_2_COORDINATES,
     finishTitle: 'Vương quốc Cây Cổ thụ',
   },
   3: {
-    bgImage: '/assests/Vocab/Starry Isle Adventure Map.png',
+    bgImage: 'https://media.dolcake.com/assests/Vocab/Starry Isle Adventure Map.png',
     coordinates: STAGE_3_COORDINATES,
     finishTitle: 'Lâu đài Ngôi sao Tốt nghiệp',
   },
@@ -170,21 +170,21 @@ const STAGE_MAP_CONFIGS: Record<number, StageMapConfig> = {
 
 /** Individual 15 Island Transparent PNG Assets for Stage 1 3D Coverflow */
 export const STAGE_1_ISLAND_IMAGES: Record<number, string> = {
-  1: '/assests/Vocab/dolcake_15_islands/01_my_body.png?v=2',
-  2: '/assests/Vocab/dolcake_15_islands/02_my_colors.png',
-  3: '/assests/Vocab/dolcake_15_islands/03_my_family.png',
-  4: '/assests/Vocab/dolcake_15_islands/04_my_clothes.png',
-  5: '/assests/Vocab/dolcake_15_islands/05_my_toys.png',
-  6: '/assests/Vocab/dolcake_15_islands/06_fruits.png',
-  7: '/assests/Vocab/dolcake_15_islands/07_vegetables.png',
-  8: '/assests/Vocab/dolcake_15_islands/08_favorite_food.png',
-  9: '/assests/Vocab/dolcake_15_islands/09_drinks.png',
-  10: '/assests/Vocab/dolcake_15_islands/10_sweet_treats.png',
-  11: '/assests/Vocab/dolcake_15_islands/11_my_pets.png',
-  12: '/assests/Vocab/dolcake_15_islands/12_farm_animal.png',
-  13: '/assests/Vocab/dolcake_15_islands/13_wild_animals.png',
-  14: '/assests/Vocab/dolcake_15_islands/14_sea_animals.png',
-  15: '/assests/Vocab/dolcake_15_islands/15_cute_bugs.png',
+  1: 'https://media.dolcake.com/assests/Vocab/dolcake_15_islands/01_my_body.png?v=2',
+  2: 'https://media.dolcake.com/assests/Vocab/dolcake_15_islands/02_my_colors.png',
+  3: 'https://media.dolcake.com/assests/Vocab/dolcake_15_islands/03_my_family.png',
+  4: 'https://media.dolcake.com/assests/Vocab/dolcake_15_islands/04_my_clothes.png',
+  5: 'https://media.dolcake.com/assests/Vocab/dolcake_15_islands/05_my_toys.png',
+  6: 'https://media.dolcake.com/assests/Vocab/dolcake_15_islands/06_fruits.png',
+  7: 'https://media.dolcake.com/assests/Vocab/dolcake_15_islands/07_vegetables.png',
+  8: 'https://media.dolcake.com/assests/Vocab/dolcake_15_islands/08_favorite_food.png',
+  9: 'https://media.dolcake.com/assests/Vocab/dolcake_15_islands/09_drinks.png',
+  10: 'https://media.dolcake.com/assests/Vocab/dolcake_15_islands/10_sweet_treats.png',
+  11: 'https://media.dolcake.com/assests/Vocab/dolcake_15_islands/11_my_pets.png',
+  12: 'https://media.dolcake.com/assests/Vocab/dolcake_15_islands/12_farm_animal.png',
+  13: 'https://media.dolcake.com/assests/Vocab/dolcake_15_islands/13_wild_animals.png',
+  14: 'https://media.dolcake.com/assests/Vocab/dolcake_15_islands/14_sea_animals.png',
+  15: 'https://media.dolcake.com/assests/Vocab/dolcake_15_islands/15_cute_bugs.png',
 };
 
 /** Rich Topic Meta with adorable child-friendly emojis and vibrant gradients */
@@ -735,7 +735,7 @@ export function ClassAdventureMap({
       {selectedStage === 1 ? (
         <div
           className="absolute inset-0 w-full h-full flex flex-col items-center justify-between pt-14 sm:pt-4 pb-2 sm:pb-3 overflow-hidden bg-cover bg-center select-none cursor-grab active:cursor-grabbing"
-          style={{ backgroundImage: `url('/assests/Vocab/dolcake_15_islands/background_2to1.jpg')` }}
+          style={{ backgroundImage: `url('https://media.dolcake.com/assests/Vocab/dolcake_15_islands/background_2to1.jpg')` }}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
           onMouseDown={handleMouseDown}
@@ -781,7 +781,7 @@ export function ClassAdventureMap({
               const isCompleted = station.isCompleted;
               const isLocked = station.isLocked;
               const isShaking = shakingDay === dayNum;
-              const islandImg = STAGE_1_ISLAND_IMAGES[dayNum] || '/assests/Vocab/dolcake_15_islands/01_my_body.png?v=2';
+              const islandImg = STAGE_1_ISLAND_IMAGES[dayNum] || 'https://media.dolcake.com/assests/Vocab/dolcake_15_islands/01_my_body.png?v=2';
 
               const topicMeta = DAY_TOPIC_EMOJIS[dayNum] || {
                 emoji: '⭐',

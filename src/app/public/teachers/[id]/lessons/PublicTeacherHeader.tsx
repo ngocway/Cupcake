@@ -19,7 +19,7 @@ export function PublicTeacherHeader() {
         <nav className="bg-white/70 backdrop-blur-xl border border-primary/10 rounded-full shadow-2xl flex justify-between items-center px-3 sm:px-6 md:px-10 py-2.5 sm:py-4">
           <Link href="/" className="flex items-center gap-1.5 sm:gap-3 group">
             <img 
-              src="/images/logo.png" 
+              src="https://media.dolcake.com/images/logo.png" 
               alt="Dolcake" 
               className="w-9 h-9 sm:w-12 sm:h-12 object-contain group-hover:rotate-12 transition-transform duration-700 shrink-0" 
             />

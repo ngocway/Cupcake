@@ -433,7 +433,7 @@ export function parseItemConfig(item: StudentGroupItem): ParsedItemConfig {
     kind = 'LESSON';
   } else if (isExplicitReading) {
     kind = 'READING';
-  } else if (kind === 'GAME' || item.assignment.materialType === 'GAME' || targetUrl.includes('/game/') || targetUrl.includes('/games/')) {
+  } else if (kind === 'GAME' || item.assignment.materialType === 'GAME' || targetUrl.includes('/game/') || targetUrl.includes('https://media.dolcake.com/games/')) {
     kind = 'GAME';
   } else if (item.assignment.materialType === 'FLASHCARD' || kind === 'FLASHCARD' || targetUrl.includes('/flashcard')) {
     kind = 'FLASHCARD';
@@ -2026,7 +2026,7 @@ export function StudentAssignmentsView({
       currentItemStage === 'game' ||
       activeItemConfig.item.assignment.materialType === 'GAME' ||
       parseItemConfig(activeItemConfig.item).targetUrl.includes('/game/') ||
-      parseItemConfig(activeItemConfig.item).targetUrl.includes('/games/')
+      parseItemConfig(activeItemConfig.item).targetUrl.includes('https://media.dolcake.com/games/')
     )
   );
 
@@ -3784,10 +3784,10 @@ export function StudentAssignmentsView({
 
                     const isMatchGame = Boolean(
                       targetUrl.includes('flashcard-match') ||
-                      targetUrl.includes('/games/') ||
+                      targetUrl.includes('https://media.dolcake.com/games/') ||
                       targetUrl.includes('/student/game/') ||
                       playUrl.includes('flashcard-match') ||
-                      playUrl.includes('/games/') ||
+                      playUrl.includes('https://media.dolcake.com/games/') ||
                       playUrl.includes('/student/game/') ||
                       metaInstructions.gameMode === 'match'
                     );
@@ -3818,7 +3818,7 @@ export function StudentAssignmentsView({
                         itemStage === 'game' ||
                         cfg.item.assignment.materialType === 'GAME' ||
                         targetUrl.includes('/game/') ||
-                        targetUrl.includes('/games/')
+                        targetUrl.includes('https://media.dolcake.com/games/')
                       ))
                     );
 

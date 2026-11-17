@@ -291,7 +291,7 @@ export default async function ClassDetailPage({
           teacher: {
             name: dbClass.teacher?.name || 'Giáo viên phụ trách',
             role: 'Giáo viên chủ nhiệm lớp',
-            avatar: dbClass.teacher?.image || '/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
+            avatar: dbClass.teacher?.image || 'https://media.dolcake.com/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
             degree: 'Cử nhân Sư phạm Tiếng Anh',
             experience: 'Nhiều năm kinh nghiệm giảng dạy tiếng Anh',
             quote: '“Học tiếng Anh với niềm vui và sự chủ động là chìa khóa mở ra tương lai tươi sáng cho các con.”',
@@ -300,7 +300,7 @@ export default async function ClassDetailPage({
             {
               id: 'r1',
               author: 'Phụ huynh học viên',
-              avatar: '/images/avatars/adult.png',
+              avatar: 'https://media.dolcake.com/images/avatars/adult.png',
               stars: 5,
               timeAgo: 'Gần đây',
               content: '“Lớp học tổ chức rất khoa học, bé nhà mình rất hào hứng học mỗi ngày.”',
@@ -379,7 +379,7 @@ export default async function ClassDetailPage({
           teacher: {
             name: dbClass.teacher?.name || 'Lead Teacher',
             role: 'Homeroom English Teacher',
-            avatar: dbClass.teacher?.image || '/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
+            avatar: dbClass.teacher?.image || 'https://media.dolcake.com/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
             degree: 'Bachelor of English Education',
             experience: 'Experienced in primary English education',
             quote: '“Learning English with joy and confidence unlocks a bright future for every child.”',
@@ -388,7 +388,7 @@ export default async function ClassDetailPage({
             {
               id: 'r1',
               author: 'Student Parent',
-              avatar: '/images/avatars/adult.png',
+              avatar: 'https://media.dolcake.com/images/avatars/adult.png',
               stars: 5,
               timeAgo: 'Recently',
               content: '“The class structure is engaging and keeps my child excited to learn every single day.”',
@@ -398,7 +398,7 @@ export default async function ClassDetailPage({
 
         classData = {
           id: dbClass.id,
-          thumbnail: dbClass.thumbnail || '/assests/Classes/thumbnails/class-thumb-neutral-default.jpg',
+          thumbnail: dbClass.thumbnail || 'https://media.dolcake.com/assests/Classes/thumbnails/class-thumb-neutral-default.jpg',
           subjectBadgeClass: 'bg-[#ede9fe] text-[#4338ca] border-[#c7d2fe]',
           typeBadgeClass: 'bg-[#fef3c7] text-[#92400e] border-[#fde68a]',
           rating: 4.9,

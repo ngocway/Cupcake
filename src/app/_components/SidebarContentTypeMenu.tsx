@@ -587,12 +587,12 @@ export function SidebarContentTypeMenu({ initialStudyAgeGroup = "" }: SidebarCon
                 <img
                   src={
                     (studyAgeGroup.toLowerCase().includes("kindergarten") || studyAgeGroup === "kids-2-5")
-                      ? "/images/avatars/kid.png"
+                      ? "https://media.dolcake.com/images/avatars/kid.png"
                       : studyAgeGroup.toLowerCase().includes("teen")
-                      ? "/images/avatars/teen.png"
+                      ? "https://media.dolcake.com/images/avatars/teen.png"
                       : studyAgeGroup.toLowerCase().includes("kid")
-                      ? "/images/avatars/kid.png"
-                      : "/images/avatars/adult.png"
+                      ? "https://media.dolcake.com/images/avatars/kid.png"
+                      : "https://media.dolcake.com/images/avatars/adult.png"
                   }
                   alt="Age Avatar"
                   suppressHydrationWarning

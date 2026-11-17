@@ -70,7 +70,7 @@ function getCompatibleGamesForSubType(subType: LibrarySubType): CompatibleGameOp
         descVi: "Học sinh lật/chọn ghép thẻ hình ảnh với từ vựng tương ứng.",
         descEn: "Students pair illustration cards with matching words.",
         videoId: "pe7grSyHL0g",
-        imageUrl: "/images/games/flashcard-quiz.png",
+        imageUrl: "https://media.dolcake.com/images/games/flashcard-quiz.png",
         buildHref: (id) =>
           `/teacher/games/match-image-text/create?type=image-text&gameMode=match&librarySetId=${id}&returnTab=lib-global`,
       },
@@ -97,7 +97,7 @@ function getCompatibleGamesForSubType(subType: LibrarySubType): CompatibleGameOp
         descVi: "Học sinh chém đứt dây thừng để thả ảnh rơi trúng từ vựng.",
         descEn: "Students slice ropes to drop images onto matching words.",
         videoId: "Dsb7Rm9Je4Y",
-        imageUrl: "/images/games/cut-rope.png",
+        imageUrl: "https://media.dolcake.com/images/games/cut-rope.png",
         buildHref: (id) =>
           `/teacher/games/match-image-text/create?type=image-text&gameMode=cut-rope&librarySetId=${id}&returnTab=lib-global`,
       },
@@ -111,7 +111,7 @@ function getCompatibleGamesForSubType(subType: LibrarySubType): CompatibleGameOp
         descVi: "Học sinh kéo thả từ vựng lên đúng toa tàu mang hình ảnh.",
         descEn: "Students load vocabulary cards onto matching train carriages.",
         videoId: "Tb2nH6nprXk",
-        imageUrl: "/images/games/train-vocab.png",
+        imageUrl: "https://media.dolcake.com/images/games/train-vocab.png",
         buildHref: (id) =>
           `/teacher/games/match-image-text/create?type=image-text&gameMode=train&librarySetId=${id}&returnTab=lib-global`,
       },
@@ -156,7 +156,7 @@ function getCompatibleGamesForSubType(subType: LibrarySubType): CompatibleGameOp
         descVi: "Học sinh ghép cặp từ vựng tiếng Anh với nghĩa hoặc câu hội thoại tương ứng.",
         descEn: "Students match words with definitions, translations, or conversation replies.",
         videoId: "qkE6qYZ-DDU",
-        imageUrl: "/images/games/word-match.png",
+        imageUrl: "https://media.dolcake.com/images/games/word-match.png",
         buildHref: (id) =>
           `/teacher/games/match-image-text/create?type=text-text&librarySetId=${id}&returnTab=lib-global`,
       },
@@ -175,7 +175,7 @@ function getCompatibleGamesForSubType(subType: LibrarySubType): CompatibleGameOp
         descVi: "Trả lời câu hỏi trắc nghiệm 4 đáp án trên bản đồ Kẹo Ngọt vui nhộn.",
         descEn: "Answer 4-option multiple choice questions in a lively Candy World.",
         videoId: "m6_CohSIXpo",
-        imageUrl: "/images/games/candy-quiz.jpg",
+        imageUrl: "https://media.dolcake.com/images/games/candy-quiz.jpg",
         buildHref: (id) =>
           `/teacher/games/candy-quiz/create?librarySetId=${id}&returnTab=lib-global`,
       },
@@ -189,7 +189,7 @@ function getCompatibleGamesForSubType(subType: LibrarySubType): CompatibleGameOp
         descVi: "Trả lời câu hỏi trắc nghiệm để lật mở bản đồ kho báu và săn rương vàng.",
         descEn: "Answer multiple-choice questions to unlock pirate treasure chests.",
         videoId: "9juS0TQRyHw",
-        imageUrl: "/games/mystery-treasure-grid-assets/assets/webp/background-stage.webp",
+        imageUrl: "https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/webp/background-stage.webp",
         buildHref: (id) =>
           `/teacher/games/treasure-hunt/create?librarySetId=${id}&returnTab=lib-global`,
       },
@@ -203,7 +203,7 @@ function getCompatibleGamesForSubType(subType: LibrarySubType): CompatibleGameOp
         descVi: "Điều khiển tàu vũ trụ bắn tia laser vào đáp án đúng đang bay.",
         descEn: "Pilot a space cannon and shoot the orb carrying the correct answer.",
         videoId: "MxrxyO1a8gM",
-        imageUrl: "/images/games/shooter-quiz.jpg",
+        imageUrl: "https://media.dolcake.com/images/games/shooter-quiz.jpg",
         buildHref: (id) =>
           `/teacher/games/shooter-quiz/create?librarySetId=${id}&returnTab=lib-global`,
       },
@@ -596,6 +596,15 @@ export function GlobalSuccessLibraryList() {
 
   // Group filtered sets by unit
   const groupedUnits = useMemo(() => {
+    const getCardOrderWeight = (ps: ParsedGlobalSet): number => {
+      const title = (ps.shortTitle || ps.raw.name || "").toLowerCase();
+      if (ps.raw.gameMode === "library-image-text" || title.includes("vocabulary")) return 1;
+      if (title.includes("english - vietnamese") || title.includes("vietnamese")) return 2;
+      if (title.includes("conversation")) return 3;
+      if (ps.raw.gameMode === "library-quiz" || title.includes("quiz")) return 4;
+      return 5;
+    };
+
     const map = new Map<string, { unitKey: string; unitNumber: number; unitHeader: string; items: ParsedGlobalSet[] }>();
     for (const ps of filteredSets) {
       const existing = map.get(ps.unitKey);
@@ -609,6 +618,9 @@ export function GlobalSuccessLibraryList() {
           items: [ps],
         });
       }
+    }
+    for (const group of map.values()) {
+      group.items.sort((a, b) => getCardOrderWeight(a) - getCardOrderWeight(b));
     }
     return Array.from(map.values()).sort((a, b) => a.unitNumber - b.unitNumber);
   }, [filteredSets]);
@@ -2142,7 +2154,7 @@ export function GlobalSuccessLibraryList() {
                   game.imageUrl ||
                   (game.videoId
                     ? `https://img.youtube.com/vi/${game.videoId}/maxresdefault.jpg`
-                    : "/images/games/flashcard-quiz.png");
+                    : "https://media.dolcake.com/images/games/flashcard-quiz.png");
                 const badgeLabel = locale === "vi" ? game.badgeVi : game.badgeEn;
                 const titleLabel = locale === "vi" ? game.titleVi : game.titleEn;
                 const descLabel = locale === "vi" ? game.descVi : game.descEn;
@@ -2185,7 +2197,7 @@ export function GlobalSuccessLibraryList() {
                           } else if (game.imageUrl && target.src !== game.imageUrl) {
                             target.src = game.imageUrl;
                           } else {
-                            target.src = "/images/games/flashcard-quiz.png";
+                            target.src = "https://media.dolcake.com/images/games/flashcard-quiz.png";
                           }
                         }}
                         alt={titleLabel}

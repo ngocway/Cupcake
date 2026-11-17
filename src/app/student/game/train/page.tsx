@@ -88,7 +88,7 @@ function TrainGameContent() {
       {/* Game Iframe */}
       <iframe
         ref={iframeRef}
-        src={`/games/Doan-tau-tu-vung/index.html?topicId=${topicId || ""}`}
+        src={`https://media.dolcake.com/games/Doan-tau-tu-vung/index.html?topicId=${topicId || ""}`}
         className="w-full h-full flex-1 border-none block"
         title="Đoàn tàu từ vựng Game"
         referrerPolicy="no-referrer"

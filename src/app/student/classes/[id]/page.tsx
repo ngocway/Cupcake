@@ -407,7 +407,7 @@ async function StudentClassDetailContent({
   const lessonThumbMap = new Map((resolvedLessons || []).filter((l: any) => l.thumbnail).map((l: any) => [l.id, l.thumbnail!]));
   const gameThumbMap = new Map((resolvedGames || []).map((g: any) => [
     g.id, 
-    g.thumbnailUrl || (g.gameMode === 'shooter-quiz' ? '/images/games/shooter-quiz.jpg' : '/images/games/candy-quiz.jpg')
+    g.thumbnailUrl || (g.gameMode === 'shooter-quiz' ? 'https://media.dolcake.com/images/games/shooter-quiz.jpg' : 'https://media.dolcake.com/images/games/candy-quiz.jpg')
   ]));
   const flashcardThumbMap = new Map((resolvedFlashcards || []).filter((f: any) => f.iconUrl).map((f: any) => [f.id, f.iconUrl!]));
   const grammarLessonMap = new Map((resolvedGrammarLessons || []).map((g: any) => [g.id, g]));
@@ -447,7 +447,7 @@ async function StudentClassDetailContent({
             }
           }
           if ((!finalThumbnail || finalThumbnail.includes('unsplash.com')) && (meta.kind === 'GAME' || meta.playUrl?.includes('/candy-quiz'))) {
-            finalThumbnail = '/images/games/candy-quiz.jpg';
+            finalThumbnail = 'https://media.dolcake.com/images/games/candy-quiz.jpg';
           }
         } catch {}
       }

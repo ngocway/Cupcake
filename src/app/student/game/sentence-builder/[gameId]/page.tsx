@@ -52,7 +52,7 @@ export default function PlaySentenceBuilderGamePage() {
           </div>
         )}
         <iframe 
-          src={`/games/sentence-builder/index.html?gameId=${gameId}&age=${age}`}
+          src={`https://media.dolcake.com/games/sentence-builder/index.html?gameId=${gameId}&age=${age}`}
           className={`w-full h-full border-none transition-opacity duration-700 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
           title="Sentence Builder Game"
           allow="autoplay"

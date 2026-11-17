@@ -71,7 +71,7 @@ const DEFAULT_MASCOTS: MascotItem[] = [
     id: 'baby_treasure_dragon',
     name: 'Bé Rồng Giữ Vàng',
     title: 'Thần Hộ Mệnh Long Tộc',
-    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/01_baby_treasure_dragon.png',
+    imageUrl: 'https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/mascots/linhvat/01_baby_treasure_dragon.png',
     color: '#f59e0b',
     tag: 'Dũng Cảm & Cao Quý',
   },
@@ -79,7 +79,7 @@ const DEFAULT_MASCOTS: MascotItem[] = [
     id: 'pirate_parrot',
     name: 'Chú Vẹt Hải Tặc',
     title: 'Hoa Tiêu Biển Cả',
-    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/02_pirate_parrot.png',
+    imageUrl: 'https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/mascots/linhvat/02_pirate_parrot.png',
     color: '#3b82f6',
     tag: 'Thông Thái & Nhanh Nhẹn',
   },
@@ -87,7 +87,7 @@ const DEFAULT_MASCOTS: MascotItem[] = [
     id: 'treasure_turtle',
     name: 'Bé Rùa Biển Vàng',
     title: 'Thần Hộ Mệnh Trầm Lặng',
-    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/03_treasure_turtle.png',
+    imageUrl: 'https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/mascots/linhvat/03_treasure_turtle.png',
     color: '#10b981',
     tag: 'Bình An & Kiên Trì',
   },
@@ -95,7 +95,7 @@ const DEFAULT_MASCOTS: MascotItem[] = [
     id: 'gem_crab',
     name: 'Bé Cua Ngọc Bích',
     title: 'Chiến Binh Càng Vàng',
-    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/04_gem_crab.png',
+    imageUrl: 'https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/mascots/linhvat/04_gem_crab.png',
     color: '#ef4444',
     tag: 'Khéo Léo & Tinh Anh',
   },
@@ -103,7 +103,7 @@ const DEFAULT_MASCOTS: MascotItem[] = [
     id: 'treasure_slime',
     name: 'Slime Hoàng Kim',
     title: 'Tinh Linh Biển Sâu',
-    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/05_treasure_slime.png',
+    imageUrl: 'https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/mascots/linhvat/05_treasure_slime.png',
     color: '#06b6d4',
     tag: 'Đáng Yêu & Diệu Kỳ',
   },
@@ -111,7 +111,7 @@ const DEFAULT_MASCOTS: MascotItem[] = [
     id: 'treasure_otter',
     name: 'Rái Cá Thủy Thủ',
     title: 'Thợ Lặn Đại Dương',
-    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/06_treasure_otter.png',
+    imageUrl: 'https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/mascots/linhvat/06_treasure_otter.png',
     color: '#8b5cf6',
     tag: 'Chăm Chỉ & Tinh Nghịch',
   },
@@ -119,7 +119,7 @@ const DEFAULT_MASCOTS: MascotItem[] = [
     id: 'royal_dolphin',
     name: 'Cá Heo Hoàng Gia',
     title: 'Sứ Giả Biển Xanh',
-    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/07_royal_dolphin.png',
+    imageUrl: 'https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/mascots/linhvat/07_royal_dolphin.png',
     color: '#0284c7',
     tag: 'Thân Thiện & Hòa Bình',
   },
@@ -127,7 +127,7 @@ const DEFAULT_MASCOTS: MascotItem[] = [
     id: 'explorer_penguin',
     name: 'Cánh Cụt Thám Hiểm',
     title: 'Nhà Thám Hiểm Băng Giá',
-    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/08_explorer_penguin.png',
+    imageUrl: 'https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/mascots/linhvat/08_explorer_penguin.png',
     color: '#1e293b',
     tag: 'Bền Bỉ & Quyết Đoán',
   },
@@ -135,7 +135,7 @@ const DEFAULT_MASCOTS: MascotItem[] = [
     id: 'adventure_bunny',
     name: 'Thỏ Con Phiêu Lưu',
     title: 'Sứ Giả Tốc Độ',
-    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/09_adventure_bunny.png',
+    imageUrl: 'https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/mascots/linhvat/09_adventure_bunny.png',
     color: '#f97316',
     tag: 'Nhanh Nhẹn & Hoạt Bát',
   },
@@ -143,7 +143,7 @@ const DEFAULT_MASCOTS: MascotItem[] = [
     id: 'map_raccoon',
     name: 'Gấu Mèo Bản Đồ',
     title: 'Chuyên Gia Dẫn Đường',
-    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/10_map_raccoon.png',
+    imageUrl: 'https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/mascots/linhvat/10_map_raccoon.png',
     color: '#78716c',
     tag: 'Sắc Sảo & Tỉ Mỉ',
   },
@@ -151,7 +151,7 @@ const DEFAULT_MASCOTS: MascotItem[] = [
     id: 'pirate_kitten',
     name: 'Mèo Con Cướp Biển',
     title: 'Thuyền Trưởng Tí Hon',
-    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/11_pirate_kitten.png',
+    imageUrl: 'https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/mascots/linhvat/11_pirate_kitten.png',
     color: '#ea580c',
     tag: 'Dũng Cảm & Đáng Yêu',
   },
@@ -159,7 +159,7 @@ const DEFAULT_MASCOTS: MascotItem[] = [
     id: 'pirate_octopus',
     name: 'Bạch Tuộc Xúc Tu Vàng',
     title: 'Chúa Tể Vực Sâu',
-    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/12_pirate_octopus.png',
+    imageUrl: 'https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/mascots/linhvat/12_pirate_octopus.png',
     color: '#ec4899',
     tag: 'Uy Quyền & Huyền Bí',
   },
@@ -167,7 +167,7 @@ const DEFAULT_MASCOTS: MascotItem[] = [
     id: 'captain_shark',
     name: 'Cá Mập Đại Dương',
     title: 'Dũng Sĩ Biển Cả',
-    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/13_captain_shark.png',
+    imageUrl: 'https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/mascots/linhvat/13_captain_shark.png',
     color: '#2563eb',
     tag: 'Mạnh Mẽ & Kiên Cường',
   },
@@ -175,7 +175,7 @@ const DEFAULT_MASCOTS: MascotItem[] = [
     id: 'treasure_ram',
     name: 'Cừu Sừng Vàng',
     title: 'Thần Hộ Mệnh Núi Đá',
-    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/14_treasure_ram.png',
+    imageUrl: 'https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/mascots/linhvat/14_treasure_ram.png',
     color: '#d97706',
     tag: 'Vững Vàng & Trung Kiên',
   },
@@ -183,7 +183,7 @@ const DEFAULT_MASCOTS: MascotItem[] = [
     id: 'treasure_monkey',
     name: 'Bé Khỉ Giữ Khóa',
     title: 'Thần Hộ Vệ Kho Báu',
-    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/15_treasure_monkey.png',
+    imageUrl: 'https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/mascots/linhvat/15_treasure_monkey.png',
     color: '#b45309',
     tag: 'Thông Minh & Hài Hước',
   },
@@ -191,7 +191,7 @@ const DEFAULT_MASCOTS: MascotItem[] = [
     id: 'pirate_owl',
     name: 'Cú Mèo Thông Thái',
     title: 'Bậc Thầy Chiến Thuật',
-    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/16_pirate_owl.png',
+    imageUrl: 'https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/mascots/linhvat/16_pirate_owl.png',
     color: '#6366f1',
     tag: 'Tri Thức & Sáng Suốt',
   },
@@ -199,7 +199,7 @@ const DEFAULT_MASCOTS: MascotItem[] = [
     id: 'adventure_fox',
     name: 'Cáo Đỏ Thám Hiểm',
     title: 'Trinh Sát Rừng Xanh',
-    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/17_adventure_fox.png',
+    imageUrl: 'https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/mascots/linhvat/17_adventure_fox.png',
     color: '#dc2626',
     tag: 'Mưu Trí & Nhạy Bén',
   },
@@ -207,7 +207,7 @@ const DEFAULT_MASCOTS: MascotItem[] = [
     id: 'gem_seal',
     name: 'Hải Cẩu Ngọc Bích',
     title: 'Thần Hộ Vệ Băng Tuyết',
-    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/18_gem_seal.png',
+    imageUrl: 'https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/mascots/linhvat/18_gem_seal.png',
     color: '#0ea5e9',
     tag: 'Hiền Hòa & May Mắn',
   },
@@ -215,7 +215,7 @@ const DEFAULT_MASCOTS: MascotItem[] = [
     id: 'royal_seahorse',
     name: 'Cá Ngựa Hoàng Triều',
     title: 'Kỵ Sĩ San Hô',
-    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/19_royal_seahorse.png',
+    imageUrl: 'https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/mascots/linhvat/19_royal_seahorse.png',
     color: '#eab308',
     tag: 'Quý Phái & Trung Thành',
   },
@@ -223,7 +223,7 @@ const DEFAULT_MASCOTS: MascotItem[] = [
     id: 'jewel_starfish',
     name: 'Bé Sao Biển Lấp Lánh',
     title: 'Ngôi Sao Diệu Kỳ',
-    imageUrl: '/games/mystery-treasure-grid-assets/assets/mascots/linhvat/20_jewel_starfish.png',
+    imageUrl: 'https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/mascots/linhvat/20_jewel_starfish.png',
     color: '#f43f5e',
     tag: 'Tỏa Sáng & Diệu Kỳ',
   },
@@ -739,13 +739,13 @@ function MysteryTreasureGridContent() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const coreModalAssets = [
-      '/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/tropical_treasure_map_ui_frame.png',
-      '/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/treasure_question_pirate_banner.png',
-      '/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/tropical_rope_framed_close_button.png',
-      '/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/glossy_tropical_wooden_game_button.png',
-      '/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/glossy_green_wood_game_button.png',
-      '/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/glossy_wooden_game_ui_banner.png',
-      '/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/glossy_purple_gold_game_button.png',
+      'https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/tropical_treasure_map_ui_frame.png',
+      'https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/treasure_question_pirate_banner.png',
+      'https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/tropical_rope_framed_close_button.png',
+      'https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/glossy_tropical_wooden_game_button.png',
+      'https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/glossy_green_wood_game_button.png',
+      'https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/glossy_wooden_game_ui_banner.png',
+      'https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/glossy_purple_gold_game_button.png',
     ];
     coreModalAssets.forEach((src) => {
       const img = new window.Image();
@@ -878,13 +878,13 @@ function MysteryTreasureGridContent() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const modalAssets = [
-      '/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/tropical_treasure_map_ui_frame.png',
-      '/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/treasure_question_pirate_banner.png',
-      '/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/tropical_rope_framed_close_button.png',
-      '/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/glossy_tropical_wooden_game_button.png',
-      '/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/glossy_green_wood_game_button.png',
-      '/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/glossy_wooden_game_ui_banner.png',
-      '/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/glossy_purple_gold_game_button.png',
+      'https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/tropical_treasure_map_ui_frame.png',
+      'https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/treasure_question_pirate_banner.png',
+      'https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/tropical_rope_framed_close_button.png',
+      'https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/glossy_tropical_wooden_game_button.png',
+      'https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/glossy_green_wood_game_button.png',
+      'https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/glossy_wooden_game_ui_banner.png',
+      'https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/glossy_purple_gold_game_button.png',
     ];
     modalAssets.forEach((src) => {
       const img = new window.Image();
@@ -1340,7 +1340,7 @@ function MysteryTreasureGridContent() {
           <div className="absolute inset-0 rounded-full border-4 border-amber-400/20 border-t-amber-400 border-r-amber-300 animate-spin" />
           <div className="relative w-16 h-16 flex items-center justify-center z-10 animate-bounce">
             <img
-              src="/games/mystery-treasure-grid-assets/assets/webp/treasure-chest.webp"
+              src="https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/webp/treasure-chest.webp"
               alt="Treasure Chest"
               className="w-full h-full object-contain drop-shadow-[0_4px_14px_rgba(255,215,0,0.6)]"
             />
@@ -1361,7 +1361,7 @@ function MysteryTreasureGridContent() {
       ref={shellRef}
       className="w-full h-full overflow-hidden flex justify-center items-start select-none relative"
       style={{
-        background: "#0d5b8d url('/games/mystery-treasure-grid-assets/assets/webp/background-browser-wide.webp') center center / cover no-repeat",
+        background: "#0d5b8d url('https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/webp/background-browser-wide.webp') center center / cover no-repeat",
         fontFamily: '"Baloo 2", "Trebuchet MS", "Arial Rounded MT Bold", sans-serif',
       }}
     >
@@ -1747,10 +1747,10 @@ function MysteryTreasureGridContent() {
           filter: drop-shadow(0 9px 6px rgba(85,47,10,.22));
           transition: transform 160ms cubic-bezier(.2,.8,.2,1), filter 160ms ease;
         }
-        .answer-blue   { --answer-image: url("/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/glossy_tropical_wooden_game_button.png"); }
-        .answer-green  { --answer-image: url("/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/glossy_green_wood_game_button.png"); }
-        .answer-orange { --answer-image: url("/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/glossy_wooden_game_ui_banner.png"); }
-        .answer-purple { --answer-image: url("/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/glossy_purple_gold_game_button.png"); }
+        .answer-blue   { --answer-image: url("https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/glossy_tropical_wooden_game_button.png"); }
+        .answer-green  { --answer-image: url("https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/glossy_green_wood_game_button.png"); }
+        .answer-orange { --answer-image: url("https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/glossy_wooden_game_ui_banner.png"); }
+        .answer-purple { --answer-image: url("https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/glossy_purple_gold_game_button.png"); }
         .treasure-answer:hover:not(:disabled) { transform: translateY(-6px) scale(1.025); filter: brightness(1.07) drop-shadow(0 13px 10px rgba(85,47,10,.28)); }
         .treasure-answer:active:not(:disabled) { transform: translateY(2px) scale(.985); filter: brightness(.98) drop-shadow(0 4px 3px rgba(85,47,10,.2)); }
 
@@ -2064,7 +2064,7 @@ function MysteryTreasureGridContent() {
         <div className="absolute top-[8px] left-[50%] -translate-x-1/2 z-[12] flex items-center justify-center pointer-events-none">
           <div className="relative w-[440px] h-[82px] flex items-center justify-center">
             <img
-              src="/games/mystery-treasure-grid-assets/assets/webp/title-board.webp"
+              src="https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/webp/title-board.webp"
               alt="Title Board"
               className="absolute inset-0 w-full h-full object-contain pointer-events-none drop-shadow-md"
             />
@@ -2079,8 +2079,8 @@ function MysteryTreasureGridContent() {
         </div>
 
         {/* Left Side Decor */}
-        <img src="/games/mystery-treasure-grid-assets/assets/png/parrot.png" alt="Parrot" className="absolute left-[-65px] top-[0px] w-[460px] z-[3] pointer-events-none" />
-        <img src="/games/mystery-treasure-grid-assets/assets/webp/sign-left.webp" alt="Sign Left" className="absolute left-[5px] top-[430px] w-[245px] z-[4] pointer-events-none" />
+        <img src="https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/png/parrot.png" alt="Parrot" className="absolute left-[-65px] top-[0px] w-[460px] z-[3] pointer-events-none" />
+        <img src="https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/webp/sign-left.webp" alt="Sign Left" className="absolute left-[5px] top-[430px] w-[245px] z-[4] pointer-events-none" />
         {/* Barrel of Gold (To hơn + Rung lắc nhịp nhàng + Hào quang rực rỡ) */}
         <div
           onClick={() => sounds.playSparkle()}
@@ -2108,7 +2108,7 @@ function MysteryTreasureGridContent() {
 
           {/* Smooth Swaying Barrel with Golden Drop-Shadow */}
           <img
-            src="/games/mystery-treasure-grid-assets/assets/webp/barrel-gold.webp"
+            src="https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/webp/barrel-gold.webp"
             alt="Thùng vàng"
             className="relative w-full h-auto object-contain animate-barrel-sway filter drop-shadow-[0_0_24px_rgba(255,215,0,0.9)] drop-shadow-[0_10px_20px_rgba(245,158,11,0.65)] group-hover:scale-105 transition-transform"
           />
@@ -2116,12 +2116,12 @@ function MysteryTreasureGridContent() {
 
         {/* Left Panel Wrap (Grid of Tiles) */}
         <section className="absolute left-[230px] top-[90px] w-[840px] h-[740px] z-[2]">
-          <img src="/games/mystery-treasure-grid-assets/assets/webp/panel-left.webp" alt="" className="absolute left-0 top-0 w-[840px] h-[740px]" />
+          <img src="https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/webp/panel-left.webp" alt="" className="absolute left-0 top-0 w-[840px] h-[740px]" />
           
           {/* Question Ribbon Banner with Game Title */}
           <div className="absolute left-[18px] top-[6px] w-[665px] h-[92px] z-[4] flex items-center justify-center px-16">
             <img
-              src="/games/mystery-treasure-grid-assets/assets/webp/question-ribbon.webp"
+              src="https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/webp/question-ribbon.webp"
               alt=""
               className="absolute inset-0 w-full h-full object-contain pointer-events-none"
             />
@@ -2147,7 +2147,7 @@ function MysteryTreasureGridContent() {
 
           {/* Counter Wrap */}
           <div className="absolute left-[592px] top-[20px] w-[217px] h-[72px] z-[5]">
-            <img src="/games/mystery-treasure-grid-assets/assets/webp/counter-board-empty.webp" alt="" className="absolute inset-0 w-full h-full" />
+            <img src="https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/webp/counter-board-empty.webp" alt="" className="absolute inset-0 w-full h-full" />
             <div className="absolute inset-0 grid place-items-center text-[#ffe15c] text-[30px] font-black tracking-wider text-shadow-md">
               {solvedSet.size} / {activeQuestions.length}
             </div>
@@ -2192,7 +2192,7 @@ function MysteryTreasureGridContent() {
                 >
                   {/* Background Tile Graphic (desaturated / stone look if wrong) */}
                   <img
-                    src={`/games/mystery-treasure-grid-assets/assets/webp/${tileColor}.webp`}
+                    src={`https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/webp/${tileColor}.webp`}
                     alt=""
                     className={`absolute inset-0 w-full h-full transition-all duration-300 ${
                       isWrong ? 'grayscale-90 brightness-65 contrast-125' : ''
@@ -2205,7 +2205,7 @@ function MysteryTreasureGridContent() {
                     /* SOLVED STATE: GOLDEN OPEN TREASURE CHEST */
                     <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none animate-zoom-in">
                       <img
-                        src="/games/mystery-treasure-grid-assets/assets/webp/treasure-chest.webp"
+                        src="https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/webp/treasure-chest.webp"
                         alt=""
                         className="w-[68%] h-[68%] object-contain drop-shadow-[0_4px_12px_rgba(255,215,0,0.85)]"
                       />
@@ -2363,7 +2363,7 @@ function MysteryTreasureGridContent() {
             );
           })()}
 
-          <img src="/games/mystery-treasure-grid-assets/assets/webp/panel-right.webp" alt="" className="absolute left-0 top-0 w-[427px] h-[494px]" />
+          <img src="https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/webp/panel-right.webp" alt="" className="absolute left-0 top-0 w-[427px] h-[494px]" />
 
           {/* Inner Panel Elements */}
           <div className="absolute left-0 top-0 w-[427px] h-[494px] z-[3]">
@@ -2453,14 +2453,14 @@ function MysteryTreasureGridContent() {
             >
               {/* Chest Image (To hơn 1.2 lần: w-[395px]) */}
               <img
-                src="/games/mystery-treasure-grid-assets/assets/webp/treasure-chest.webp"
+                src="https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/webp/treasure-chest.webp"
                 alt="Treasure Chest"
                 className="w-[395px] object-contain drop-shadow-md hover:scale-105 transition-transform"
               />
 
               {/* Nameplate (Tỉ lệ chuẩn 1.2 lần: w-[414px]) */}
               <img
-                src="/games/mystery-treasure-grid-assets/assets/webp/chest-nameplate.webp"
+                src="https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/webp/chest-nameplate.webp"
                 alt="Magical Treasure Chest"
                 className="-mt-[52px] w-[414px] object-contain drop-shadow-md hover:scale-105 transition-transform"
               />
@@ -2495,7 +2495,7 @@ function MysteryTreasureGridContent() {
                               width: `${size}px`,
                               height: `${size}px`,
                             }}
-                            className={`relative bg-[url('/games/mystery-treasure-grid-assets/assets/webp/progress-slot.webp')] bg-contain bg-center bg-no-repeat ${
+                            className={`relative bg-[url('https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/webp/progress-slot.webp')] bg-contain bg-center bg-no-repeat ${
                               isFilled ? 'after:scale-100 after:opacity-100 animate-slot-spark' : ''
                             } after:content-[''] after:absolute after:inset-[26%] after:rounded-full after:scale-25 after:opacity-0 after:bg-[radial-gradient(circle_at_35%_35%,#fff7af_0%,#ffd643_35%,#f4a012_100%)] after:shadow-[0_0_18px_rgba(255,217,74,0.82)] after:transition-all after:duration-220`}
                           />
@@ -2510,10 +2510,10 @@ function MysteryTreasureGridContent() {
         </section>
 
         {/* Right Side Decor */}
-        <img src="/games/mystery-treasure-grid-assets/assets/webp/sign-right.webp" alt="Sign Right" className="absolute right-[80px] bottom-[110px] w-[170px] z-[2] pointer-events-none" />
+        <img src="https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/webp/sign-right.webp" alt="Sign Right" className="absolute right-[80px] bottom-[110px] w-[170px] z-[2] pointer-events-none" />
         {/* Crab (Lắc chậm) */}
         <img
-          src="/games/mystery-treasure-grid-assets/assets/webp/crab.webp"
+          src="https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/webp/crab.webp"
           alt="Bé Cua"
           onClick={() => sounds.playMascotSqueak()}
           className="absolute right-[130px] bottom-[30px] w-[130px] z-[2] animate-crab-slow cursor-pointer hover:scale-110 transition-transform filter drop-shadow-[0_4px_12px_rgba(0,0,0,0.25)]"
@@ -2675,7 +2675,7 @@ function MysteryTreasureGridContent() {
 
               <img
                 className="treasure-frame"
-                src="/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/tropical_treasure_map_ui_frame.png"
+                src="https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/tropical_treasure_map_ui_frame.png"
                 alt=""
                 draggable="false"
                 loading="eager"
@@ -2683,7 +2683,7 @@ function MysteryTreasureGridContent() {
               />
               <img
                 className="treasure-title-banner"
-                src="/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/treasure_question_pirate_banner.png"
+                src="https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/treasure_question_pirate_banner.png"
                 alt="Treasure Question"
                 draggable="false"
                 loading="eager"
@@ -2692,7 +2692,7 @@ function MysteryTreasureGridContent() {
 
               <button onClick={closeQuestion} className="treasure-close" type="button" aria-label="Close question">
                 <img
-                  src="/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/tropical_rope_framed_close_button.png"
+                  src="https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/treasure_modal_full_pack_v1/assets/png/tropical_rope_framed_close_button.png"
                   alt=""
                   draggable="false"
                   loading="eager"
@@ -3101,7 +3101,7 @@ function MysteryTreasureGridContent() {
           >
             <div className="flex items-center justify-center gap-3">
               <img
-                src="/games/mystery-treasure-grid-assets/assets/webp/treasure-chest.webp"
+                src="https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/webp/treasure-chest.webp"
                 alt="Rương kho báu"
                 className="w-12 h-12 sm:w-16 sm:h-16 object-contain drop-shadow-md"
               />
@@ -3114,7 +3114,7 @@ function MysteryTreasureGridContent() {
                 CHIẾN THẮNG
               </div>
               <img
-                src="/games/mystery-treasure-grid-assets/assets/webp/treasure-chest.webp"
+                src="https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/webp/treasure-chest.webp"
                 alt="Rương kho báu"
                 className="w-12 h-12 sm:w-16 sm:h-16 object-contain drop-shadow-md"
               />
@@ -3199,7 +3199,7 @@ export default function MysteryTreasureGridPage() {
             <div className="absolute inset-0 rounded-full border-4 border-amber-400/20 border-t-amber-400 border-r-amber-300 animate-spin" />
             <div className="relative w-16 h-16 flex items-center justify-center z-10 animate-bounce">
               <img
-                src="/games/mystery-treasure-grid-assets/assets/webp/treasure-chest.webp"
+                src="https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/webp/treasure-chest.webp"
                 alt="Treasure Chest"
                 className="w-full h-full object-contain drop-shadow-[0_4px_14px_rgba(255,215,0,0.6)]"
               />

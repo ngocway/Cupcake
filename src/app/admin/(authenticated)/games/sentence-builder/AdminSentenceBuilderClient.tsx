@@ -710,7 +710,7 @@ export function AdminSentenceBuilderClient({
               
               <div>
                 <label className="block text-xs font-medium text-neutral-400 mb-1.5">Audio</label>
-                <input value={questionForm.audioUrl} onChange={e => setQuestionForm(p => ({...p, audioUrl: e.target.value}))} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500" placeholder="/games/sentence-builder/audio/l1_q1.wav" />
+                <input value={questionForm.audioUrl} onChange={e => setQuestionForm(p => ({...p, audioUrl: e.target.value}))} className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500" placeholder="https://media.dolcake.com/games/sentence-builder/audio/l1_q1.wav" />
               </div>
 
               <div>

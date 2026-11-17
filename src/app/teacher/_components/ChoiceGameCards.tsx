@@ -101,7 +101,7 @@ function ChoiceGameCardItem({
             src={
               game.videoId
                 ? `https://img.youtube.com/vi/${game.videoId}/maxresdefault.jpg`
-                : (game.imageUrl || "/images/games/flashcard-quiz.png")
+                : (game.imageUrl || "https://media.dolcake.com/images/games/flashcard-quiz.png")
             }
             onError={(e) => {
               const target = e.currentTarget;

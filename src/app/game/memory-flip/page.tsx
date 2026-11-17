@@ -40,7 +40,7 @@ import { GameStartOverlay } from '@/components/games/GameStartOverlay';
 import { getMatchImageTextGameDetailsAction } from '@/actions/match-image-text-actions';
 
 // Path constant for ocean_ui_web assets
-const ASSET_PATH = '/images/assest/ocean_ui_web/assets';
+const ASSET_PATH = 'https://media.dolcake.com/images/assest/ocean_ui_web/assets';
 
 // Teacher Card Interface
 export interface TeacherCardData {

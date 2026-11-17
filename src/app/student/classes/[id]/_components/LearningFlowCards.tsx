@@ -469,7 +469,7 @@ export function EducationalGameCard({
   itemCount
 }: CardHelperProps) {
   const count = itemCount || 20;
-  const thumbnail = item.assignment.thumbnail || "/images/games/candy-quiz.jpg";
+  const thumbnail = item.assignment.thumbnail || "https://media.dolcake.com/images/games/candy-quiz.jpg";
 
   return (
     <div className="group rounded-md hover:z-30 relative bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-md hover:shadow-2xl hover:-translate-y-1.5 transition-all duration-300 flex flex-col justify-between">

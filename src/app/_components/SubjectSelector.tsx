@@ -36,24 +36,24 @@ const subjectStyles: Record<string, { bg: string; activeBg: string; border: stri
   english: {
     bg: "bg-emerald-50", activeBg: "bg-emerald-500", border: "border-emerald-200",
     activeBorder: "border-emerald-500", text: "text-emerald-800", activeText: "text-white",
-    icon: "/images/english.png"
+    icon: "https://media.dolcake.com/images/english.png"
   },
   math: {
     bg: "bg-orange-50", activeBg: "bg-orange-500", border: "border-orange-200",
     activeBorder: "border-orange-500", text: "text-orange-800", activeText: "text-white",
-    icon: "/images/math.png"
+    icon: "https://media.dolcake.com/images/math.png"
   },
   global: {
     bg: "bg-sky-50", activeBg: "bg-sky-500", border: "border-sky-200",
     activeBorder: "border-sky-500", text: "text-sky-800", activeText: "text-white",
-    icon: "/images/global.png"
+    icon: "https://media.dolcake.com/images/global.png"
   },
 };
 
 const defaultStyle = {
   bg: "bg-purple-50", activeBg: "bg-purple-500", border: "border-purple-200",
   activeBorder: "border-purple-500", text: "text-purple-800", activeText: "text-white",
-  icon: "/images/english.png"
+  icon: "https://media.dolcake.com/images/english.png"
 };
 
 function getStyle(subjectId: string) {
@@ -139,22 +139,22 @@ export function SubjectSelector({ subjects, config, locale = "en", initialStudyS
           const isLocked = subject.id === "math" || subject.id === "global";
 
           let displayLabel = subject.label;
-          let iconUrl = "/images/english.png";
+          let iconUrl = "https://media.dolcake.com/images/english.png";
           let activeClass = "";
 
           if (subject.id === "english") {
             displayLabel = locale === "vi" ? "Tiếng Anh" : "English";
-            iconUrl = "/images/english.png";
+            iconUrl = "https://media.dolcake.com/images/english.png";
             activeClass = isActive 
               ? "bg-[#12A375] text-white border-[#12A375] shadow-md shadow-emerald-500/25 scale-[1.02]" 
               : "bg-white border-[#F0E2BF] text-[#3E3524] hover:bg-[#DEF4EA] hover:border-[#12A375] hover:text-[#0B7A58]";
           } else if (subject.id === "math") {
             displayLabel = locale === "vi" ? "Toán" : "Math";
-            iconUrl = "/images/math.png";
+            iconUrl = "https://media.dolcake.com/images/math.png";
             activeClass = "bg-white border-[#F0E2BF] text-[#8C826D] opacity-85 cursor-not-allowed";
           } else if (subject.id === "global") {
             displayLabel = locale === "vi" ? "Khoa học & TG" : "Global & Science";
-            iconUrl = "/images/global.png";
+            iconUrl = "https://media.dolcake.com/images/global.png";
             activeClass = "bg-white border-[#F0E2BF] text-[#8C826D] opacity-85 cursor-not-allowed";
           }
 

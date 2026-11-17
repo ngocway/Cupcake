@@ -15,7 +15,7 @@ const STUDENT_CARDS = [
     title: 'Classes',
     subtitle: 'Customized by Age & Purpose',
     tab: 'classes',
-    image: '/images/home/art_roadmap.webp',
+    image: 'https://media.dolcake.com/images/home/art_roadmap.webp',
     alt: 'Classes - Customized by Age & Purpose',
     objPos: 'center 22%',
     zoom: 1.05,
@@ -26,7 +26,7 @@ const STUDENT_CARDS = [
     title: 'Grammar',
     subtitle: 'Basic to Advanced',
     tab: 'exercises',
-    image: '/images/home/art_grammar.webp',
+    image: 'https://media.dolcake.com/images/home/art_grammar.webp',
     alt: 'Grammar - Basic to Advanced',
     objPos: 'center 38%',
     priority: true,
@@ -36,7 +36,7 @@ const STUDENT_CARDS = [
     title: 'Reading',
     subtitle: 'Stories & Academic Texts',
     tab: 'lessons',
-    image: '/images/home/art_reading.webp',
+    image: 'https://media.dolcake.com/images/home/art_reading.webp',
     alt: 'Reading - Stories & Academic Texts',
     objPos: 'center 46%',
     priority: false,
@@ -46,7 +46,7 @@ const STUDENT_CARDS = [
     title: 'Shadowing',
     subtitle: 'Daily Chat & Fluency',
     tab: 'shadowing',
-    image: '/images/home/art_shadowing.webp',
+    image: 'https://media.dolcake.com/images/home/art_shadowing.webp',
     alt: 'Shadowing - Daily Chat & Fluency',
     objPos: 'center 46%',
     priority: false,
@@ -121,7 +121,7 @@ export function HomeHeroSplit({ initialSession }: { initialSession?: any }) {
       <div className="absolute top-4 sm:top-5 lg:top-6 left-4 sm:left-6 lg:left-8 z-30">
         <Link href="/" className="inline-flex items-center gap-2.5 group">
           <img 
-            src="/images/logo.png" 
+            src="https://media.dolcake.com/images/logo.png" 
             alt="Dolcake" 
             className="w-9 h-9 sm:w-10 sm:h-10 object-contain group-hover:scale-105 group-hover:rotate-6 transition-transform duration-300 shrink-0" 
           />
@@ -261,7 +261,7 @@ export function HomeHeroSplit({ initialSession }: { initialSession?: any }) {
             {/* Card 1: Flashcard Match (Left) */}
             <div className="group relative overflow-visible hover:-translate-y-2 hover:scale-[1.03] transition-all duration-300 cursor-default select-none">
               <Image 
-                src="/images/home/card_flashcard_match.png" 
+                src="https://media.dolcake.com/images/home/card_flashcard_match.png" 
                 alt="Flashcard Match" 
                 width={336} 
                 height={334} 
@@ -272,7 +272,7 @@ export function HomeHeroSplit({ initialSession }: { initialSession?: any }) {
             {/* Card 2: Quiz Arena (Centerpiece HERO Card - Taller & Elevated with Celebration Confetti) */}
             <div className="group relative overflow-visible hover:-translate-y-2 hover:scale-[1.04] transition-all duration-300 cursor-default select-none z-20 sm:translate-y-1">
               <Image 
-                src="/images/home/card_quiz_arena.png" 
+                src="https://media.dolcake.com/images/home/card_quiz_arena.png" 
                 alt="Quiz Arena" 
                 width={352} 
                 height={540} 
@@ -284,7 +284,7 @@ export function HomeHeroSplit({ initialSession }: { initialSession?: any }) {
             {/* Card 3: Sentence Builder (Right) */}
             <div className="group relative overflow-visible hover:-translate-y-2 hover:scale-[1.03] transition-all duration-300 cursor-default select-none">
               <Image 
-                src="/images/home/card_sentence_builder.png" 
+                src="https://media.dolcake.com/images/home/card_sentence_builder.png" 
                 alt="Sentence Builder" 
                 width={336} 
                 height={334} 

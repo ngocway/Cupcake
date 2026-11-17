@@ -61,7 +61,7 @@ export function QuizStartScreen({
           ? "overflow-hidden bg-gradient-to-tr from-[#e6fcf0] via-[#f2faf5] to-[#cbf9e2]"
           : "bg-cover bg-center bg-[#8cd2f6]"
       }`}
-      style={isHighLevel ? {} : { backgroundImage: 'url(/images/background/cartoon-background-children.jpg)' }}
+      style={isHighLevel ? {} : { backgroundImage: 'url(https://media.dolcake.com/images/background/cartoon-background-children.jpg)' }}
     >
       {/* B1+ floating decorative blobs */}
       {isHighLevel && (

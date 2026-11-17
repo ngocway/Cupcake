@@ -42,10 +42,10 @@ function SidebarUserTypeListContent({ initialUserType }: { initialUserType?: str
   };
 
   const types = [
-    { id: 'kindergarten', label: 'Kindergarten', src: '/images/avatars/kid.png' },
-    { id: 'kid', label: 'Kid', src: '/images/avatars/kid.png' },
-    { id: 'teen', label: 'Teen', src: '/images/avatars/teen.png' },
-    { id: 'learner', label: 'Learner', src: '/images/avatars/adult.png' },
+    { id: 'kindergarten', label: 'Kindergarten', src: 'https://media.dolcake.com/images/avatars/kid.png' },
+    { id: 'kid', label: 'Kid', src: 'https://media.dolcake.com/images/avatars/kid.png' },
+    { id: 'teen', label: 'Teen', src: 'https://media.dolcake.com/images/avatars/teen.png' },
+    { id: 'learner', label: 'Learner', src: 'https://media.dolcake.com/images/avatars/adult.png' },
   ];
 
   return (

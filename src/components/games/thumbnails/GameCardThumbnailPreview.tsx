@@ -61,7 +61,7 @@ export const GameCardThumbnailPreview = React.forwardRef<
       >
         {/* Background stage */}
         <img
-          src="/games/mystery-treasure-grid-assets/assets/webp/background-stage.webp"
+          src="https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/webp/background-stage.webp"
           alt="Treasure Background"
           className="absolute inset-0 w-full h-full object-cover"
         />
@@ -127,7 +127,7 @@ export const GameCardThumbnailPreview = React.forwardRef<
           <div className="col-span-4 flex flex-col items-center justify-center space-y-4">
             <div className="w-56 h-56 relative drop-shadow-2xl">
               <img
-                src="/games/mystery-treasure-grid-assets/assets/webp/treasure-chest.webp"
+                src="https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/webp/treasure-chest.webp"
                 alt="Treasure Chest"
                 className="w-full h-full object-contain filter drop-shadow-[0_15px_15px_rgba(0,0,0,0.6)]"
               />
@@ -233,10 +233,10 @@ export const GameCardThumbnailPreview = React.forwardRef<
   // ──────────────────────────────────────────────────────────────────────────
   if (normMode.includes("egg") || normMode.includes("đập trứng") || normMode === "choice-egg") {
     const eggImages = [
-      "/games/egg-smash-quiz-premium-ambient/assets/egg-blue.png",
-      "/games/egg-smash-quiz-premium-ambient/assets/egg-pink.png",
-      "/games/egg-smash-quiz-premium-ambient/assets/egg-green.png",
-      "/games/egg-smash-quiz-premium-ambient/assets/egg-purple.png",
+      "https://media.dolcake.com/games/egg-smash-quiz-premium-ambient/assets/egg-blue.png",
+      "https://media.dolcake.com/games/egg-smash-quiz-premium-ambient/assets/egg-pink.png",
+      "https://media.dolcake.com/games/egg-smash-quiz-premium-ambient/assets/egg-green.png",
+      "https://media.dolcake.com/games/egg-smash-quiz-premium-ambient/assets/egg-purple.png",
     ];
 
     return (
@@ -247,7 +247,7 @@ export const GameCardThumbnailPreview = React.forwardRef<
       >
         {/* Background farm */}
         <img
-          src="/games/egg-smash-quiz-premium-ambient/assets/background-farm-no-nest.png"
+          src="https://media.dolcake.com/games/egg-smash-quiz-premium-ambient/assets/background-farm-no-nest.png"
           alt="Farm Background"
           className="absolute inset-0 w-full h-full object-cover"
         />
@@ -475,10 +475,10 @@ export const GameCardThumbnailPreview = React.forwardRef<
     const activePairs = pairs.length > 0
       ? pairs.slice(0, 4)
       : [
-          { word: "Cat", imageUrl: "/games/magic_tree_matching_game_v3/assets/animals/animal-cat.png" },
-          { word: "Dog", imageUrl: "/games/magic_tree_matching_game_v3/assets/animals/animal-dog.png" },
-          { word: "Monkey", imageUrl: "/games/magic_tree_matching_game_v3/assets/animals/animal-monkey.png" },
-          { word: "Chicken", imageUrl: "/games/magic_tree_matching_game_v3/assets/animals/animal-chicken.png" },
+          { word: "Cat", imageUrl: "https://media.dolcake.com/games/magic_tree_matching_game_v3/assets/animals/animal-cat.png" },
+          { word: "Dog", imageUrl: "https://media.dolcake.com/games/magic_tree_matching_game_v3/assets/animals/animal-dog.png" },
+          { word: "Monkey", imageUrl: "https://media.dolcake.com/games/magic_tree_matching_game_v3/assets/animals/animal-monkey.png" },
+          { word: "Chicken", imageUrl: "https://media.dolcake.com/games/magic_tree_matching_game_v3/assets/animals/animal-chicken.png" },
         ];
     const targetWord = activePairs[0]?.word || "TARGET";
 
@@ -489,7 +489,7 @@ export const GameCardThumbnailPreview = React.forwardRef<
         className="relative overflow-hidden font-sans select-none flex flex-col justify-between p-8 bg-[#8bd8ff]"
       >
         <img
-          src="/games/magic_tree_matching_game_v3/assets/background/background.png"
+          src="https://media.dolcake.com/games/magic_tree_matching_game_v3/assets/background/background.png"
           alt="Cut Rope Tree Background"
           className="absolute inset-0 w-full h-full object-cover"
         />
@@ -538,13 +538,13 @@ export const GameCardThumbnailPreview = React.forwardRef<
               {targetWord}
             </div>
             <img
-              src="/games/magic_tree_matching_game_v3/assets/answer/basket-front.png"
+              src="https://media.dolcake.com/games/magic_tree_matching_game_v3/assets/answer/basket-front.png"
               alt="Basket"
               className="w-56 h-auto -mt-3 object-contain drop-shadow-xl"
             />
           </div>
           <img
-            src="/games/magic_tree_matching_game_v3/assets/mascot/mascot-squirrel.png"
+            src="https://media.dolcake.com/games/magic_tree_matching_game_v3/assets/mascot/mascot-squirrel.png"
             alt="Mascot"
             className="w-28 h-28 object-contain drop-shadow-xl"
           />
@@ -642,7 +642,7 @@ export const GameCardThumbnailPreview = React.forwardRef<
     >
       {/* Background Candy Kingdom */}
       <img
-        src="/games/candy-grammar-sugar-jelly/assets/background/candyland-clean-hq.png"
+        src="https://media.dolcake.com/games/candy-grammar-sugar-jelly/assets/background/candyland-clean-hq.png"
         alt="Candyland"
         className="absolute inset-0 w-full h-full object-cover"
       />

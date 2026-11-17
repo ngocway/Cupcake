@@ -65,7 +65,7 @@ const MATCH_GAMES: GameCard[] = [
     badgeBg: "bg-rose-500 text-white",
     desc: "Học sinh dùng thao tác cắt dây để nối hình ảnh với từ vựng / câu tương ứng.",
     videoId: "Dsb7Rm9Je4Y",
-    imageUrl: "/images/games/cut-rope.png",
+    imageUrl: "https://media.dolcake.com/images/games/cut-rope.png",
   },
   {
     id: "train-vocab",
@@ -74,7 +74,7 @@ const MATCH_GAMES: GameCard[] = [
     badgeBg: "bg-amber-500 text-white",
     desc: "Học sinh ghép thẻ từ vựng vào đúng toa tàu có hình ảnh tương ứng.",
     videoId: "Tb2nH6nprXk",
-    imageUrl: "/images/games/train-vocab.png",
+    imageUrl: "https://media.dolcake.com/images/games/train-vocab.png",
   },
 ];
 
@@ -155,7 +155,7 @@ function MatchGameCardItem({
             src={
               game.videoId
                 ? `https://img.youtube.com/vi/${game.videoId}/maxresdefault.jpg`
-                : (game.imageUrl || "/images/games/flashcard-quiz.png")
+                : (game.imageUrl || "https://media.dolcake.com/images/games/flashcard-quiz.png")
             }
             onError={(e) => {
               const target = e.currentTarget;
