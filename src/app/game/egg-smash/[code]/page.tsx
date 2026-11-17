@@ -119,7 +119,7 @@ export default function StudentEggSmashGamePage({ params }: { params: Promise<{ 
       )}
 
       <iframe
-        src="https://media.dolcake.com/games/egg-smash-quiz-premium-ambient/index.html"
+        src="/games/egg-smash-quiz-premium-ambient/index.html"
         className="w-full h-full flex-1 border-none block"
         title="Egg Smash Quiz Game"
         sandbox="allow-scripts allow-same-origin"

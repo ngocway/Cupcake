@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Treasure Question Modal</title>
+  <link rel="stylesheet" href="treasure-modal.css" />
+</head>
+<body>
+  <main class="game-demo" aria-hidden="true">
+    <div class="demo-title">MYSTERY TREASURE GRID</div>
+  </main>
+
+  <!-- MODAL START -->
+  <div class="treasure-modal-backdrop" id="treasureModal">
+    <section class="treasure-modal" role="dialog" aria-modal="true" aria-labelledby="treasureQuestion">
+      <img class="treasure-frame" src="assets/png/tropical_treasure_map_ui_frame.png" alt="" draggable="false" />
+      <img class="treasure-title-banner" src="assets/png/treasure_question_pirate_banner.png" alt="Treasure Question" draggable="false" />
+
+      <button class="treasure-close" type="button" aria-label="Close question">
+        <img src="assets/png/tropical_rope_framed_close_button.png" alt="" draggable="false" />
+      </button>
+
+      <div class="treasure-content">
+        <h2 class="treasure-question" id="treasureQuestion">Which shape has three sides?</h2>
+
+        <div class="treasure-answers" role="group" aria-label="Choose an answer">
+          <button class="treasure-answer answer-blue" type="button" data-answer="A">
+            <span class="answer-letter">A</span>
+            <span class="answer-text">Circle</span>
+            <span class="answer-shine" aria-hidden="true"></span>
+          </button>
+
+          <button class="treasure-answer answer-green" type="button" data-answer="B">
+            <span class="answer-letter">B</span>
+            <span class="answer-text">Triangle</span>
+            <span class="answer-shine" aria-hidden="true"></span>
+          </button>
+
+          <button class="treasure-answer answer-orange" type="button" data-answer="C">
+            <span class="answer-letter">C</span>
+            <span class="answer-text">Square</span>
+            <span class="answer-shine" aria-hidden="true"></span>
+          </button>
+
+          <button class="treasure-answer answer-purple" type="button" data-answer="D">
+            <span class="answer-letter">D</span>
+            <span class="answer-text">Rectangle</span>
+            <span class="answer-shine" aria-hidden="true"></span>
+          </button>
+        </div>
+      </div>
+
+      <i class="sparkle sparkle-1" aria-hidden="true"></i>
+      <i class="sparkle sparkle-2" aria-hidden="true"></i>
+      <i class="sparkle sparkle-3" aria-hidden="true"></i>
+    </section>
+  </div>
+  <!-- MODAL END -->
+</body>
+</html>

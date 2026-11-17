@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mystery Treasure Grid</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <div id="game-shell">
+      <div id="game-stage" aria-label="Mystery Treasure Grid game">
+        <img class="bg-scene" src="assets/webp/background-stage.webp" alt="" />
+
+        <img class="topbar-base" src="assets/webp/topbar-base.webp" alt="" />
+        <button id="backBtn" class="image-btn back-btn" aria-label="Back to games">
+          <img src="assets/webp/btn-back.webp" alt="Back to Games" />
+        </button>
+        <img class="title-board" src="assets/webp/title-board.webp" alt="Mystery Treasure Grid" />
+
+        <div class="hud hud-score" aria-live="polite">
+          <div class="hud-icon coin-star">★</div>
+          <div id="scoreValue" class="hud-value">0 pts</div>
+        </div>
+        <div class="hud hud-timer" aria-live="polite">
+          <div class="hud-icon clock-icon"></div>
+          <div id="timerValue" class="hud-value">00:31</div>
+        </div>
+        <button id="soundBtn" class="image-btn round-btn sound-btn" aria-label="Toggle sound">
+          <img src="assets/webp/btn-sound.webp" alt="Sound" />
+        </button>
+        <button id="restartBtn" class="image-btn round-btn restart-btn" aria-label="Restart game">
+          <img src="assets/webp/btn-restart.webp" alt="Restart" />
+        </button>
+
+        <img class="parrot" src="assets/webp/parrot.webp" alt="Pirate parrot" />
+        <img class="left-sign" src="assets/webp/sign-left.webp" alt="Small Questions Big Treasures" />
+        <img class="barrel" src="assets/webp/barrel-gold.webp" alt="Gold barrel" />
+
+        <section class="left-panel-wrap">
+          <img class="panel panel-left" src="assets/webp/panel-left.webp" alt="" />
+          <img class="question-ribbon" src="assets/webp/question-ribbon.webp" alt="Choose a treasure tile" />
+          <div class="counter-wrap">
+            <img class="counter-board" src="assets/webp/counter-board-empty.webp" alt="" />
+            <div id="leftCounterText" class="counter-text">0 / 16</div>
+          </div>
+          <div id="tileGrid" class="tile-grid" aria-label="Treasure tiles"></div>
+        </section>
+
+        <section class="right-panel-wrap">
+          <img class="panel panel-right" src="assets/webp/panel-right.webp" alt="" />
+          <div id="chestWrap" class="chest-wrap">
+            <img class="treasure-chest" src="assets/webp/treasure-chest.webp" alt="Treasure chest" />
+          </div>
+          <img class="chest-nameplate" src="assets/webp/chest-nameplate.webp" alt="Magical Treasure Chest" />
+          <div class="progress-wrap">
+            <img class="progress-pill" src="assets/webp/progress-pill-empty.webp" alt="" />
+            <div id="progressText" class="progress-text">0 / 16 CODES</div>
+          </div>
+          <div id="slotGrid" class="slot-grid" aria-label="Code progress"></div>
+        </section>
+
+        <img class="right-sign" src="assets/webp/sign-right.webp" alt="Discover Learn Play Shine" />
+        <img class="crab" src="assets/webp/crab.webp" alt="Cute crab" />
+
+        <div id="particlesLayer" class="particles-layer" aria-hidden="true"></div>
+
+        <div id="questionModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="questionTitle">
+          <div class="modal-card">
+            <div class="modal-header">Treasure Question</div>
+            <div id="questionIndex" class="modal-subtitle">Tile 1</div>
+            <h2 id="questionTitle" class="modal-question">Question text</h2>
+            <div id="answerList" class="answer-list"></div>
+            <div class="modal-actions">
+              <button id="skipCloseBtn" class="modal-secondary">Close</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="finishOverlay" class="finish-overlay hidden">
+          <div class="finish-card">
+            <div class="finish-title">Treasure Complete!</div>
+            <div class="finish-subtitle">You opened all 16 treasure tiles.</div>
+            <div id="finishScore" class="finish-score">Final Score: 160 pts</div>
+            <button id="playAgainBtn" class="modal-primary">Play Again</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>

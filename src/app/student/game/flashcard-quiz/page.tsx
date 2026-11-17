@@ -41,7 +41,7 @@ function FlashcardQuizGameContent() {
           </div>
         )}
         <iframe 
-          src={`https://media.dolcake.com/games/flashcard-quiz/index.html?age=${age}&nativeLanguage=${nativeLanguage}${topicId ? `&topicId=${topicId}` : ''}`} 
+          src={`/games/flashcard-quiz/index.html?age=${age}&nativeLanguage=${nativeLanguage}${topicId ? `&topicId=${topicId}` : ''}`} 
           className={`w-full h-full border-none transition-opacity duration-700 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
           title="Flashcard Quiz Game"
           sandbox="allow-scripts allow-same-origin"

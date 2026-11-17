@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#3db9f8">
+  <title>Candy Grammar Quest — Sugar Burst</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<main id="game" class="game" tabindex="0" aria-label="Candy Grammar Quest">
+  <img class="background" src="assets/background/candyland-clean-hq.png" alt="Thế giới kẹo Candy Land" draggable="false">
+
+  <div class="stage">
+    <header class="hud">
+      <div class="hud-left">
+        <div class="counter hud-item">
+          <img src="assets/hud/question-counter-hq.png" alt="" draggable="false">
+          <div class="counter-text"><span id="roundLabel">Câu</span><strong id="questionCounter">1/5</strong></div>
+        </div>
+
+        <button id="autoNextBtn" class="auto-toggle-btn active" type="button" role="switch" aria-checked="true" aria-label="Tự chuyển câu" title="Tự chuyển câu: BẬT">
+          <img class="toggle-skin" src="assets/hud/question-counter-hq.png" alt="" draggable="false">
+          <div class="toggle-content">
+            <span class="toggle-track">
+              <span class="toggle-thumb">⚡</span>
+            </span>
+            <span class="toggle-label">Tự chuyển câu</span>
+          </div>
+        </button>
+      </div>
+
+      <div class="hud-right">
+        <div class="coins hud-item">
+          <img src="assets/hud/coin-counter-hq.png" alt="" draggable="false">
+          <strong id="coinValue">160</strong>
+          <button id="addCoinBtn" class="plus-hotspot" type="button" aria-label="Cộng thử 5 xu"></button>
+        </div>
+      </div>
+    </header>
+
+    <section id="questionSection" class="question">
+      <!-- Mode 1: No image (default single centered board) -->
+      <div id="singleQuestionBoard" class="single-question-board">
+        <img class="question-board-bg" src="assets/boards/question-board-hq.png" alt="" draggable="false">
+        <div id="questionTextSingle" class="question-text">Listen! Someone _____ at the front door right now.</div>
+      </div>
+
+      <!-- Mode 2: With image (split 2 columns: image left, text right) -->
+      <div id="splitImageFrame" class="split-image-frame" role="button" tabindex="0" title="Nhấn để phóng to ảnh" aria-label="Phóng to ảnh">
+        <div class="cookie-frame-outer">
+          <div class="cookie-frame-inner">
+            <img id="questionImage" class="question-image-split" alt="Hình minh họa câu hỏi" draggable="false">
+            <span class="zoom-hint">🔍 Phóng to</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="splitTextBoard" class="split-text-board">
+        <img class="split-board-bg" src="assets/boards/answer-board-hq.png" alt="" draggable="false">
+        <div id="questionTextSplit" class="question-text-split"></div>
+      </div>
+    </section>
+
+    <section id="answersGrid" class="answers" aria-label="Các đáp án">
+      <button class="answer-card" data-index="0" type="button">
+        <img class="answer-skin" src="assets/boards/answer-board-hq.png" alt="" draggable="false">
+        <img class="answer-badge" src="assets/hud/badge-a.svg" alt="A">
+        <span class="answer-text"></span>
+        <img class="sugar-ring" src="assets/effects/sugar-ring.svg" alt="">
+        <img class="jelly-poof" src="assets/effects/jelly-poof.svg" alt="">
+      </button>
+      <button class="answer-card" data-index="1" type="button">
+        <img class="answer-skin" src="assets/boards/answer-board-hq.png" alt="" draggable="false">
+        <img class="answer-badge" src="assets/hud/badge-b.svg" alt="B">
+        <span class="answer-text"></span>
+        <img class="sugar-ring" src="assets/effects/sugar-ring.svg" alt="">
+        <img class="jelly-poof" src="assets/effects/jelly-poof.svg" alt="">
+      </button>
+      <button class="answer-card" data-index="2" type="button">
+        <img class="answer-skin" src="assets/boards/answer-board-hq.png" alt="" draggable="false">
+        <img class="answer-badge" src="assets/hud/badge-c.svg" alt="C">
+        <span class="answer-text"></span>
+        <img class="sugar-ring" src="assets/effects/sugar-ring.svg" alt="">
+        <img class="jelly-poof" src="assets/effects/jelly-poof.svg" alt="">
+      </button>
+      <button class="answer-card" data-index="3" type="button">
+        <img class="answer-skin" src="assets/boards/answer-board-hq.png" alt="" draggable="false">
+        <img class="answer-badge" src="assets/hud/badge-d.svg" alt="D">
+        <span class="answer-text"></span>
+        <img class="sugar-ring" src="assets/effects/sugar-ring.svg" alt="">
+        <img class="jelly-poof" src="assets/effects/jelly-poof.svg" alt="">
+      </button>
+    </section>
+
+    <button id="nextBtn" class="next-btn" type="button" hidden>Câu tiếp ➔</button>
+
+    <img class="hammer" src="assets/decor/candy-hammer-hq.png" alt="" draggable="false">
+
+    <div id="effectsLayer" class="effects-layer" aria-hidden="true"></div>
+    <div id="coinBurst" class="coin-burst" aria-hidden="true">+15</div>
+  </div>
+
+  <div id="roundOverlay" class="overlay" hidden>
+    <div class="modal round-modal">
+      <div class="modal-decor-top">
+        <span class="decor-lollipop">🍭</span>
+        <span class="decor-sparkle">✨</span>
+        <span class="decor-chocolate">🍫</span>
+      </div>
+      <div class="modal-stars-banner">
+        <span class="star-item star-side">⭐</span>
+        <span class="star-item star-center">🏆</span>
+        <span class="star-item star-side">⭐</span>
+      </div>
+      <h2 id="roundModalTitle" class="modal-title">Chiến Thắng!</h2>
+      <div class="modal-reward-card">
+        <p id="roundModalSubtitle" class="modal-subtitle">Tuyệt đỉnh! Bé đã xuất sắc hoàn thành tất cả các câu hỏi của bài tập!</p>
+      </div>
+      <button id="nextRoundBtn" class="modal-btn" type="button">Chơi lại từ đầu 🔄</button>
+    </div>
+  </div>
+
+  <div id="loadingOverlay" class="overlay" hidden>
+    <div class="modal loading-modal">
+      <div class="candy-spinner">🍬</div>
+      <h2 class="modal-title">Đang nạp bài tập...</h2>
+      <div class="modal-reward-card">
+        <p class="modal-subtitle">Thế giới kẹo ngọt đang chuẩn bị câu hỏi cho bé nhé!</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="pauseOverlay" class="overlay" hidden>
+    <div class="modal pause-modal">
+      <div class="modal-stars-banner">
+        <span class="star-item star-center">⏸️</span>
+      </div>
+      <h2 class="modal-title">Tạm Dừng</h2>
+      <div class="modal-reward-card">
+        <p class="modal-subtitle">Nhấn “Chơi tiếp” để quay lại Candy Land.</p>
+      </div>
+      <button id="resumeBtn" class="modal-btn" type="button">Chơi tiếp ▶</button>
+    </div>
+  </div>
+
+  <div id="imageZoomOverlay" class="overlay" hidden>
+    <div class="modal image-zoom-modal">
+      <button id="closeZoomBtn" class="close-zoom-btn" type="button" aria-label="Đóng phóng to">✕</button>
+      <div class="zoom-img-container">
+        <img id="zoomedImage" src="" alt="Hình minh họa phóng to" draggable="false">
+      </div>
+      <p class="zoom-tip">Chạm ra ngoài hoặc bấm dấu ✕ để đóng</p>
+    </div>
+  </div>
+
+  <canvas id="fireworksCanvas" class="fireworks-canvas"></canvas>
+</main>
+<script src="game.js"></script>
+</body>
+</html>

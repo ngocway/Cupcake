@@ -9,7 +9,7 @@ export interface ReviewQuestionOption {
 
 export interface ReviewQuestion {
   id: string;
-  type: "MULTIPLE_CHOICE" | "MATCHING" | "CLOZE_TEST" | "TRUE_FALSE";
+  type: "MULTIPLE_CHOICE" | "MATCHING" | "CLOZE_TEST" | "TRUE_FALSE" | "SENTENCE_BUILDER";
   imageUrl?: string;
   audioUrl?: string;
   audioText?: string;
@@ -57,7 +57,7 @@ function isValidDialogue(speakerA?: string | null, speakerB?: string | null): bo
  * 4. Genuine conversational exchanges (only if valid human dialogue)
  * Minimum 20 questions!
  */
-export function generateUnitReviewQuestions(sets: LibrarySetItem[]): ReviewQuestion[] {
+export function generateUnitReviewQuestions(sets: LibrarySetItem[], grade: number = 5): ReviewQuestion[] {
   const vocabSet = sets.find((s) => s.subType === "image-text");
   const quizSet = sets.find((s) => s.subType === "quiz");
   const textSets = sets.filter((s) => s.subType === "text-text");
@@ -242,9 +242,11 @@ export function generateUnitReviewQuestions(sets: LibrarySetItem[]): ReviewQuest
         ...distractorReplies.map((r) => ({ text: r, isCorrect: false })),
       ]);
 
+      const cleanSpeakerA = speakerA.replace(/^["“]+|["”]+$/g, "").trim();
+
       const qContent = {
         type: "MULTIPLE_CHOICE",
-        questionText: `Choose the best response to complete the conversation:\nSpeaker A: "${speakerA}"`,
+        questionText: `💬 ${cleanSpeakerA}`,
         options,
       };
 
@@ -258,12 +260,60 @@ export function generateUnitReviewQuestions(sets: LibrarySetItem[]): ReviewQuest
   });
 
   // ──────────────────────────────────────────────────────────────────────────
-  // Đảm bảo tối thiểu 20 câu hỏi chất lượng cao
+  // 5. DẠNG 5: Sắp xếp câu (Sentence Builder) từ các câu hội thoại chuẩn
+  // ──────────────────────────────────────────────────────────────────────────
+  const sbCandidates: Array<{ sentence: string; contextHint?: string }> = [];
+  legitimateDialogues.forEach((pair) => {
+    const cleanA = pair.word!.replace(/^["“]+|["”]+$/g, "").trim();
+    const cleanB = pair.labelB!.replace(/^["“]+|["”]+$/g, "").trim();
+
+    const bWords = cleanB.split(/\s+/).filter(Boolean);
+    const aWords = cleanA.split(/\s+/).filter(Boolean);
+
+    if (bWords.length >= 3 && bWords.length <= 10) {
+      sbCandidates.push({
+        sentence: cleanB,
+        contextHint: grade <= 9 ? `💬 "${cleanA}"` : undefined,
+      });
+    } else if (aWords.length >= 3 && aWords.length <= 10) {
+      sbCandidates.push({
+        sentence: cleanA,
+        contextHint: grade <= 9 ? `💬 "${cleanB}"` : undefined,
+      });
+    }
+  });
+
+  shuffleArray(sbCandidates)
+    .forEach((cand, idx) => {
+      const words = cand.sentence.split(/\s+/).filter(Boolean);
+      let shuffledWords = shuffleArray(words);
+      if (words.length > 1 && shuffledWords.join(" ") === words.join(" ")) {
+        shuffledWords = [...words.slice(1), words[0]];
+      }
+
+      const qContent = {
+        type: "SENTENCE_BUILDER",
+        questionText: cand.contextHint || "Arrange the words to make a correct sentence:",
+        targetSentence: words.join(" "),
+        words,
+        shuffledWords,
+      };
+
+      questions.push({
+        id: `rev-sb-${idx}-${qCounter++}`,
+        type: "SENTENCE_BUILDER",
+        content: JSON.stringify(qContent),
+        explanation: `[EN] Correct sentence: "${words.join(" ")}".\n[VI] Câu đúng là: "${words.join(" ")}".`,
+      });
+    });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // Đảm bảo tối thiểu 20 câu hỏi chất lượng cao (không cắt bớt nếu nhiều hơn)
   // ──────────────────────────────────────────────────────────────────────────
   const finalShuffled = shuffleArray(questions);
 
   if (finalShuffled.length >= 20) {
-    return finalShuffled.slice(0, Math.min(finalShuffled.length, 28));
+    return finalShuffled;
   }
 
   // Nếu chưa đủ 20 (ví dụ Unit lớp 1 quá ngắn), nhân bản xoay vòng từ các câu hỏi chuẩn trên

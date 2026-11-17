@@ -33,43 +33,43 @@ export function resolveDirectGameUrl(rawUrl: string, assignment?: any): string {
   const queryStr = params.toString() ? `?${params.toString()}` : '';
 
   if (basePath.includes('/student/game/flashcard-match')) {
-    return `https://media.dolcake.com/games/flashcard-match/index.html${queryStr}`;
+    return `/games/flashcard-match/index.html${queryStr}`;
   }
   if (basePath.includes('/student/game/candy-quiz')) {
-    return `https://media.dolcake.com/games/candy-grammar-sugar-jelly/index.html${queryStr}`;
+    return `/games/candy-grammar-sugar-jelly/index.html${queryStr}`;
   }
   if (basePath.includes('/student/game/egg-smash-quiz')) {
-    return `https://media.dolcake.com/games/egg-smash-quiz-premium-ambient/index.html${queryStr}`;
+    return `/games/egg-smash-quiz-premium-ambient/index.html${queryStr}`;
   }
   if (basePath.includes('/student/game/conveyor-drop')) {
-    return `https://media.dolcake.com/games/conveyor-drop/index.html${queryStr}`;
+    return `/games/conveyor-drop/index.html${queryStr}`;
   }
   if (basePath.includes('/student/game/match-words')) {
-    return `https://media.dolcake.com/games/match-words/index.html${queryStr}`;
+    return `/games/match-words/index.html${queryStr}`;
   }
   if (basePath.includes('/student/game/match-text-text')) {
-    return `https://media.dolcake.com/games/match-text-text/index.html${queryStr}`;
+    return `/games/match-text-text/index.html${queryStr}`;
   }
   if (basePath.includes('/student/game/sentence-builder')) {
-    return `https://media.dolcake.com/games/sentence-builder/index.html${queryStr}`;
+    return `/games/sentence-builder/index.html${queryStr}`;
   }
   if (basePath.includes('/student/game/flashcard-sentence-builder')) {
-    return `https://media.dolcake.com/games/flashcard-sentence-builder/index.html${queryStr}`;
+    return `/games/flashcard-sentence-builder/index.html${queryStr}`;
   }
   if (basePath.includes('/student/game/robot-chat')) {
-    return `https://media.dolcake.com/games/robot-chat/index.html${queryStr}`;
+    return `/games/robot-chat/index.html${queryStr}`;
   }
   if (basePath.includes('/student/game/train')) {
-    return `https://media.dolcake.com/games/Doan-tau-tu-vung/index.html${queryStr}`;
+    return `/games/Doan-tau-tu-vung/index.html${queryStr}`;
   }
   if (basePath.includes('/student/game/treasure-hunt')) {
-    return `https://media.dolcake.com/games/mystery-treasure-grid-assets/index.html${queryStr}`;
+    return `/games/mystery-treasure-grid-assets/index.html${queryStr}`;
   }
   if (basePath.includes('/student/game/cut-rope')) {
-    return `https://media.dolcake.com/games/magic_tree_matching_game_v3/index.html${queryStr}`;
+    return `/games/magic_tree_matching_game_v3/index.html${queryStr}`;
   }
   if (basePath.includes('/student/game/flashcard-quiz')) {
-    return `https://media.dolcake.com/games/flashcard-quiz/index.html${queryStr}`;
+    return `/games/flashcard-quiz/index.html${queryStr}`;
   }
 
   if (basePath.startsWith('https://media.dolcake.com/games/')) {

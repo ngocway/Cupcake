@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { getUnitReviewCountsByGradeAction } from "@/actions/unit-review-actions";
 import {
   BookOpen,
   Gamepad2,
@@ -624,6 +625,19 @@ export function GlobalSuccessLibraryList() {
     }
     return Array.from(map.values()).sort((a, b) => a.unitNumber - b.unitNumber);
   }, [filteredSets]);
+
+  const [unitReviewCounts, setUnitReviewCounts] = useState<Record<number, number>>({});
+
+  useEffect(() => {
+    if (!selectedGrade) return;
+    let active = true;
+    getUnitReviewCountsByGradeAction(selectedGrade).then((counts) => {
+      if (active) setUnitReviewCounts(counts);
+    });
+    return () => {
+      active = false;
+    };
+  }, [selectedGrade]);
 
   const getGradePastelTheme = (grade: number, hasData: boolean) => {
     const palettes: Record<
@@ -1810,7 +1824,7 @@ export function GlobalSuccessLibraryList() {
                       <div className="flex items-center justify-between gap-2">
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/95 dark:bg-slate-900 border border-white/80 dark:border-slate-700 text-purple-700 dark:text-purple-300 text-[11px] font-bold shadow-2xs">
                           <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-                          <span>20+ {locale === "vi" ? "câu hỏi" : "questions"}</span>
+                          <span>{unitReviewCounts[unitGroup.unitNumber] ?? "20+"} {locale === "vi" ? "câu hỏi" : "questions"}</span>
                         </span>
 
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-100/80 dark:bg-purple-900/40 text-purple-800 dark:text-purple-200 text-[11px] font-bold">

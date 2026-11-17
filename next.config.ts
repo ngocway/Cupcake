@@ -86,6 +86,33 @@ const nextConfig: NextConfig = {
         destination: '/public/lessons/exploring-the-world-of-animals',
         permanent: true,
       },
+      // Serve heavy media inside /games/ from Cloudflare R2 while keeping HTML/JS/CSS same-origin
+      {
+        source: '/games/:path((?:.+/)?[^/]+\\.(?:png|jpg|jpeg|webp|gif|svg|wav|mp3|ogg))',
+        destination: 'https://media.dolcake.com/games/:path',
+        permanent: false,
+      },
+      // Fallback redirects for moved public media folders -> Cloudflare R2
+      {
+        source: '/sounds/:path*',
+        destination: 'https://media.dolcake.com/sounds/:path*',
+        permanent: false,
+      },
+      {
+        source: '/assests/:path*',
+        destination: 'https://media.dolcake.com/assests/:path*',
+        permanent: false,
+      },
+      {
+        source: '/images/:path*',
+        destination: 'https://media.dolcake.com/images/:path*',
+        permanent: false,
+      },
+      {
+        source: '/guides/:path((?:.+/)?[^/]+\\.(?:png|jpg|jpeg|webp|gif|svg|mp4|webm))',
+        destination: 'https://media.dolcake.com/guides/:path',
+        permanent: false,
+      },
     ];
   },
 };

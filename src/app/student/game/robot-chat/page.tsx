@@ -40,7 +40,7 @@ export default function RobotChatGamePage() {
           </div>
         )}
         <iframe 
-          src={`https://media.dolcake.com/games/robot-chat/index.html?nativeLang=${nativeLanguage || "vi"}&level=${effectiveLevel}`} 
+          src={`/games/robot-chat/index.html?nativeLang=${nativeLanguage || "vi"}&level=${effectiveLevel}`} 
           className={`w-full h-full border-none transition-opacity duration-700 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
           title="Robot Chat Game"
           allow="microphone"

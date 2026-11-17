@@ -81,6 +81,13 @@ export const getQuestionStatus = (q: any, answer: any) => {
     const isAllCorrect = pairs.every((p: any) => userAnswer[p.id] === p.rightText);
     return isAllCorrect ? "correct" : "incorrect";
   }
+  if (qType === "SENTENCE_BUILDER") {
+    const selected: Array<{ idx: number; text: string }> = Array.isArray(answer) ? answer : [];
+    if (selected.length === 0) return "pending";
+    const built = selected.map((s) => s.text).join(" ").trim();
+    const expected = (questionData.targetSentence || (questionData.words || []).join(" ")).trim();
+    return built === expected ? "correct" : "incorrect";
+  }
   return "pending";
 };
 

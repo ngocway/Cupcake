@@ -40,6 +40,7 @@ import { QuizQuestionNumbers } from "./components/QuizQuestionNumbers";
 import { MultipleChoiceBlock } from "./components/question-types/MultipleChoiceBlock";
 import { TrueFalseBlock } from "./components/question-types/TrueFalseBlock";
 import { ClozeTestBlock } from "./components/question-types/ClozeTestBlock";
+import { SentenceBuilderBlock } from "./components/question-types/SentenceBuilderBlock";
 import { useQuizAudioEngine } from "./hooks/useQuizAudioEngine";
 
 // Dynamically load MatchingQuestionBlock to optimize bundle size
@@ -783,6 +784,8 @@ export default function KidTeenQuizRunner({
                     ? "Fill in the blank"
                     : qType === "TRUE_FALSE"
                     ? "True / False"
+                    : qType === "SENTENCE_BUILDER"
+                    ? "Sentence Builder"
                     : "Choose the correct answer"}
                 </span>
               </div>
@@ -889,6 +892,18 @@ export default function KidTeenQuizRunner({
                     userAnswer={userAnswer}
                     isChecked={isChecked}
                     quizMode={quizMode}
+                    attemptSeed={attemptSeed}
+                    handleAnswerChange={handleAnswerChange}
+                  />
+                )}
+
+                {/* Sentence Builder */}
+                {qType === "SENTENCE_BUILDER" && (
+                  <SentenceBuilderBlock
+                    currentQuestion={currentQuestion}
+                    currentQuestionData={currentQuestionData}
+                    userAnswer={userAnswer}
+                    isChecked={isChecked}
                     attemptSeed={attemptSeed}
                     handleAnswerChange={handleAnswerChange}
                   />

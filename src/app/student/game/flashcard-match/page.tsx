@@ -51,7 +51,7 @@ function FlashcardMatchGameContent() {
         </div>
       )}
       <iframe
-        src={`https://media.dolcake.com/games/flashcard-match/index.html?topicId=${topicId || ""}`}
+        src={`/games/flashcard-match/index.html?topicId=${topicId || ""}`}
         className={`w-full h-full flex-1 border-none block transition-opacity duration-700 ${isLoading ? "opacity-0" : "opacity-100"}`}
         title="Flashcard Match Game"
         referrerPolicy="no-referrer"

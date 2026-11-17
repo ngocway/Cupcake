@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Match & Learn</title>
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0; font-family:Arial,Helvetica,sans-serif; color:#24304a;
+  min-height:100vh; background:linear-gradient(135deg,#f5f3ff,#eef8ff 55%,#fff5fb);
+}
+.app{min-height:100vh;padding:18px 28px 24px;position:relative;overflow:hidden}
+.bg{position:absolute;inset:0;pointer-events:none;opacity:.55}
+.bg:before,.bg:after{content:"";position:absolute;border-radius:50%;filter:blur(3px)}
+.bg:before{width:380px;height:380px;background:#d9d1ff;left:-170px;bottom:-160px}
+.bg:after{width:300px;height:300px;background:#d6f8ec;right:-130px;top:130px}
+.header{
+  height:82px;background:rgba(255,255,255,.92);border:1px solid #eeeaff;
+  border-radius:24px;display:flex;align-items:center;padding:0 24px;
+  box-shadow:0 10px 30px rgba(79,68,150,.10);position:relative;z-index:2
+}
+.back{width:48px;height:48px;border:0;border-radius:50%;background:#fff;
+  color:#6d4cff;font-size:30px;box-shadow:0 4px 14px #ddd8f5;cursor:pointer}
+.brand{display:flex;align-items:center;gap:12px;margin-left:18px;min-width:220px}
+.logo{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;
+  background:#eee9ff;color:#704cff;font-size:25px}
+.brand b{font-size:20px}.brand small{display:block;color:#7b849b;margin-top:3px}
+.progress{flex:1;max-width:600px;margin:auto;display:flex;align-items:center;gap:14px}
+.star{font-size:27px}.bar{height:14px;flex:1;border-radius:20px;background:#eeeafa;overflow:hidden}
+.fill{height:100%;width:55%;background:linear-gradient(90deg,#704cff,#b75cff,#ffb340);border-radius:20px}
+.round{font-weight:700;color:#6549dc;white-space:nowrap}
+.score{background:white;padding:13px 22px;border-radius:25px;font-weight:700;font-size:18px;box-shadow:0 4px 15px #e6e0f4;margin-right:12px}
+.gear{width:48px;height:48px;border:0;border-radius:50%;background:#fff;font-size:23px;cursor:pointer}
+.title{text-align:center;margin:25px 0 15px;position:relative;z-index:2}
+.title h1{font-size:24px;margin:0 0 5px}.title p{margin:0;color:#7d879d}
+.game{position:relative;z-index:2;max-width:1400px;margin:auto}
+.board{position:relative;min-height:590px;padding:20px 4%;display:flex;flex-direction:column;justify-content:space-between}
+.row{display:grid;grid-template-columns:repeat(4,1fr);gap:55px;position:relative;z-index:3}
+.card{
+  height:210px;background:rgba(255,255,255,.94);border-radius:24px;
+  border:2px solid var(--c);box-shadow:0 12px 25px rgba(70,70,120,.10);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  cursor:pointer;transition:.2s;position:relative;user-select:none
+}
+.card:hover{transform:translateY(-5px);box-shadow:0 18px 30px rgba(70,70,120,.16)}
+.topcard{touch-action:none}.topcard .port{cursor:grab}.topcard:active{cursor:grabbing}
+.card.selected{transform:translateY(-6px);box-shadow:0 0 0 5px rgba(112,76,255,.14),0 18px 35px rgba(70,70,120,.18)}
+.card.matched{animation:pop .35s ease;box-shadow:0 0 0 4px #53d39a55,0 15px 30px #53d39a22}
+@keyframes pop{50%{transform:scale(1.05)}}
+.emoji{font-size:76px;line-height:1;margin-bottom:15px;filter:drop-shadow(0 5px 5px #aaa5)}
+.word{font-size:25px;font-weight:800}.port{
+  position:absolute;bottom:-13px;width:28px;height:28px;border-radius:50%;
+  background:white;border:5px solid var(--c);box-shadow:0 3px 10px #9996;z-index:5
+}
+.bottom .port{top:-13px;bottom:auto}
+.lines{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:visible}
+line,.curve{fill:none;stroke-width:6;stroke-linecap:round;filter:drop-shadow(0 3px 3px #8884)}
+.controls{display:flex;justify-content:center;gap:28px;margin-top:8px;position:relative;z-index:3}
+.btn{border:0;border-radius:28px;padding:15px 42px;background:white;color:#6549dc;
+  font-weight:800;font-size:17px;box-shadow:0 7px 20px #dcd8ed;cursor:pointer}
+.btn.primary{background:linear-gradient(100deg,#704cff,#a55cff);color:white}
+.message{text-align:center;height:30px;font-weight:700;color:#6549dc;margin-top:6px}
+.shake{animation:shake .3s}@keyframes shake{25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+@media(max-width:900px){
+ .app{padding:10px}.header{padding:0 12px;height:70px}.brand{min-width:auto;margin-left:8px}
+ .brand div:last-child,.score{display:none}.progress{margin-left:15px}.board{padding:15px 1%;min-height:520px}
+ .row{gap:12px}.card{height:170px;border-radius:18px}.emoji{font-size:55px}.word{font-size:20px}
+ .controls{gap:10px}.btn{padding:12px 20px}
+}
+@media(max-width:600px){
+ .brand{display:none}.header{justify-content:space-between}.progress{margin:0 10px}.round{font-size:13px}
+ .row{gap:7px}.card{height:135px}.emoji{font-size:40px;margin-bottom:8px}.word{font-size:16px}
+ .board{min-height:420px}.controls{flex-wrap:wrap}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="bg"></div>
+<header class="header">
+<button class="back" onclick="resetGame()">‹</button>
+<div class="brand"><div class="logo">🎮</div><div><b>Match & Learn</b><small>Nối từ với nghĩa tương ứng</small></div></div>
+<div class="progress"><span class="star">⭐</span><div class="bar"><div class="fill" id="fill"></div></div><span class="round" id="round">1 / 2</span></div>
+<div class="score">⭐ <span id="score">120</span></div><button class="gear">⚙️</button>
+</header>
+
+<div class="title"><h1>✨ Nối từ tiếng Anh với nghĩa tiếng Việt tương ứng</h1><p>Chọn một từ ở hàng trên, sau đó chọn nghĩa phù hợp ở hàng dưới.</p></div>
+
+<main class="game">
+<section class="board" id="board">
+<svg class="lines" id="lines"></svg>
+<div class="row top" id="top"></div>
+<div class="row bottom" id="bottom"></div>
+</section>
+<div class="message" id="message"></div>
+<div class="controls">
+<button class="btn" onclick="resetGame()">↻ Làm lại</button>
+<button class="btn primary" onclick="hint()">💡 Gợi ý <span id="hintCount">3</span></button>
+<button class="btn" onclick="nextRound()">▶ Tiếp theo</button>
+</div>
+</main>
+</div>
+
+<script>
+const rounds=[
+[
+ {en:"Cat",vi:"Mèo",emoji:"🐱",c:"#ff6fae"},
+ {en:"Dog",vi:"Chó",emoji:"🐶",c:"#45cfa0"},
+ {en:"Sheep",vi:"Cừu",emoji:"🐑",c:"#55a5ff"},
+ {en:"Bird",vi:"Chim",emoji:"🐦",c:"#ffb62e"}
+],
+[
+ {en:"Apple",vi:"Quả táo",emoji:"🍎",c:"#ff6b6b"},
+ {en:"Banana",vi:"Quả chuối",emoji:"🍌",c:"#f6c945"},
+ {en:"Orange",vi:"Quả cam",emoji:"🍊",c:"#ff9d43"},
+ {en:"Grape",vi:"Quả nho",emoji:"🍇",c:"#a66cff"}
+]
+];
+
+let round=0, matched=new Set(), score=120, hints=3;
+let dragging=null, tempPath=null;
+
+function render(){
+ matched=new Set(); dragging=null; tempPath=null;
+ const data=rounds[round];
+ const bottom=[...data].sort(()=>Math.random()-.5);
+ document.getElementById("top").innerHTML=data.map((x,i)=>card(x,i,true)).join("");
+ document.getElementById("bottom").innerHTML=bottom.map((x,i)=>card(x,i,false)).join("");
+ document.getElementById("round").textContent=`${round+1} / ${rounds.length}`;
+ document.getElementById("fill").style.width=(round ? "100%" : "55%");
+ document.getElementById("message").textContent="Kéo từ hàng trên xuống nghĩa đúng ở hàng dưới.";
+ document.getElementById("hintCount").textContent=hints;
+ bindDrag();
+ requestAnimationFrame(drawAll);
+}
+
+function card(x,i,isTop){
+ return `<div class="card ${isTop?'topcard':'bottomcard'}"
+ data-en="${x.en}" data-vi="${x.vi}" style="--c:${x.c}">
+ ${isTop?`<div class="emoji">${x.emoji}</div>`:`<div class="emoji" style="font-size:55px">${x.emoji}</div>`}
+ <div class="word">${isTop?x.en:x.vi}</div><span class="port"></span></div>`;
+}
+
+function bindDrag(){
+ document.querySelectorAll(".topcard").forEach(card=>{
+   card.addEventListener("pointerdown", startDrag);
+   card.addEventListener("click", ()=>{
+     if(!dragging && !card.classList.contains("matched")){
+       card.classList.toggle("selected");
+     }
+   });
+ });
+}
+
+function pointInBoard(e){
+ const board=document.getElementById("board").getBoundingClientRect();
+ return {x:e.clientX-board.left,y:e.clientY-board.top};
+}
+
+function startDrag(e){
+ if(e.button!==undefined && e.button!==0) return;
+ if(this.classList.contains("matched")) return;
+ e.preventDefault();
+ this.setPointerCapture?.(e.pointerId);
+ dragging={card:this,pointerId:e.pointerId};
+ this.classList.add("selected");
+ createTempPath();
+ updateTempPath(e);
+ document.addEventListener("pointermove", dragMove);
+ document.addEventListener("pointerup", endDrag, {once:true});
+}
+
+function createTempPath(){
+ const svg=document.getElementById("lines");
+ tempPath=document.createElementNS("http://www.w3.org/2000/svg","path");
+ tempPath.classList.add("curve");
+ tempPath.style.stroke=dragging.card.style.getPropertyValue("--c");
+ tempPath.style.opacity=".72";
+ svg.appendChild(tempPath);
+}
+
+function updateTempPath(e){
+ if(!dragging || !tempPath) return;
+ const p=pointInBoard(e);
+ const a=dragging.card.querySelector(".port").getBoundingClientRect();
+ const board=document.getElementById("board").getBoundingClientRect();
+ const x1=a.left+a.width/2-board.left, y1=a.top+a.height/2-board.top;
+ const x2=p.x,y2=p.y, mid=(y1+y2)/2;
+ tempPath.setAttribute("d",`M ${x1} ${y1} C ${x1} ${mid-35}, ${x2} ${mid+35}, ${x2} ${y2}`);
+}
+
+function dragMove(e){
+ updateTempPath(e);
+ const el=document.elementFromPoint(e.clientX,e.clientY)?.closest(".bottomcard");
+ document.querySelectorAll(".bottomcard").forEach(x=>x.classList.remove("selected"));
+ if(el && !el.classList.contains("matched")) el.classList.add("selected");
+}
+
+function endDrag(e){
+ document.removeEventListener("pointermove",dragMove);
+ if(!dragging) return;
+ const a=dragging.card;
+ const target=document.elementFromPoint(e.clientX,e.clientY)?.closest(".bottomcard");
+ if(tempPath){tempPath.remove();tempPath=null}
+ a.classList.remove("selected");
+ document.querySelectorAll(".bottomcard").forEach(x=>x.classList.remove("selected"));
+
+ if(target && !target.classList.contains("matched")){
+   if(a.dataset.vi===target.dataset.vi){
+     a.classList.add("matched");
+     target.classList.add("matched");
+     matched.add(a.dataset.en);
+     drawLine(a,target,a.style.getPropertyValue("--c"));
+     score+=10;
+     document.getElementById("score").textContent=score;
+     document.getElementById("message").textContent="✓ Chính xác! Kéo tiếp cặp tiếp theo.";
+     if(matched.size===rounds[round].length){
+       document.getElementById("message").textContent="🎉 Tuyệt vời! Bạn đã nối đúng tất cả!";
+     }
+   }else{
+     a.classList.add("shake"); target.classList.add("shake");
+     document.getElementById("message").textContent="💭 Chưa đúng — thử kéo lại nhé!";
+     setTimeout(()=>{a.classList.remove("shake");target.classList.remove("shake")},350);
+   }
+ }
+ dragging=null;
+}
+
+function drawLine(a,b,color){
+ const svg=document.getElementById("lines"), board=document.getElementById("board").getBoundingClientRect();
+ const p1=a.querySelector(".port").getBoundingClientRect(),p2=b.querySelector(".port").getBoundingClientRect();
+ const x1=p1.left+p1.width/2-board.left,y1=p1.top+p1.height/2-board.top;
+ const x2=p2.left+p2.width/2-board.left,y2=p2.top+p2.height/2-board.top;
+ const mid=(y1+y2)/2;
+ const curve=document.createElementNS("http://www.w3.org/2000/svg","path");
+ curve.classList.add("curve"); curve.style.stroke=color;
+ curve.setAttribute("d",`M ${x1} ${y1} C ${x1} ${mid-35}, ${x2} ${mid+35}, ${x2} ${y2}`);
+ svg.appendChild(curve);
+ const len=curve.getTotalLength();
+ curve.style.strokeDasharray=len; curve.style.strokeDashoffset=len;
+ requestAnimationFrame(()=>{curve.style.transition="stroke-dashoffset .5s ease";curve.style.strokeDashoffset="0"});
+}
+
+function drawAll(){
+ document.getElementById("lines").innerHTML="";
+ document.querySelectorAll(".topcard.matched").forEach(a=>{
+   const b=[...document.querySelectorAll(".bottomcard.matched")].find(x=>x.dataset.vi===a.dataset.vi);
+   if(b) drawLine(a,b,a.style.getPropertyValue("--c"));
+ });
+}
+
+function resetGame(){render()}
+
+function hint(){
+ if(hints<=0){document.getElementById("message").textContent="Bạn đã dùng hết gợi ý.";return}
+ const data=rounds[round].find(x=>!matched.has(x.en));
+ if(!data)return;
+ hints--;
+ document.getElementById("hintCount").textContent=hints;
+ const a=[...document.querySelectorAll(".topcard")].find(x=>x.dataset.en===data.en);
+ const b=[...document.querySelectorAll(".bottomcard")].find(x=>x.dataset.vi===data.vi);
+ a.classList.add("selected");b.classList.add("selected");
+ setTimeout(()=>{a.classList.remove("selected");b.classList.remove("selected")},900);
+}
+
+function nextRound(){
+ if(round<rounds.length-1){round++;render()}
+ else {round=0;score=120;hints=3;render();document.getElementById("message").textContent="🔄 Bắt đầu lại từ Round 1!"}
+}
+
+window.addEventListener("resize",drawAll);
+render();
+</script>
+</body>
+</html>

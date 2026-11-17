@@ -14,8 +14,8 @@ function EggSmashQuizGameContent() {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const gameSrc = topicId
-    ? `https://media.dolcake.com/games/egg-smash-quiz-premium-ambient/index.html?topicId=${encodeURIComponent(topicId)}`
-    : "https://media.dolcake.com/games/egg-smash-quiz-premium-ambient/index.html";
+    ? `/games/egg-smash-quiz-premium-ambient/index.html?topicId=${encodeURIComponent(topicId)}`
+    : "/games/egg-smash-quiz-premium-ambient/index.html";
 
   return (
     <ForcedLandscapeWrapper

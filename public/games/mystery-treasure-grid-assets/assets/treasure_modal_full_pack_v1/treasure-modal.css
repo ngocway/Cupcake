@@ -1,0 +1,168 @@
+:root {
+  --treasure-text: #123b77;
+  --ui-font: "Trebuchet MS", "Arial Rounded MT Bold", "Segoe UI", Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+html, body { min-height: 100%; margin: 0; }
+body { overflow: hidden; font-family: var(--ui-font); background: #0b5d8e; }
+button { font: inherit; }
+
+/* Demo background only; remove this block when inserting the modal into your game. */
+.game-demo {
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(circle at 15% 25%, rgba(255,215,90,.25) 0 8%, transparent 9%),
+    radial-gradient(circle at 82% 20%, rgba(255,255,255,.35) 0 10%, transparent 11%),
+    linear-gradient(180deg, #1ba8e1 0 48%, #14b8d4 49% 62%, #f4cf78 63% 100%);
+}
+.demo-title {
+  position: absolute; top: 4vh; left: 50%; transform: translateX(-50%);
+  padding: 14px 34px; border-radius: 999px; color: white;
+  font-size: clamp(18px, 2.2vw, 36px); font-weight: 900; letter-spacing: .04em;
+  text-shadow: 0 3px 0 #743500; background: rgba(78,36,7,.62);
+}
+
+.treasure-modal-backdrop {
+  position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center;
+  padding: 24px; background: rgba(7,26,43,.48);
+  backdrop-filter: blur(8px) saturate(.78); -webkit-backdrop-filter: blur(8px) saturate(.78);
+}
+.treasure-modal-backdrop.is-hidden { display: none; }
+
+.treasure-modal {
+  position: relative;
+  width: min(1080px, 94vw, calc(86vh * 4 / 3));
+  aspect-ratio: 4 / 3;
+  isolation: isolate;
+  filter: drop-shadow(0 28px 34px rgba(0,0,0,.34));
+  animation: treasureModalIn 420ms cubic-bezier(.19,.9,.28,1.18) both;
+}
+
+.treasure-frame {
+  position: absolute; inset: 0; z-index: 1;
+  width: 100%; height: 100%; object-fit: contain;
+  pointer-events: none; user-select: none;
+}
+.treasure-title-banner {
+  position: absolute; z-index: 4; width: 72%; left: 50%; top: -9.5%;
+  transform: translateX(-50%); pointer-events: none; user-select: none;
+  filter: drop-shadow(0 9px 8px rgba(74,32,0,.22));
+}
+.treasure-close {
+  position: absolute; z-index: 6; top: 1.6%; right: -1.5%;
+  width: 11.5%; aspect-ratio: 1; padding: 0; border: 0; border-radius: 50%;
+  background: transparent; cursor: pointer;
+  transition: transform 160ms ease, filter 160ms ease;
+}
+.treasure-close img { display: block; width: 100%; height: 100%; object-fit: contain; pointer-events: none; }
+.treasure-close:hover { transform: translateY(-4px) scale(1.06) rotate(2deg); filter: brightness(1.08) drop-shadow(0 8px 10px rgba(77,20,2,.25)); }
+.treasure-close:active { transform: translateY(2px) scale(.96); }
+.treasure-close:focus-visible, .treasure-answer:focus-visible { outline: 4px solid white; outline-offset: 4px; }
+
+.treasure-content {
+  position: absolute; z-index: 3;
+  left: 16.5%; right: 16.5%; top: 28%; bottom: 20%;
+  display: flex; flex-direction: column; align-items: center;
+}
+.treasure-question {
+  width: 100%; margin: 0; padding: 0 3%; color: var(--treasure-text);
+  font-size: clamp(24px, 3.05vw, 44px); line-height: 1.14; font-weight: 900;
+  text-align: center; letter-spacing: -.02em;
+  text-shadow: 0 2px 0 rgba(255,255,255,.78), 0 4px 7px rgba(111,69,21,.15);
+}
+.treasure-answers {
+  width: 100%; margin-top: clamp(24px, 4.4%, 44px);
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(15px, 2.2vw, 28px) clamp(18px, 2.5vw, 30px);
+}
+
+.treasure-answer {
+  --answer-image: none;
+  position: relative; width: 100%; aspect-ratio: 3 / 1; padding: 0; border: 0;
+  border-radius: 999px; color: white; background: transparent var(--answer-image) center / 100% 100% no-repeat;
+  cursor: pointer; overflow: visible;
+  filter: drop-shadow(0 9px 6px rgba(85,47,10,.22));
+  transition: transform 160ms cubic-bezier(.2,.8,.2,1), filter 160ms ease;
+}
+.answer-blue   { --answer-image: url("assets/png/glossy_tropical_wooden_game_button.png"); }
+.answer-green  { --answer-image: url("assets/png/glossy_green_wood_game_button.png"); }
+.answer-orange { --answer-image: url("assets/png/glossy_wooden_game_ui_banner.png"); }
+.answer-purple { --answer-image: url("assets/png/glossy_purple_gold_game_button.png"); }
+.treasure-answer:hover { transform: translateY(-6px) scale(1.025); filter: brightness(1.07) drop-shadow(0 13px 10px rgba(85,47,10,.28)); }
+.treasure-answer:active { transform: translateY(2px) scale(.985); filter: brightness(.98) drop-shadow(0 4px 3px rgba(85,47,10,.2)); }
+
+.answer-letter {
+  position: absolute; left: 17.5%; top: 50%; transform: translate(-50%, -50%);
+  color: #153b73; font-size: clamp(22px, 2.5vw, 38px); line-height: 1; font-weight: 900;
+  text-shadow: 0 2px 0 rgba(255,255,255,.7); pointer-events: none;
+}
+.answer-text {
+  position: absolute; left: 33%; right: 5.5%; top: 50%; transform: translateY(-50%);
+  color: white; font-size: clamp(20px, 2.25vw, 34px); line-height: 1; font-weight: 900;
+  text-align: center; white-space: nowrap;
+  text-shadow: 0 3px 0 rgba(53,31,9,.35), 0 4px 7px rgba(0,0,0,.18); pointer-events: none;
+}
+.answer-shine {
+  position: absolute; left: 28%; top: 13%; width: 17%; height: 62%; border-radius: 50%;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,.65), transparent);
+  opacity: 0; transform: skewX(-18deg) translateX(-80%); pointer-events: none;
+}
+.treasure-answer:hover .answer-shine { opacity: .72; animation: answerShine 720ms ease; }
+
+/* Optional classes your JS can add. */
+.treasure-answer.is-correct {
+  animation: correctTreasure 720ms cubic-bezier(.2,.9,.25,1.25);
+  filter: brightness(1.1) drop-shadow(0 0 15px rgba(255,225,74,.95)) drop-shadow(0 12px 10px rgba(25,107,38,.25));
+}
+.treasure-answer.is-correct::after {
+  content: "✓"; position: absolute; right: 4.5%; top: 50%; transform: translateY(-50%);
+  display: grid; place-items: center; width: 13%; aspect-ratio: 1; border-radius: 50%;
+  color: white; font-size: clamp(19px,2.2vw,34px); font-weight: 900;
+  background: linear-gradient(#71ef72,#169d37); border: 3px solid #ffe56f;
+  box-shadow: 0 3px 0 #08782a, 0 0 14px rgba(255,228,84,.8);
+}
+.treasure-answer.is-wrong { animation: wrongTreasure 520ms ease; filter: saturate(.85) drop-shadow(0 0 13px rgba(255,65,83,.8)); }
+.treasure-answer.is-wrong::after {
+  content: "×"; position: absolute; right: 4.5%; top: 50%; transform: translateY(-50%);
+  display: grid; place-items: center; width: 13%; aspect-ratio: 1; border-radius: 50%;
+  color: white; font-size: clamp(20px,2.35vw,36px); font-weight: 900;
+  background: linear-gradient(#ff7979,#e72d3d); border: 3px solid #ffcf62; box-shadow: 0 3px 0 #a81729;
+}
+
+.sparkle {
+  position: absolute; z-index: 5; width: 12px; aspect-ratio: 1; background: #fff6ad;
+  clip-path: polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%);
+  filter: drop-shadow(0 0 7px #ffc933); animation: twinkle 1.6s ease-in-out infinite; pointer-events: none;
+}
+.sparkle-1 { top: 9%; left: 27%; }
+.sparkle-2 { top: 11%; right: 26%; animation-delay: .45s; transform: scale(.7); }
+.sparkle-3 { bottom: 15%; left: 49%; animation-delay: .85s; transform: scale(.6); }
+
+@media (max-width: 720px), (max-height: 620px) {
+  .treasure-modal-backdrop { padding: 10px; }
+  .treasure-modal { width: min(96vw, calc(94vh * 4 / 3)); }
+  .treasure-title-banner { width: 75%; top: -8.5%; }
+  .treasure-close { width: 12%; right: -1.2%; }
+  .treasure-content { left: 15.5%; right: 15.5%; top: 27%; }
+  .treasure-answers { gap: 12px 14px; margin-top: 22px; }
+}
+@media (max-width: 520px) {
+  .treasure-answers { grid-template-columns: 1fr; width: 82%; gap: 8px; }
+  .treasure-content { top: 25.5%; }
+  .treasure-question { font-size: clamp(18px,5vw,27px); }
+  .treasure-answer { aspect-ratio: 3.3 / 1; }
+  .answer-letter { font-size: clamp(17px,5vw,25px); }
+  .answer-text { font-size: clamp(16px,4.7vw,24px); }
+}
+
+@keyframes treasureModalIn {
+  0% { opacity: 0; transform: translateY(20px) scale(.88); }
+  72% { opacity: 1; transform: translateY(-4px) scale(1.018); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes answerShine { from { transform: skewX(-18deg) translateX(-100%); } to { transform: skewX(-18deg) translateX(360%); } }
+@keyframes correctTreasure { 0% { transform: scale(1); } 28% { transform: scale(.96); } 62% { transform: scale(1.075); } 100% { transform: scale(1.025); } }
+@keyframes wrongTreasure { 0%,100% { transform: translateX(0) rotate(0); } 18% { transform: translateX(-9px) rotate(-1.2deg); } 36% { transform: translateX(8px) rotate(1deg); } 54% { transform: translateX(-6px) rotate(-.7deg); } 72% { transform: translateX(4px) rotate(.45deg); } }
+@keyframes twinkle { 0%,100% { opacity: .35; scale: .7; rotate: 0deg; } 50% { opacity: 1; scale: 1.2; rotate: 45deg; } }

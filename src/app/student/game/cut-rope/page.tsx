@@ -72,7 +72,7 @@ function CutRopeGameContent() {
       {/* Game Iframe */}
       <iframe
         ref={iframeRef}
-        src={`https://media.dolcake.com/games/magic_tree_matching_game_v3/index.html?topicId=${topicId || ""}`}
+        src={`/games/magic_tree_matching_game_v3/index.html?topicId=${topicId || ""}`}
         className="w-full h-full flex-1 border-none block"
         title="Magic Tree Matching Game"
         referrerPolicy="no-referrer"

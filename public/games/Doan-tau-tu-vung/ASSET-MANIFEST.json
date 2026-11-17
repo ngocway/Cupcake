@@ -1,0 +1,253 @@
+[
+  {
+    "file": "assets/background/background.png",
+    "bytes": 1984785,
+    "format": "png",
+    "width": 1672,
+    "height": 941,
+    "alpha": false
+  },
+  {
+    "file": "assets/effects/check.svg",
+    "bytes": 287,
+    "format": "svg"
+  },
+  {
+    "file": "assets/effects/confetti.svg",
+    "bytes": 319,
+    "format": "svg"
+  },
+  {
+    "file": "assets/effects/medal.svg",
+    "bytes": 341,
+    "format": "svg"
+  },
+  {
+    "file": "assets/effects/ribbon.svg",
+    "bytes": 216,
+    "format": "svg"
+  },
+  {
+    "file": "assets/effects/sparkle.svg",
+    "bytes": 165,
+    "format": "svg"
+  },
+  {
+    "file": "assets/effects/star.svg",
+    "bytes": 229,
+    "format": "svg"
+  },
+  {
+    "file": "assets/train/connector.svg",
+    "bytes": 279,
+    "format": "svg"
+  },
+  {
+    "file": "assets/train/locomotive.png",
+    "bytes": 947540,
+    "format": "png",
+    "width": 1448,
+    "height": 1086,
+    "alpha": true
+  },
+  {
+    "file": "assets/train/rail.png",
+    "bytes": 279733,
+    "format": "png",
+    "width": 2172,
+    "height": 724,
+    "alpha": true
+  },
+  {
+    "file": "assets/train/smoke-small.png",
+    "bytes": 459582,
+    "format": "png",
+    "width": 1374,
+    "height": 1145,
+    "alpha": true
+  },
+  {
+    "file": "assets/train/smoke-wide.png",
+    "bytes": 602958,
+    "format": "png",
+    "width": 1774,
+    "height": 887,
+    "alpha": true
+  },
+  {
+    "file": "assets/train/smoke.png",
+    "bytes": 694848,
+    "format": "png",
+    "width": 1254,
+    "height": 1254,
+    "alpha": true
+  },
+  {
+    "file": "assets/train/wagon-coral.png",
+    "bytes": 691042,
+    "format": "png",
+    "width": 1448,
+    "height": 1086,
+    "alpha": true
+  },
+  {
+    "file": "assets/train/wagon-purple.png",
+    "bytes": 694985,
+    "format": "png",
+    "width": 1448,
+    "height": 1086,
+    "alpha": true
+  },
+  {
+    "file": "assets/train/wagon-teal.png",
+    "bytes": 769325,
+    "format": "png",
+    "width": 1448,
+    "height": 1086,
+    "alpha": true
+  },
+  {
+    "file": "assets/train/wagon-yellow.png",
+    "bytes": 768180,
+    "format": "png",
+    "width": 1448,
+    "height": 1086,
+    "alpha": true
+  },
+  {
+    "file": "assets/train/wheel-engine.png",
+    "bytes": 1338868,
+    "format": "png",
+    "width": 1254,
+    "height": 1254,
+    "alpha": true
+  },
+  {
+    "file": "assets/train/wheel-wagon.png",
+    "bytes": 1129976,
+    "format": "png",
+    "width": 1254,
+    "height": 1254,
+    "alpha": true
+  },
+  {
+    "file": "assets/ui/button-disabled.svg",
+    "bytes": 356,
+    "format": "svg"
+  },
+  {
+    "file": "assets/ui/button-normal.svg",
+    "bytes": 356,
+    "format": "svg"
+  },
+  {
+    "file": "assets/ui/button-pressed.svg",
+    "bytes": 356,
+    "format": "svg"
+  },
+  {
+    "file": "assets/ui/card-normal.svg",
+    "bytes": 356,
+    "format": "svg"
+  },
+  {
+    "file": "assets/ui/card-selected.svg",
+    "bytes": 356,
+    "format": "svg"
+  },
+  {
+    "file": "assets/ui/card-used.svg",
+    "bytes": 356,
+    "format": "svg"
+  },
+  {
+    "file": "assets/ui/drop-correct.svg",
+    "bytes": 356,
+    "format": "svg"
+  },
+  {
+    "file": "assets/ui/drop-empty.svg",
+    "bytes": 378,
+    "format": "svg"
+  },
+  {
+    "file": "assets/ui/drop-hint.svg",
+    "bytes": 356,
+    "format": "svg"
+  },
+  {
+    "file": "assets/ui/drop-hover.svg",
+    "bytes": 356,
+    "format": "svg"
+  },
+  {
+    "file": "assets/ui/drop-wrong.svg",
+    "bytes": 356,
+    "format": "svg"
+  },
+  {
+    "file": "assets/ui/icon-close.svg",
+    "bytes": 241,
+    "format": "svg"
+  },
+  {
+    "file": "assets/ui/icon-edit.svg",
+    "bytes": 261,
+    "format": "svg"
+  },
+  {
+    "file": "assets/ui/icon-hint.svg",
+    "bytes": 275,
+    "format": "svg"
+  },
+  {
+    "file": "assets/ui/icon-restart.svg",
+    "bytes": 251,
+    "format": "svg"
+  },
+  {
+    "file": "assets/ui/icon-sound-off.svg",
+    "bytes": 277,
+    "format": "svg"
+  },
+  {
+    "file": "assets/ui/icon-sound-on.svg",
+    "bytes": 287,
+    "format": "svg"
+  },
+  {
+    "file": "assets/ui/panel-guide.svg",
+    "bytes": 360,
+    "format": "svg"
+  },
+  {
+    "file": "assets/ui/panel-success.svg",
+    "bytes": 360,
+    "format": "svg"
+  },
+  {
+    "file": "assets/ui/progress-off.svg",
+    "bytes": 311,
+    "format": "svg"
+  },
+  {
+    "file": "assets/ui/progress-on.svg",
+    "bytes": 311,
+    "format": "svg"
+  },
+  {
+    "file": "assets/ui/signal-green.svg",
+    "bytes": 337,
+    "format": "svg"
+  },
+  {
+    "file": "assets/ui/signal-red.svg",
+    "bytes": 337,
+    "format": "svg"
+  },
+  {
+    "file": "assets/ui/title-sign.svg",
+    "bytes": 360,
+    "format": "svg"
+  }
+]
