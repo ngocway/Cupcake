@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Pause, Lightbulb } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Pause, Lightbulb, Volume2 } from 'lucide-react';
 
 interface QuestionAudioPlayButtonProps {
   src?: string | null;
@@ -11,6 +11,8 @@ interface QuestionAudioPlayButtonProps {
   useDeepgram?: boolean;
   deepgramModel?: string;
   deepgramSpeed?: number;
+  label?: string;
+  autoPlay?: boolean;
 }
 
 // Module-level cache for synthesized Deepgram audio blobs
@@ -24,6 +26,8 @@ export function QuestionAudioPlayButton({
   useDeepgram = true,
   deepgramModel = "aura-2-thalia-en",
   deepgramSpeed = 0.85,
+  label,
+  autoPlay = false,
 }: QuestionAudioPlayButtonProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -128,9 +132,7 @@ export function QuestionAudioPlayButton({
     });
   };
 
-  const handlePlay = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-
+  const startPlayback = useCallback(async () => {
     if (isPlaying) {
       if (audioRef.current) {
         audioRef.current.pause();
@@ -193,7 +195,21 @@ export function QuestionAudioPlayButton({
 
     // Fallback to browser Web Speech API
     playTTS();
+  }, [src, text, isPlaying, useDeepgram, deepgramModel, deepgramSpeed, playbackRate]);
+
+  const handlePlay = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    startPlayback();
   };
+
+  useEffect(() => {
+    if (autoPlay && (src || text)) {
+      const timer = setTimeout(() => {
+        startPlayback();
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [autoPlay, src, text]);
 
   useEffect(() => {
     const handleGlobalPause = (e: CustomEvent) => {
@@ -217,26 +233,32 @@ export function QuestionAudioPlayButton({
 
   if (!src && !text) return null;
 
+  const defaultStyles = isPlaying
+    ? 'bg-amber-500 border-amber-500 text-white shadow-md shadow-amber-500/20 animate-pulse'
+    : isLoading
+      ? 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400 cursor-wait'
+      : 'bg-amber-50 hover:bg-amber-100 border-amber-200 hover:border-amber-300 text-amber-700 hover:text-amber-800 dark:bg-amber-950/20 dark:hover:bg-amber-950/40 dark:border-amber-900/40 dark:text-amber-300 dark:hover:text-amber-200 shadow-sm';
+
   return (
     <button
       onClick={handlePlay}
-      className={`inline-flex items-center justify-center gap-1.5 px-4.5 py-2 rounded-full border transition-all duration-300 active:scale-95 select-none cursor-pointer text-xs font-black uppercase tracking-wider ${
-        isPlaying
-          ? 'bg-amber-500 border-amber-500 text-white shadow-md shadow-amber-500/20 animate-pulse'
-          : isLoading
-            ? 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400 cursor-wait'
-            : 'bg-amber-50 hover:bg-amber-100 border-amber-200 hover:border-amber-300 text-amber-700 hover:text-amber-800 dark:bg-amber-950/20 dark:hover:bg-amber-950/40 dark:border-amber-900/40 dark:text-amber-300 dark:hover:text-amber-200 shadow-sm'
-      } ${className}`}
-      title={isPlaying ? "Pause" : isLoading ? "Loading..." : "Listen to audio hint"}
+      className={`inline-flex items-center justify-center gap-2 select-none cursor-pointer transition-all duration-300 active:scale-95 ${
+        className
+          ? `${className} ${isPlaying ? 'ring-4 ring-purple-300/60 scale-[1.02]' : ''}`
+          : `px-4.5 py-2 rounded-full border text-xs font-black uppercase tracking-wider ${defaultStyles}`
+      }`}
+      title={isPlaying ? "Pause" : isLoading ? "Loading..." : label || "Listen to audio hint"}
     >
       {isLoading ? (
-        <span className="w-3.5 h-3.5 rounded-full border-2 border-amber-500/20 border-t-amber-600 animate-spin" />
+        <span className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin shrink-0" />
       ) : isPlaying ? (
-        <Pause className="w-3.5 h-3.5 fill-current" />
+        <Pause className="w-4 h-4 fill-current shrink-0" />
+      ) : label ? (
+        <Volume2 className="w-5 h-5 shrink-0" />
       ) : (
-        <Lightbulb className="w-3.5 h-3.5" />
+        <Lightbulb className="w-3.5 h-3.5 shrink-0" />
       )}
-      <span>{isPlaying ? "Playing..." : isLoading ? "Loading..." : "Hint"}</span>
+      <span>{isPlaying ? "Playing..." : isLoading ? "Loading..." : label || "Hint"}</span>
     </button>
   );
 }

@@ -144,9 +144,10 @@ export function MatchGameShareModal({
 
   const activeGamePath = selectedOption?.gamePath || gamePath;
 
-  const rawBase = activeGamePath.includes("topicId=")
-    ? activeGamePath
-    : `${activeGamePath}${activeGamePath.includes("?") ? "&" : "?"}topicId=${topicId}`;
+  const rawBase =
+    activeGamePath.includes("topicId=") || activeGamePath.includes("unit=")
+      ? activeGamePath
+      : `${activeGamePath}${activeGamePath.includes("?") ? "&" : "?"}topicId=${topicId}`;
 
   const gameUrl =
     typeof window !== "undefined"

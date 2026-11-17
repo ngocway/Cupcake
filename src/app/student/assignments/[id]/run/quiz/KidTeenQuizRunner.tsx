@@ -573,6 +573,25 @@ export default function KidTeenQuizRunner({
   const isCorrectNow = isChecked && questionStatus === "correct";
   const isWrongNow = isChecked && questionStatus !== "correct" && questionStatus !== "pending";
 
+  const isListeningQuestion = Boolean(
+    currentQuestionData?.isListeningQuestion ||
+    (typeof questionText === "string" && questionText.toLowerCase().includes("listen"))
+  );
+
+  const validAudioUrl = (() => {
+    const url = currentQuestion?.audioUrl || currentQuestionData?.audioUrl;
+    if (!url || typeof url !== "string") return undefined;
+    const clean = url.trim();
+    return clean !== "null" && clean.length > 5 ? clean : undefined;
+  })();
+
+  const targetAudioText =
+    currentQuestion?.audioText ||
+    currentQuestionData?.audioText ||
+    (isListeningQuestion
+      ? currentQuestionData?.options?.find((o: any) => o.isCorrect)?.text || ""
+      : "");
+
   const matchingColors = ["#8B5CF6", "#10B981", "#F59E0B", "#EF4444", "#3B82F6", "#EC4899"];
 
   // 1. Start Screen
@@ -811,12 +830,41 @@ export default function KidTeenQuizRunner({
                     >
                       {questionText}
                     </h3>
-                    {currentQuestion?.audioUrl && (
+                    {!isListeningQuestion && (validAudioUrl || currentQuestion?.audioUrl) && (
                       <QuestionAudioPlayButton
-                        src={currentQuestion.audioUrl}
+                        src={validAudioUrl || currentQuestion?.audioUrl}
                         playbackRate={audioEngine.getQuestionSpeed()}
                       />
                     )}
+                  </div>
+                )}
+
+                {/* Listening Question Main Audio Player */}
+                {isListeningQuestion && (
+                  <div className="flex flex-col items-center justify-center my-3 sm:my-4 gap-1.5 animate-in fade-in zoom-in-95 duration-300">
+                    <QuestionAudioPlayButton
+                      key={`listening-${currentQuestion?.id || currentIndex}`}
+                      src={validAudioUrl}
+                      text={targetAudioText}
+                      playbackRate={audioEngine.getQuestionSpeed()}
+                      autoPlay={!isChecked}
+                      label="Tap to Listen (Bấm để nghe)"
+                      className="px-6 py-3.5 sm:px-8 sm:py-4 rounded-full bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:from-purple-700 hover:to-indigo-700 text-white font-black text-sm sm:text-base shadow-lg shadow-purple-500/25 border-2 border-white/80 active:scale-95 transition-all cursor-pointer"
+                    />
+                    <span className="text-[11px] font-bold text-slate-400 animate-pulse">
+                      🎧 Tự động phát âm thanh • Bấm nút để nghe lại
+                    </span>
+                  </div>
+                )}
+
+                {/* Question illustration if available */}
+                {(currentQuestion?.imageUrl || currentQuestionData?.imageUrl) && (
+                  <div className="flex justify-center my-1.5 sm:my-2">
+                    <img
+                      src={currentQuestion?.imageUrl || currentQuestionData?.imageUrl}
+                      alt="Question illustration"
+                      className="max-h-36 sm:max-h-48 w-auto object-contain rounded-2xl shadow-sm border-2 border-purple-100 bg-white p-1"
+                    />
                   </div>
                 )}
 

@@ -9,6 +9,12 @@ export function PublicHeaderWrapper({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const isStudentClassDetail =
     pathname?.startsWith('/student/classes/') && pathname !== '/student/classes';
-  if (isStudentClassDetail) return null;
+  const isUnitReview = pathname?.includes('/unit-review');
+  const isFullscreenRunner =
+    pathname?.includes('/run') ||
+    pathname?.includes('/quiz') ||
+    pathname?.includes('/play');
+
+  if (isStudentClassDetail || isUnitReview || isFullscreenRunner) return null;
   return <>{children}</>;
 }

@@ -94,7 +94,10 @@ export function MultipleChoiceBlock({
         const isOddLast = options.length % 2 === 1 && i === options.length - 1;
         const btnHeightAndPadding = "min-h-[3.5rem] sm:min-h-[4.75rem] py-2 sm:py-3.5 px-2.5 sm:px-5";
         const badgeDimensions = "-top-2.5 -left-1.5 sm:-top-3 sm:-left-2 w-6 h-6 sm:w-8 sm:h-8 text-[11px] sm:text-sm font-[900]";
-        const textFontSize = "text-xs sm:text-[clamp(0.95rem,2.2dvh,1.15rem)] font-[800] leading-snug text-center break-words max-w-full px-1";
+        const isShortLetter = typeof option.text === "string" && option.text.trim().length <= 2;
+        const textFontSize = isShortLetter
+          ? "text-xl sm:text-2xl font-[900]"
+          : "text-xs sm:text-[clamp(0.95rem,2.2dvh,1.15rem)] font-[800] leading-snug text-center break-words max-w-full px-1";
 
         return (
           <button
@@ -111,8 +114,15 @@ export function MultipleChoiceBlock({
                 : String.fromCharCode(65 + i)}
             </div>
 
-            <span className={`relative z-10 ${textFontSize} tracking-tight transition-all duration-500 ${textClass} text-center flex items-center justify-center gap-1.5 leading-snug break-words max-w-full`}>
-              {option.text}
+            <span className={`relative z-10 ${textFontSize} tracking-tight transition-all duration-500 ${textClass} text-center flex flex-col sm:flex-row items-center justify-center gap-1.5 leading-snug break-words max-w-full`}>
+              {option.imageUrl && (
+                <img
+                  src={option.imageUrl}
+                  alt={option.text || "option"}
+                  className="w-14 h-14 sm:w-16 sm:h-16 object-contain rounded-xl p-0.5 bg-white/90 shadow-2xs border border-white/60 shrink-0"
+                />
+              )}
+              {option.text && <span>{option.text}</span>}
               {isChecked && isCorrectOpt && <CheckCircle2 className="w-[1.2em] h-[1.2em] text-emerald-600 shrink-0 ml-1" />}
               {isChecked && isSelected && !isCorrectOpt && <XCircle className="w-[1.2em] h-[1.2em] text-rose-600 shrink-0 ml-1" />}
             </span>

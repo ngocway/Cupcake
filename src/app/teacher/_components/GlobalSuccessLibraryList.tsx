@@ -22,6 +22,7 @@ import {
   Copy,
   Share2,
   Plus,
+  Volume2,
 } from "lucide-react";
 import {
   MatchGameShareModal,
@@ -342,6 +343,11 @@ export function GlobalSuccessLibraryList() {
   const [pickerSet, setPickerSet] = useState<LibrarySetItem | null>(null);
   const [viewingSet, setViewingSet] = useState<LibrarySetItem | null>(null);
   const [sharingSet, setSharingSet] = useState<LibrarySetItem | null>(null);
+  const [sharingReview, setSharingReview] = useState<{
+    grade: number;
+    unitNumber: number;
+    unitHeader: string;
+  } | null>(null);
   const hasRestoredUiRef = useRef(false);
   const pendingShareIdRef = useRef<string | null>(null);
   const [loadingViewId, setLoadingViewId] = useState<string | null>(null);
@@ -722,6 +728,12 @@ export function GlobalSuccessLibraryList() {
 
     if (isConversationOrSentence) {
       return {
+        category: "conversations" as const,
+        iconEmoji: "💬",
+        iconBg: "bg-teal-100 text-teal-700 dark:bg-teal-900/60 dark:text-teal-300 border border-teal-200/80 dark:border-teal-700",
+        titleColor: "text-teal-950 dark:text-teal-100 group-hover/card:text-teal-600 dark:group-hover/card:text-teal-400",
+        subTitleText: locale === "vi" ? "Mẫu câu & hội thoại giao tiếp" : "Sentence patterns & dialogues",
+        topBorder: "border-t-[3.5px] border-t-teal-500",
         label: t.library.textTextBadge,
         cls: "bg-white/95 text-teal-700 border-teal-200 shadow-2xs",
         cardBg:
@@ -738,6 +750,12 @@ export function GlobalSuccessLibraryList() {
     switch (subType) {
       case "image-text":
         return {
+          category: "vocabulary" as const,
+          iconEmoji: "🖼️",
+          iconBg: "bg-sky-100 text-sky-700 dark:bg-sky-900/60 dark:text-sky-300 border border-sky-200/80 dark:border-sky-700",
+          titleColor: "text-sky-950 dark:text-sky-100 group-hover/card:text-sky-600 dark:group-hover/card:text-sky-400",
+          subTitleText: locale === "vi" ? "Từ vựng qua hình ảnh minh họa" : "Vocabulary with illustrations",
+          topBorder: "border-t-[3.5px] border-t-sky-500",
           label: t.library.imageTextBadge,
           cls: "bg-white/95 text-sky-700 border-sky-200 shadow-2xs",
           cardBg:
@@ -751,6 +769,12 @@ export function GlobalSuccessLibraryList() {
         };
       case "image-image":
         return {
+          category: "image-image" as const,
+          iconEmoji: "🃏",
+          iconBg: "bg-purple-100 text-purple-700 dark:bg-purple-900/60 dark:text-purple-300 border border-purple-200/80 dark:border-purple-700",
+          titleColor: "text-purple-950 dark:text-purple-100 group-hover/card:text-purple-600 dark:group-hover/card:text-purple-400",
+          subTitleText: locale === "vi" ? "Nối cặp hình ảnh trực quan" : "Visual image pair matching",
+          topBorder: "border-t-[3.5px] border-t-purple-500",
           label: t.library.imageImageBadge,
           cls: "bg-white/95 text-purple-700 border-purple-200 shadow-2xs",
           cardBg:
@@ -764,6 +788,12 @@ export function GlobalSuccessLibraryList() {
         };
       case "text-text":
         return {
+          category: "en-vi" as const,
+          iconEmoji: "🌐",
+          iconBg: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/60 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-700",
+          titleColor: "text-indigo-950 dark:text-indigo-100 group-hover/card:text-indigo-600 dark:group-hover/card:text-indigo-400",
+          subTitleText: locale === "vi" ? "Từ vựng song ngữ Anh - Việt" : "Bilingual English - Vietnamese",
+          topBorder: "border-t-[3.5px] border-t-indigo-500",
           label: t.library.textTextBadge,
           cls: "bg-white/95 text-indigo-700 border-indigo-200 shadow-2xs",
           cardBg:
@@ -777,6 +807,12 @@ export function GlobalSuccessLibraryList() {
         };
       case "quiz":
         return {
+          category: "quiz" as const,
+          iconEmoji: "🎯",
+          iconBg: "bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-300 border border-amber-200/80 dark:border-amber-700",
+          titleColor: "text-amber-950 dark:text-amber-100 group-hover/card:text-amber-600 dark:group-hover/card:text-amber-400",
+          subTitleText: locale === "vi" ? "Trắc nghiệm 4 lựa chọn ôn tập" : "Multiple choice practice quiz",
+          topBorder: "border-t-[3.5px] border-t-amber-500",
           label: t.library.quizBadge,
           cls: "bg-white/95 text-amber-700 border-amber-200 shadow-2xs",
           cardBg:
@@ -790,6 +826,12 @@ export function GlobalSuccessLibraryList() {
         };
       case "choice":
         return {
+          category: "choice" as const,
+          iconEmoji: "⚡",
+          iconBg: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-700",
+          titleColor: "text-emerald-950 dark:text-emerald-100 group-hover/card:text-emerald-600 dark:group-hover/card:text-emerald-400",
+          subTitleText: locale === "vi" ? "Câu hỏi trắc nghiệm nhanh" : "Fast choice quiz",
+          topBorder: "border-t-[3.5px] border-t-emerald-500",
           label: t.library.choiceBadge,
           cls: "bg-white/95 text-emerald-700 border-emerald-200 shadow-2xs",
           cardBg:
@@ -1368,6 +1410,8 @@ export function GlobalSuccessLibraryList() {
                       </button>
                     );
                   })}
+
+                  
                 </div>
               </div>
             ))}
@@ -1440,7 +1484,7 @@ export function GlobalSuccessLibraryList() {
                     return (
                       <div
                         key={setItem.id}
-                        className={`rounded-2xl border p-4 hover:-translate-y-0.5 transition-all flex flex-col justify-between gap-3 ${badge.cardBg}`}
+                        className={`rounded-2xl border ${badge.topBorder} p-4 hover:-translate-y-1 transition-all flex flex-col justify-between gap-3 ${badge.cardBg}`}
                       >
                         <div
                           onClick={() => handleOpenViewModal(setItem)}
@@ -1448,16 +1492,23 @@ export function GlobalSuccessLibraryList() {
                           className="space-y-2.5 cursor-pointer group/card"
                         >
                           {/* Title & Badges */}
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0 flex-1">
-                              <h4
-                                className={`font-headline font-black text-[15px] text-slate-800 dark:text-white transition-colors truncate ${badge.titleHover}`}
+                          <div className="flex items-start justify-between gap-2.5">
+                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                              <div
+                                className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-2xs font-black text-base ${badge.iconBg}`}
                               >
-                                {shortTitle}
-                              </h4>
-                              <p className="text-[11px] font-semibold text-slate-500/85 dark:text-slate-400 truncate">
-                                {setItem.name}
-                              </p>
+                                {badge.iconEmoji}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <h4
+                                  className={`font-headline font-black text-[15px] sm:text-base leading-tight truncate transition-colors ${badge.titleColor}`}
+                                >
+                                  {shortTitle}
+                                </h4>
+                                <p className="text-[11px] font-semibold text-slate-500/90 dark:text-slate-400 truncate mt-0.5">
+                                  {badge.subTitleText}
+                                </p>
+                              </div>
                             </div>
                             <span
                               className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border shrink-0 ${badge.cls}`}
@@ -1494,30 +1545,155 @@ export function GlobalSuccessLibraryList() {
 
                           {/* Mini Preview Strip */}
                           <div className="grid grid-cols-3 gap-1.5 pt-0.5">
-                            {previewItems.map((item, idx) => (
-                              <div
-                                key={item.id || idx}
-                                className={`rounded-[10px] bg-white/95 dark:bg-slate-900 border p-2 flex flex-col items-center justify-center text-center gap-1 min-h-[62px] transition-colors ${badge.previewBorder}`}
-                              >
-                                {item.imageUrl ? (
-                                  <img
-                                    src={item.imageUrl}
-                                    alt={item.word || "item"}
-                                    className="w-8 h-8 object-contain rounded-lg"
-                                  />
-                                ) : null}
-                                {item.word ? (
-                                  <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 line-clamp-2 break-words leading-tight">
-                                    {item.word}
-                                  </span>
-                                ) : null}
-                                {setItem.subType === "text-text" && item.labelB ? (
-                                  <span className={`text-[10px] font-semibold line-clamp-1 ${badge.pairTextCls}`}>
-                                    ↔ {item.labelB}
-                                  </span>
-                                ) : null}
-                              </div>
-                            ))}
+                            {previewItems.map((item, idx) => {
+                              if (badge.category === "vocabulary") {
+                                return (
+                                  <div
+                                    key={item.id || idx}
+                                    className={`rounded-xl bg-white/95 dark:bg-slate-900 border p-1.5 flex flex-col items-center justify-between text-center min-h-[76px] transition-all hover:scale-105 ${badge.previewBorder}`}
+                                  >
+                                    <div className="w-10 h-10 flex items-center justify-center p-0.5 rounded-lg bg-slate-50 dark:bg-slate-800/80 shrink-0">
+                                      {item.imageUrl ? (
+                                        <img
+                                          src={item.imageUrl}
+                                          alt={item.word || "item"}
+                                          className="w-full h-full object-contain rounded-md"
+                                        />
+                                      ) : (
+                                        <ImageIcon className="w-5 h-5 text-slate-400" />
+                                      )}
+                                    </div>
+                                    <div className="w-full flex items-center justify-center gap-1 mt-1">
+                                      <Volume2 className="w-2.5 h-2.5 text-sky-500 shrink-0 opacity-70" />
+                                      <span className="text-[11px] font-black text-slate-800 dark:text-slate-100 truncate">
+                                        {item.word}
+                                      </span>
+                                    </div>
+                                  </div>
+                                );
+                              }
+
+                              if (badge.category === "en-vi") {
+                                return (
+                                  <div
+                                    key={item.id || idx}
+                                    className={`rounded-xl bg-white/95 dark:bg-slate-900 border p-2 flex flex-col items-center justify-center text-center min-h-[76px] transition-all hover:scale-105 ${badge.previewBorder}`}
+                                  >
+                                    <div className="flex items-center gap-1 w-full justify-center min-w-0">
+                                      <span className="text-[8px] font-black uppercase px-1 py-0.2 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 shrink-0">
+                                        EN
+                                      </span>
+                                      <span className="text-[11px] font-black text-slate-800 dark:text-slate-100 truncate">
+                                        {item.word}
+                                      </span>
+                                    </div>
+                                    <div className="w-3/4 border-t border-dashed border-slate-200 dark:border-slate-700 my-1" />
+                                    <div className="flex items-center gap-1 w-full justify-center min-w-0">
+                                      <span className="text-[8px] font-black uppercase px-1 py-0.2 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 shrink-0">
+                                        VI
+                                      </span>
+                                      <span className="text-[10.5px] font-bold text-emerald-700 dark:text-emerald-300 truncate">
+                                        {item.labelB || "..."}
+                                      </span>
+                                    </div>
+                                  </div>
+                                );
+                              }
+
+                              if (badge.category === "conversations") {
+                                return (
+                                  <div
+                                    key={item.id || idx}
+                                    className={`rounded-xl bg-white/95 dark:bg-slate-900 border p-1.5 flex flex-col justify-center gap-1 min-h-[76px] transition-all hover:scale-105 text-left ${badge.previewBorder}`}
+                                  >
+                                    <div className="px-1.5 py-0.5 rounded-md bg-teal-50 dark:bg-teal-950/70 border border-teal-200/60 dark:border-teal-800/60 flex items-center gap-1 min-w-0">
+                                      <span className="text-[9px] shrink-0">🗣️</span>
+                                      <span className="text-[10px] font-bold text-teal-900 dark:text-teal-200 truncate">
+                                        {item.word}
+                                      </span>
+                                    </div>
+                                    <div className="px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200/70 dark:border-slate-700 flex items-center gap-1 min-w-0">
+                                      <span className="text-[9px] shrink-0">💬</span>
+                                      <span className="text-[10px] font-medium text-slate-700 dark:text-slate-300 truncate">
+                                        {item.labelB || "..."}
+                                      </span>
+                                    </div>
+                                  </div>
+                                );
+                              }
+
+                              if (badge.category === "quiz") {
+                                let correctAnswer = "";
+                                if (item.labelB) {
+                                  try {
+                                    const parsed = JSON.parse(item.labelB);
+                                    if (Array.isArray(parsed.options)) {
+                                      const correct = parsed.options.find((o: any) => o.isCorrect);
+                                      if (correct) correctAnswer = correct.text;
+                                    }
+                                  } catch {
+                                    correctAnswer = item.labelB;
+                                  }
+                                }
+
+                                return (
+                                  <div
+                                    key={item.id || idx}
+                                    className={`rounded-xl bg-white/95 dark:bg-slate-900 border p-1.5 flex flex-col justify-between text-left min-h-[76px] transition-all hover:scale-105 ${badge.previewBorder}`}
+                                  >
+                                    <div className="flex items-center gap-1 min-w-0">
+                                      {item.imageUrl ? (
+                                        <img
+                                          src={item.imageUrl}
+                                          alt="q"
+                                          className="w-5 h-5 object-contain rounded shrink-0 bg-slate-50 dark:bg-slate-800"
+                                        />
+                                      ) : (
+                                        <span className="text-[9px] font-black text-amber-600 bg-amber-50 dark:bg-amber-950/60 px-1 py-0.2 rounded shrink-0">
+                                          Q
+                                        </span>
+                                      )}
+                                      <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200 truncate">
+                                        {item.word}
+                                      </span>
+                                    </div>
+                                    <div className="px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/80 dark:border-emerald-800/80 flex items-center gap-1 min-w-0">
+                                      <Check className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                      <span className="text-[9.5px] font-black text-emerald-700 dark:text-emerald-300 truncate">
+                                        {correctAnswer || item.labelB || "..."}
+                                      </span>
+                                    </div>
+                                  </div>
+                                );
+                              }
+
+                              return (
+                                <div
+                                  key={item.id || idx}
+                                  className={`rounded-[10px] bg-white/95 dark:bg-slate-900 border p-2 flex flex-col items-center justify-center text-center gap-1 min-h-[62px] transition-colors ${badge.previewBorder}`}
+                                >
+                                  {item.imageUrl ? (
+                                    <img
+                                      src={item.imageUrl}
+                                      alt={item.word || "item"}
+                                      className="w-8 h-8 object-contain rounded-lg"
+                                    />
+                                  ) : null}
+                                  {item.word ? (
+                                    <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 line-clamp-2 break-words leading-tight">
+                                      {item.word}
+                                    </span>
+                                  ) : null}
+                                  {item.labelB ? (
+                                    <span
+                                      className={`text-[10px] font-semibold line-clamp-1 ${badge.pairTextCls}`}
+                                    >
+                                      ↔ {item.labelB}
+                                    </span>
+                                  ) : null}
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
 
@@ -1584,6 +1760,132 @@ export function GlobalSuccessLibraryList() {
                       </div>
                     );
                   })}
+
+                  {/* 5th Card: Unit Review Test Card */}
+                  <div className="rounded-2xl border border-t-[3.5px] border-t-purple-600 border-purple-200/90 dark:border-purple-800/70 p-4 hover:-translate-y-1 transition-all flex flex-col justify-between gap-3 bg-gradient-to-br from-purple-50/95 via-fuchsia-50/50 to-indigo-50/80 dark:from-purple-950/40 dark:via-slate-800/70 dark:to-indigo-950/30 shadow-xs hover:shadow-md">
+                    <div
+                      onClick={() => {
+                        router.push(
+                          `/student/unit-review?grade=${selectedGrade}&unit=${unitGroup.unitNumber}`
+                        );
+                      }}
+                      title={locale === "vi" ? "Xem ngay ôn tập Unit" : "View Unit Review"}
+                      className="space-y-2.5 cursor-pointer group/card"
+                    >
+                      {/* Title & Badges */}
+                      <div className="flex items-start justify-between gap-2.5">
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                          <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-2xs font-black text-base bg-gradient-to-br from-purple-500 to-indigo-600 text-white shadow-purple-500/20">
+                            👑
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-headline font-black text-[15px] sm:text-base leading-tight truncate transition-colors text-purple-950 dark:text-purple-100 group-hover/card:text-purple-600 dark:group-hover/card:text-purple-400">
+                              {locale === "vi" ? "Ôn tập Unit" : "Unit Review"}
+                            </h4>
+                            <p className="text-[11px] font-semibold text-slate-500/90 dark:text-slate-400 truncate mt-0.5">
+                              {locale === "vi"
+                                ? "Đề luyện tập tổng hợp toàn diện Unit"
+                                : "Comprehensive Unit practice test"}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border shrink-0 bg-white/95 text-purple-700 border-purple-200 shadow-2xs">
+                          {locale === "vi" ? "Đề tổng hợp" : "Full Review"}
+                        </span>
+                      </div>
+
+                      {/* Count Badge & Quick Start Row */}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/95 dark:bg-slate-900 border border-white/80 dark:border-slate-700 text-purple-700 dark:text-purple-300 text-[11px] font-bold shadow-2xs">
+                          <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+                          <span>20+ {locale === "vi" ? "câu hỏi" : "questions"}</span>
+                        </span>
+
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-100/80 dark:bg-purple-900/40 text-purple-800 dark:text-purple-200 text-[11px] font-bold">
+                          <Clock className="w-3 h-3 text-purple-600" />
+                          <span>15 - 20 {locale === "vi" ? "phút" : "mins"}</span>
+                        </span>
+                      </div>
+
+                      {/* Mini Preview Strip: 3 feature badges */}
+                      <div className="grid grid-cols-3 gap-1.5 pt-0.5">
+                        <div className="rounded-xl bg-white/95 dark:bg-slate-900 border border-purple-200/80 dark:border-slate-700 p-1.5 flex flex-col items-center justify-center text-center gap-1 min-h-[76px] transition-all hover:scale-105">
+                          <div className="w-7 h-7 rounded-lg bg-purple-100 dark:bg-purple-950 flex items-center justify-center text-sm">
+                            🎧
+                          </div>
+                          <span className="text-[10px] font-black text-purple-900 dark:text-purple-200 leading-tight">
+                            {locale === "vi" ? "Nhìn & Nghe" : "Look & Listen"}
+                          </span>
+                        </div>
+
+                        <div className="rounded-xl bg-white/95 dark:bg-slate-900 border border-purple-200/80 dark:border-slate-700 p-1.5 flex flex-col items-center justify-center text-center gap-1 min-h-[76px] transition-all hover:scale-105">
+                          <div className="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-950 flex items-center justify-center text-sm">
+                            💬
+                          </div>
+                          <span className="text-[10px] font-black text-indigo-900 dark:text-indigo-200 leading-tight">
+                            {locale === "vi" ? "Xếp câu" : "Sentence"}
+                          </span>
+                        </div>
+
+                        <div className="rounded-xl bg-white/95 dark:bg-slate-900 border border-purple-200/80 dark:border-slate-700 p-1.5 flex flex-col items-center justify-center text-center gap-1 min-h-[76px] transition-all hover:scale-105">
+                          <div className="w-7 h-7 rounded-lg bg-fuchsia-100 dark:bg-fuchsia-950 flex items-center justify-center text-sm">
+                            🎯
+                          </div>
+                          <span className="text-[10px] font-black text-fuchsia-900 dark:text-fuchsia-200 leading-tight">
+                            {locale === "vi" ? "Trắc nghiệm" : "Quiz Test"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Footer Actions: Chia sẻ (Left) | Ôn tập ngay (Right, Primary Purple) */}
+                    <div className="pt-2.5 border-t border-purple-200/60 dark:border-slate-700/70 grid grid-cols-2 gap-2">
+                      <div className="relative group/btn w-full">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSharingReview({
+                              grade: selectedGrade,
+                              unitNumber: unitGroup.unitNumber,
+                              unitHeader: unitGroup.unitHeader,
+                            });
+                          }}
+                          className="w-full py-2 px-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200/90 dark:border-slate-700 font-bold text-xs shadow-2xs flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer hover:border-slate-300"
+                        >
+                          <Share2 className="w-3.5 h-3.5 shrink-0 text-purple-600" />
+                          <span className="whitespace-nowrap">
+                            {locale === "vi" ? "Chia sẻ đề" : "Share Test"}
+                          </span>
+                        </button>
+                        <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/btn:flex flex-col items-center z-30 transition-all duration-200 animate-in fade-in zoom-in-95">
+                          <div className="bg-slate-900 text-white text-[10px] font-semibold py-1 px-2.5 rounded-lg shadow-xl whitespace-nowrap flex items-center gap-1 border border-slate-700">
+                            <span>🔗</span>
+                            <span>
+                              {locale === "vi"
+                                ? "Lấy link & mã QR cho học sinh ôn tập tại nhà"
+                                : "Get link & QR code for students to practice"}
+                            </span>
+                          </div>
+                          <div className="w-2 h-2 bg-slate-900 border-r border-b border-slate-700 rotate-45 -mt-1" />
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          router.push(
+                            `/student/unit-review?grade=${selectedGrade}&unit=${unitGroup.unitNumber}`
+                          );
+                        }}
+                        className="w-full py-2 px-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs shadow-md shadow-purple-500/25 hover:shadow-lg hover:shadow-purple-500/35 border border-purple-400/30 flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 shrink-0 text-purple-200" />
+                        <span className="whitespace-nowrap">
+                          {locale === "vi" ? "Xem ngay" : "View Now"}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}
@@ -1944,6 +2246,20 @@ export function GlobalSuccessLibraryList() {
           isGlobalSuccess={true}
           gradeLevel={sharingSet.gradeLevel}
           subType={sharingSet.subType}
+        />
+      )}
+
+      {/* MODAL 3.5: SHARE UNIT REVIEW DIRECTLY */}
+      {sharingReview && (
+        <MatchGameShareModal
+          isOpen={Boolean(sharingReview)}
+          onClose={() => setSharingReview(null)}
+          topicName={`${sharingReview.unitHeader} (Grade ${sharingReview.grade} Review Test)`}
+          topicId={`unit-review-${sharingReview.grade}-${sharingReview.unitNumber}`}
+          gamePath={`/student/unit-review?grade=${sharingReview.grade}&unit=${sharingReview.unitNumber}`}
+          isGlobalSuccess={true}
+          gradeLevel={`Grade ${sharingReview.grade}`}
+          subType="quiz"
         />
       )}
 
