@@ -65,7 +65,9 @@ export function TeacherLibraryPickerButton({
       if (globalRes.success && Array.isArray(globalRes.sets)) {
         const compatGlobal = globalRes.sets.filter((s) => compatibleSubTypes.includes(s.subType));
         setGlobalSets(compatGlobal);
-        if (
+        if (compatGlobal.length === 0) {
+          setSourceTab("personal");
+        } else if (
           (!personalRes.sets || personalRes.sets.filter((s) => compatibleSubTypes.includes(s.subType)).length === 0) &&
           compatGlobal.length > 0
         ) {
@@ -146,37 +148,39 @@ export function TeacherLibraryPickerButton({
               </button>
             </div>
 
-            {/* Source Tabs: My Saved Sets vs Global Success Books */}
-            <div className="flex items-center gap-2 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700">
-              <button
-                type="button"
-                onClick={() => setSourceTab("personal")}
-                className={`flex-1 py-2 px-3 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  sourceTab === "personal"
-                    ? "bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 shadow-xs"
-                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
-                }`}
-              >
-                <span>👤 {t.library.mySetsTab}</span>
-                <span className="px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-700 text-[10px]">
-                  {sets.length}
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setSourceTab("global")}
-                className={`flex-1 py-2 px-3 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  sourceTab === "global"
-                    ? "bg-white dark:bg-slate-900 text-amber-700 dark:text-amber-400 shadow-xs"
-                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
-                }`}
-              >
-                <span>📘 {t.library.globalSuccessTab}</span>
-                <span className="px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-700 text-[10px]">
-                  {globalSets.length}
-                </span>
-              </button>
-            </div>
+            {/* Source Tabs: My Saved Sets vs Global Success Books (only show tabs if Global Success has compatible sets) */}
+            {globalSets.length > 0 && (
+              <div className="flex items-center gap-2 p-1 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => setSourceTab("personal")}
+                  className={`flex-1 py-2 px-3 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    sourceTab === "personal"
+                      ? "bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-400 shadow-xs"
+                      : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
+                  }`}
+                >
+                  <span>👤 {t.library.mySetsTab}</span>
+                  <span className="px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-700 text-[10px]">
+                    {sets.length}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSourceTab("global")}
+                  className={`flex-1 py-2 px-3 rounded-xl text-xs font-extrabold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    sourceTab === "global"
+                      ? "bg-white dark:bg-slate-900 text-amber-700 dark:text-amber-400 shadow-xs"
+                      : "text-slate-500 hover:text-slate-700 dark:text-slate-400"
+                  }`}
+                >
+                  <span>📘 {t.library.globalSuccessTab}</span>
+                  <span className="px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-700 text-[10px]">
+                    {globalSets.length}
+                  </span>
+                </button>
+              </div>
+            )}
 
             {/* Search */}
             <div className="relative">
@@ -207,7 +211,7 @@ export function TeacherLibraryPickerButton({
                   </p>
                 </div>
               ) : (
-                filteredSets.map((setItem) => {
+                filteredSets.map((setItem, setIdx) => {
                   const isPairs =
                     setItem.subType === "image-text" ||
                     setItem.subType === "image-image" ||
@@ -260,22 +264,41 @@ export function TeacherLibraryPickerButton({
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => handleChoose(setItem, "replace")}
-                          className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs flex items-center gap-1 shadow-xs transition-all active:scale-95 cursor-pointer"
-                        >
-                          <Download className="w-3.5 h-3.5" />
-                          <span>{t.library.replaceBtn}</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleChoose(setItem, "append")}
-                          className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-bold text-xs flex items-center gap-1 transition-all active:scale-95 cursor-pointer"
-                        >
-                          <Plus className="w-3.5 h-3.5 text-emerald-600" />
-                          <span>{t.library.appendBtn}</span>
-                        </button>
+                        <div className="relative group/replace">
+                          <button
+                            type="button"
+                            onClick={() => handleChoose(setItem, "replace")}
+                            className="px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs flex items-center gap-1 shadow-xs transition-all active:scale-95 cursor-pointer"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            <span>{t.library.replaceBtn}</span>
+                          </button>
+                          <div
+                            className={`pointer-events-none opacity-0 group-hover/replace:opacity-100 group-focus-within/replace:opacity-100 transition-opacity duration-150 absolute right-0 z-50 w-56 px-3 py-2 rounded-xl bg-slate-900 dark:bg-slate-950 text-white text-[11px] font-medium leading-snug shadow-xl border border-slate-700/80 ${
+                              setIdx === 0 ? "top-full mt-2" : "bottom-full mb-2"
+                            }`}
+                          >
+                            {t.library.replaceTooltip}
+                          </div>
+                        </div>
+
+                        <div className="relative group/append">
+                          <button
+                            type="button"
+                            onClick={() => handleChoose(setItem, "append")}
+                            className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-bold text-xs flex items-center gap-1 transition-all active:scale-95 cursor-pointer"
+                          >
+                            <Plus className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>{t.library.appendBtn}</span>
+                          </button>
+                          <div
+                            className={`pointer-events-none opacity-0 group-hover/append:opacity-100 group-focus-within/append:opacity-100 transition-opacity duration-150 absolute right-0 z-50 w-56 px-3 py-2 rounded-xl bg-slate-900 dark:bg-slate-950 text-white text-[11px] font-medium leading-snug shadow-xl border border-slate-700/80 ${
+                              setIdx === 0 ? "top-full mt-2" : "bottom-full mb-2"
+                            }`}
+                          >
+                            {t.library.appendTooltip}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   );
