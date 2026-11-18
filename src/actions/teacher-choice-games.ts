@@ -46,8 +46,16 @@ export async function saveTeacherChoiceGameAction(data: SaveTeacherChoiceGamePay
       });
     }
 
-    // 2. Prepare items data
-    const itemsData = data.questions.map((q, idx) => ({
+    // 2. Validate & prepare items data
+    const validQuestions = Array.isArray(data.questions)
+      ? data.questions.filter((q) => q && typeof q.q === "string" && q.q.trim().length > 0)
+      : [];
+
+    if (validQuestions.length === 0) {
+      return { success: false, error: "Bài tập cần ít nhất 1 câu hỏi hợp lệ để lưu." };
+    }
+
+    const itemsData = validQuestions.map((q) => ({
       roundIndex: 0,
       word: q.q.trim(),
       labelB: JSON.stringify({
@@ -60,83 +68,86 @@ export async function saveTeacherChoiceGameAction(data: SaveTeacherChoiceGamePay
       imageUrl: null,
       audioUrl: null,
       imageBUrl: null,
-      labelA: null,
+      audioBUrl: null,
     }));
 
-    // 3. Upsert into MatchWordTopic
-    const existing = await prisma.matchWordTopic.findFirst({
-      where: {
-        slug: data.code.trim().toUpperCase(),
-        gameMode: targetGameMode,
-      },
-    });
-
-    let topicId: string;
-
-    if (existing) {
-      topicId = existing.id;
-      // Delete existing items
-      await prisma.matchWordItem.deleteMany({
-        where: { topicId: existing.id },
-      });
-
-      // Update topic info
-      await prisma.matchWordTopic.update({
-        where: { id: existing.id },
-        data: {
-          name: data.title.trim(),
-          icon: defaultIcon,
+    // 3 & 4. Atomically upsert topic and bulk insert items in a transaction
+    const normalizedCode = data.code.trim().toUpperCase();
+    const topicId = await prisma.$transaction(async (tx) => {
+      const existing = await tx.matchWordTopic.findFirst({
+        where: {
+          slug: normalizedCode,
           gameMode: targetGameMode,
-          ...(data.thumbnailUrl ? { thumbnailUrl: data.thumbnailUrl } : {}),
-          updatedAt: new Date(),
         },
       });
-    } else {
-      // Create new topic
-      const newTopic = await prisma.matchWordTopic.create({
-        data: {
-          gameId: game.id,
-          name: data.title.trim(),
-          slug: data.code.trim().toUpperCase(),
-          ageGroup: "kids-2-5",
-          icon: defaultIcon,
-          thumbnailUrl: data.thumbnailUrl || null,
-          audioMode: "NONE",
-          gameMode: targetGameMode,
-          teacherId: session?.user?.id || null,
-        },
-      });
-      topicId = newTopic.id;
-    }
 
-    // 4. Bulk insert questions in 1 single SQL statement
-    if (itemsData.length > 0) {
-      await prisma.matchWordItem.createMany({
+      let targetTopicId: string;
+
+      if (existing) {
+        targetTopicId = existing.id;
+        await tx.matchWordItem.deleteMany({
+          where: { topicId: existing.id },
+        });
+
+        await tx.matchWordTopic.update({
+          where: { id: existing.id },
+          data: {
+            name: data.title.trim(),
+            icon: defaultIcon,
+            gameMode: targetGameMode,
+            ...(data.thumbnailUrl ? { thumbnailUrl: data.thumbnailUrl } : {}),
+            updatedAt: new Date(),
+          },
+        });
+      } else {
+        const newTopic = await tx.matchWordTopic.create({
+          data: {
+            gameId: game.id,
+            name: data.title.trim(),
+            slug: normalizedCode,
+            ageGroup: "kids-2-5",
+            icon: defaultIcon,
+            thumbnailUrl: data.thumbnailUrl || null,
+            audioMode: "NONE",
+            gameMode: targetGameMode,
+            teacherId: session?.user?.id || null,
+          },
+        });
+        targetTopicId = newTopic.id;
+      }
+
+      await tx.matchWordItem.createMany({
         data: itemsData.map((item) => ({
           ...item,
-          topicId,
+          topicId: targetTopicId,
         })),
       });
-    }
 
-    // Auto-sync to Teacher's My Library
-    await syncSetToTeacherLibrary({
-      teacherId: session?.user?.id || null,
-      title: data.title.trim(),
-      subType: "choice",
-      gradeLevel: "kids-2-5",
-      audioMode: "NONE",
-      thumbnailUrl: data.thumbnailUrl || null,
-      items: itemsData.map((item) => ({
-        roundIndex: 0,
-        word: item.word,
-        labelB: item.labelB,
-      })),
+      return targetTopicId;
     });
+
+    // Auto-sync to Teacher's My Library (non-fatal if sync fails)
+    try {
+      await syncSetToTeacherLibrary({
+        teacherId: session?.user?.id || null,
+        title: data.title.trim(),
+        subType: "choice",
+        gradeLevel: "kids-2-5",
+        audioMode: "NONE",
+        thumbnailUrl: data.thumbnailUrl || null,
+        items: itemsData.map((item) => ({
+          roundIndex: 0,
+          word: item.word,
+          labelB: item.labelB,
+        })),
+      });
+    } catch (syncErr) {
+      console.warn("Failed to sync choice game to teacher library:", syncErr);
+    }
 
     revalidatePath("/teacher");
     revalidatePath("/");
-    return { success: true, topicId, code: data.code.trim().toUpperCase() };
+    return { success: true, topicId, code: normalizedCode };
   } catch (error: any) {
     console.error("Failed to save teacher choice game:", error);
     return { success: false, error: error.message || "Failed to save game to database" };

@@ -21,18 +21,29 @@ export default function StudentShooterGamePage({ params }: { params: Promise<{ c
         setLoading(false);
         return;
       }
+
+      let dbGame: ChoiceShooterGame | null = null;
       try {
         const dbRes = await getTeacherChoiceGameByCodeAction(code);
         if (dbRes.success && dbRes.game) {
-          setGame(dbRes.game as any);
-          setLoading(false);
-          return;
+          dbGame = dbRes.game as any;
         }
       } catch (e) {}
 
-      // Fallback to local storage
-      const found = getChoiceShooterGameById(code);
-      setGame(found);
+      // If DB has questions, use it directly
+      if (dbGame && Array.isArray(dbGame.questions) && dbGame.questions.length > 0) {
+        setGame(dbGame);
+        setLoading(false);
+        return;
+      }
+
+      // Fallback to local storage (also rescues creator's local copy if DB had 0 items)
+      const localFound = getChoiceShooterGameById(code);
+      if (localFound && Array.isArray(localFound.questions) && localFound.questions.length > 0) {
+        setGame(localFound);
+      } else {
+        setGame(dbGame || localFound);
+      }
       setLoading(false);
     }
     load();
@@ -57,6 +68,28 @@ export default function StudentShooterGamePage({ params }: { params: Promise<{ c
           <h1 className="font-headline font-black text-2xl text-white">Không tìm thấy bài tập!</h1>
           <p className="text-xs text-slate-400 font-mono">
             Mã bài tập "{code}" không tồn tại hoặc đã bị xóa. Vui lòng kiểm tra lại đường link.
+          </p>
+        </div>
+        <Link
+          href="/"
+          className="px-6 py-3 bg-cyan-500 hover:bg-cyan-600 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg shadow-cyan-500/20 transition-all"
+        >
+          Quay về Trang chủ
+        </Link>
+      </div>
+    );
+  }
+
+  if (!Array.isArray(game.questions) || game.questions.length === 0) {
+    return (
+      <div className="fixed inset-0 bg-[#050510] text-white flex flex-col items-center justify-center p-6 text-center space-y-6 font-sans">
+        <div className="w-20 h-20 rounded-3xl bg-amber-950/60 border border-amber-500/40 text-amber-400 flex items-center justify-center text-4xl shadow-xl">
+          🚀
+        </div>
+        <div className="space-y-2 max-w-md">
+          <h1 className="font-headline font-black text-2xl text-white">Bài tập chưa có câu hỏi!</h1>
+          <p className="text-xs text-slate-400 font-mono">
+            Trò chơi "{game.title || code}" hiện chưa có câu hỏi nào. Giáo viên vui lòng mở chỉnh sửa và lưu lại câu hỏi cho bài tập này.
           </p>
         </div>
         <Link

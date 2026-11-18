@@ -188,7 +188,7 @@ export function SciFiNeonShooterGame({ game, onClose, isModal = false }: SciFiNe
   };
 
   useEffect(() => {
-    if (gameState !== "playing") return;
+    if (gameState !== "playing" || questions.length === 0) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -304,19 +304,21 @@ export function SciFiNeonShooterGame({ game, onClose, isModal = false }: SciFiNe
     let typeIdx = 0;
     let typeTimer = 0;
 
-    function loadQuestionData(qObj: ChoiceShooterQuestion) {
+    function loadQuestionData(qObj?: ChoiceShooterQuestion) {
+      if (!qObj) return;
       targets = [];
       dangerAlpha = 0;
-      fullQText = qObj.q;
+      fullQText = qObj.q || "";
       currentTypeStr = "";
       typeIdx = 0;
       typeTimer = 0;
 
+      const wrongArr = Array.isArray(qObj.wrong) ? qObj.wrong : [];
       const opts: Array<{ text: string; isCorrect: boolean }> = [
-        { text: qObj.a, isCorrect: true },
-        { text: qObj.wrong[0] || "0", isCorrect: false },
-        { text: qObj.wrong[1] || "1", isCorrect: false },
-        { text: qObj.wrong[2] || "2", isCorrect: false },
+        { text: qObj.a || "", isCorrect: true },
+        { text: wrongArr[0] || "0", isCorrect: false },
+        { text: wrongArr[1] || "1", isCorrect: false },
+        { text: wrongArr[2] || "2", isCorrect: false },
       ].sort(() => Math.random() - 0.5);
 
       const sciFiColors = [

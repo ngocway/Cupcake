@@ -93,6 +93,10 @@ export async function saveMatchImageTextGameAction(data: SaveMatchImageTextPaylo
       })
     );
 
+    if (sanitizedPairs.length === 0) {
+      return { success: false, error: "Bài tập phải có ít nhất 1 cặp nội dung!" };
+    }
+
     const isImageImage =
       data.gameType === "image-image" ||
       data.gameType === "FLIP_IMAGE_IMAGE" ||
@@ -109,28 +113,28 @@ export async function saveMatchImageTextGameAction(data: SaveMatchImageTextPaylo
 
     // If updating an existing topic
     if (data.topicId) {
-      // 1. Delete existing items to re-create fresh pair items
-      await prisma.matchWordItem.deleteMany({
-        where: { topicId: data.topicId },
-      });
+      const updatedTopic = await prisma.$transaction(async (tx) => {
+        // 1. Delete existing items to re-create fresh pair items
+        await tx.matchWordItem.deleteMany({
+          where: { topicId: data.topicId },
+        });
 
-      // 2. Update the topic
-      const updatedTopic = await prisma.matchWordTopic.update({
-        where: { id: data.topicId },
-        data: {
-          name: data.title,
-          ageGroup: data.gradeLevel || "kids-2-5",
-          audioMode: data.audioMode || "AUTO_TTS",
-          ...(data.gameMode ? { gameMode: data.gameMode } : {}),
-          ...(data.thumbnailUrl ? { thumbnailUrl: data.thumbnailUrl } : {}),
-        },
-      });
+        // 2. Update the topic
+        const topic = await tx.matchWordTopic.update({
+          where: { id: data.topicId },
+          data: {
+            name: data.title,
+            ageGroup: data.gradeLevel || "kids-2-5",
+            audioMode: data.audioMode || "AUTO_TTS",
+            ...(data.gameMode ? { gameMode: data.gameMode } : {}),
+            ...(data.thumbnailUrl ? { thumbnailUrl: data.thumbnailUrl } : {}),
+          },
+        });
 
-      // 3. Bulk insert items in 1 SQL statement
-      if (sanitizedPairs.length > 0) {
-        await prisma.matchWordItem.createMany({
+        // 3. Bulk insert items in 1 SQL statement
+        await tx.matchWordItem.createMany({
           data: sanitizedPairs.map((pair) => ({
-            topicId: updatedTopic.id,
+            topicId: topic.id,
             roundIndex: pair.roundIndex ?? 0,
             word: pair.word || "",
             imageUrl: pair.imageUrl || null,
@@ -140,26 +144,32 @@ export async function saveMatchImageTextGameAction(data: SaveMatchImageTextPaylo
             audioBUrl: pair.audioBUrl || null,
           })),
         });
-      }
 
-      // Auto-sync to Teacher's My Library
-      await syncSetToTeacherLibrary({
-        teacherId: session?.user?.id || null,
-        title: data.title,
-        subType: librarySubType,
-        gradeLevel: data.gradeLevel || "kids-2-5",
-        audioMode: data.audioMode || "AUTO_TTS",
-        thumbnailUrl: data.thumbnailUrl || null,
-        items: sanitizedPairs.map((pair) => ({
-          roundIndex: pair.roundIndex ?? 0,
-          word: pair.word || "",
-          imageUrl: pair.imageUrl || null,
-          audioUrl: pair.audioUrl || null,
-          imageBUrl: pair.imageBUrl || null,
-          labelB: pair.labelB || null,
-          audioBUrl: pair.audioBUrl || null,
-        })),
+        return topic;
       });
+
+      // Auto-sync to Teacher's My Library (non-fatal if sync fails)
+      try {
+        await syncSetToTeacherLibrary({
+          teacherId: session?.user?.id || null,
+          title: data.title,
+          subType: librarySubType,
+          gradeLevel: data.gradeLevel || "kids-2-5",
+          audioMode: data.audioMode || "AUTO_TTS",
+          thumbnailUrl: data.thumbnailUrl || null,
+          items: sanitizedPairs.map((pair) => ({
+            roundIndex: pair.roundIndex ?? 0,
+            word: pair.word || "",
+            imageUrl: pair.imageUrl || null,
+            audioUrl: pair.audioUrl || null,
+            imageBUrl: pair.imageBUrl || null,
+            labelB: pair.labelB || null,
+            audioBUrl: pair.audioBUrl || null,
+          })),
+        });
+      } catch (syncErr) {
+        console.warn("Failed to sync match game to teacher library:", syncErr);
+      }
 
       revalidatePath("/teacher");
       revalidatePath("/student/game/flashcard-match");
@@ -203,26 +213,25 @@ export async function saveMatchImageTextGameAction(data: SaveMatchImageTextPaylo
 
     const slug = toSlug(data.title) + "-" + Date.now().toString(36);
 
-    // 2. Create the new topic
-    const topic = await prisma.matchWordTopic.create({
-      data: {
-        gameId: game.id,
-        name: data.title,
-        slug,
-        ageGroup: data.gradeLevel || "kids-2-5",
-        icon: "🖼️",
-        thumbnailUrl: data.thumbnailUrl || null,
-        audioMode: data.audioMode || "AUTO_TTS",
-        gameMode: data.gameMode || "match",
-        teacherId: session?.user?.id || null,
-      },
-    });
+    // 2 & 3. Atomically create topic and bulk insert all card items
+    const topic = await prisma.$transaction(async (tx) => {
+      const created = await tx.matchWordTopic.create({
+        data: {
+          gameId: game.id,
+          name: data.title,
+          slug,
+          ageGroup: data.gradeLevel || "kids-2-5",
+          icon: "🖼️",
+          thumbnailUrl: data.thumbnailUrl || null,
+          audioMode: data.audioMode || "AUTO_TTS",
+          gameMode: data.gameMode || "match",
+          teacherId: session?.user?.id || null,
+        },
+      });
 
-    // 3. Bulk insert all card items in 1 SQL statement
-    if (sanitizedPairs.length > 0) {
-      await prisma.matchWordItem.createMany({
+      await tx.matchWordItem.createMany({
         data: sanitizedPairs.map((pair) => ({
-          topicId: topic.id,
+          topicId: created.id,
           roundIndex: pair.roundIndex ?? 0,
           word: pair.word || "",
           imageUrl: pair.imageUrl || null,
@@ -232,26 +241,32 @@ export async function saveMatchImageTextGameAction(data: SaveMatchImageTextPaylo
           audioBUrl: pair.audioBUrl || null,
         })),
       });
-    }
 
-    // Auto-sync to Teacher's My Library
-    await syncSetToTeacherLibrary({
-      teacherId: session?.user?.id || null,
-      title: data.title,
-      subType: librarySubType,
-      gradeLevel: data.gradeLevel || "kids-2-5",
-      audioMode: data.audioMode || "AUTO_TTS",
-      thumbnailUrl: data.thumbnailUrl || null,
-      items: sanitizedPairs.map((pair) => ({
-        roundIndex: pair.roundIndex ?? 0,
-        word: pair.word || "",
-        imageUrl: pair.imageUrl || null,
-        audioUrl: pair.audioUrl || null,
-        imageBUrl: pair.imageBUrl || null,
-        labelB: pair.labelB || null,
-        audioBUrl: pair.audioBUrl || null,
-      })),
+      return created;
     });
+
+    // Auto-sync to Teacher's My Library (non-fatal if sync fails)
+    try {
+      await syncSetToTeacherLibrary({
+        teacherId: session?.user?.id || null,
+        title: data.title,
+        subType: librarySubType,
+        gradeLevel: data.gradeLevel || "kids-2-5",
+        audioMode: data.audioMode || "AUTO_TTS",
+        thumbnailUrl: data.thumbnailUrl || null,
+        items: sanitizedPairs.map((pair) => ({
+          roundIndex: pair.roundIndex ?? 0,
+          word: pair.word || "",
+          imageUrl: pair.imageUrl || null,
+          audioUrl: pair.audioUrl || null,
+          imageBUrl: pair.imageBUrl || null,
+          labelB: pair.labelB || null,
+          audioBUrl: pair.audioBUrl || null,
+        })),
+      });
+    } catch (syncErr) {
+      console.warn("Failed to sync match game to teacher library:", syncErr);
+    }
 
     revalidatePath("/teacher");
     revalidatePath("/student/game/flashcard-match");

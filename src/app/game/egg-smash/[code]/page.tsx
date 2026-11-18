@@ -36,23 +36,30 @@ export default function StudentEggSmashGamePage({ params }: { params: Promise<{ 
         return;
       }
 
-      let found: ChoiceEggGame | null = null;
+      let dbGame: ChoiceEggGame | null = null;
 
       try {
         const dbRes = await getTeacherChoiceGameByCodeAction(code);
         if (dbRes.success && dbRes.game) {
-          found = dbRes.game as any;
+          dbGame = dbRes.game as any;
         }
       } catch (e) {}
 
-      if (!found) {
-        found = getChoiceEggGameById(code);
+      let found: ChoiceEggGame | null = null;
+      if (dbGame && Array.isArray(dbGame.questions) && dbGame.questions.length > 0) {
+        found = dbGame;
+      } else {
+        const localFound = getChoiceEggGameById(code);
+        found =
+          localFound && Array.isArray(localFound.questions) && localFound.questions.length > 0
+            ? localFound
+            : dbGame || localFound;
       }
 
       if (found) {
         setGame(found);
         // Inject custom questions into parent window for iframe game.js to read
-        (window as any).CUSTOM_EGG_GAME_DATA = prepareEggGameData(found.questions);
+        (window as any).CUSTOM_EGG_GAME_DATA = prepareEggGameData(found.questions || []);
         (window as any).CUSTOM_EGG_END_MODE = found.endMode || "finish";
       }
 
@@ -80,6 +87,28 @@ export default function StudentEggSmashGamePage({ params }: { params: Promise<{ 
           <h1 className="font-headline font-black text-2xl text-white">Không tìm thấy bài tập!</h1>
           <p className="text-xs text-slate-400 font-mono">
             Mã bài tập "{code}" không tồn tại hoặc đã bị xóa. Vui lòng kiểm tra lại đường link.
+          </p>
+        </div>
+        <Link
+          href="/"
+          className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-lg shadow-amber-500/20 transition-all"
+        >
+          Quay về Trang chủ
+        </Link>
+      </div>
+    );
+  }
+
+  if (!Array.isArray(game.questions) || game.questions.length === 0) {
+    return (
+      <div className="fixed inset-0 bg-[#11111a] text-white flex flex-col items-center justify-center p-6 text-center space-y-6 font-sans">
+        <div className="w-20 h-20 rounded-3xl bg-amber-950/60 border border-amber-500/40 text-amber-400 flex items-center justify-center text-4xl shadow-xl">
+          🥚
+        </div>
+        <div className="space-y-2 max-w-md">
+          <h1 className="font-headline font-black text-2xl text-white">Bài tập chưa có câu hỏi!</h1>
+          <p className="text-xs text-slate-400 font-mono">
+            Trò chơi "{game.title || code}" hiện chưa có câu hỏi nào. Giáo viên vui lòng mở chỉnh sửa và lưu lại câu hỏi cho bài tập này.
           </p>
         </div>
         <Link

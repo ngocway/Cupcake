@@ -166,25 +166,25 @@ export async function saveCandyQuizGameAction(data: SaveCandyQuizPayload) {
 
     // If updating an existing topic
     if (data.topicId) {
-      await prisma.matchWordItem.deleteMany({
-        where: { topicId: data.topicId },
-      });
+      const updatedTopic = await prisma.$transaction(async (tx) => {
+        await tx.matchWordItem.deleteMany({
+          where: { topicId: data.topicId },
+        });
 
-      const updatedTopic = await prisma.matchWordTopic.update({
-        where: { id: data.topicId },
-        data: {
-          name: data.title,
-          ageGroup: data.gradeLevel || "kids-2-5",
-          audioMode: "NONE",
-          gameMode: targetGameMode,
-          ...(data.thumbnailUrl ? { thumbnailUrl: data.thumbnailUrl } : {}),
-        },
-      });
+        const topic = await tx.matchWordTopic.update({
+          where: { id: data.topicId },
+          data: {
+            name: data.title,
+            ageGroup: data.gradeLevel || "kids-2-5",
+            audioMode: "NONE",
+            gameMode: targetGameMode,
+            ...(data.thumbnailUrl ? { thumbnailUrl: data.thumbnailUrl } : {}),
+          },
+        });
 
-      if (sanitizedFlatItems.length > 0) {
-        await prisma.matchWordItem.createMany({
+        await tx.matchWordItem.createMany({
           data: sanitizedFlatItems.map((item) => ({
-            topicId: updatedTopic.id,
+            topicId: topic.id,
             roundIndex: item.roundIndex,
             word: item.word,
             imageUrl: item.imageUrl,
@@ -193,22 +193,28 @@ export async function saveCandyQuizGameAction(data: SaveCandyQuizPayload) {
             audioBUrl: null,
           })),
         });
-      }
 
-      await syncSetToTeacherLibrary({
-        teacherId: session?.user?.id || null,
-        title: data.title,
-        subType: "quiz",
-        gradeLevel: data.gradeLevel || "kids-2-5",
-        audioMode: "NONE",
-        thumbnailUrl: data.thumbnailUrl || null,
-        items: sanitizedFlatItems.map((item) => ({
-          roundIndex: item.roundIndex,
-          word: item.word,
-          imageUrl: item.imageUrl,
-          labelB: item.labelB,
-        })),
+        return topic;
       });
+
+      try {
+        await syncSetToTeacherLibrary({
+          teacherId: session?.user?.id || null,
+          title: data.title,
+          subType: "quiz",
+          gradeLevel: data.gradeLevel || "kids-2-5",
+          audioMode: "NONE",
+          thumbnailUrl: data.thumbnailUrl || null,
+          items: sanitizedFlatItems.map((item) => ({
+            roundIndex: item.roundIndex,
+            word: item.word,
+            imageUrl: item.imageUrl,
+            labelB: item.labelB,
+          })),
+        });
+      } catch (syncErr) {
+        console.warn("Failed to sync quiz game to teacher library:", syncErr);
+      }
 
       revalidatePath("/teacher");
       revalidatePath("/");
@@ -234,24 +240,24 @@ export async function saveCandyQuizGameAction(data: SaveCandyQuizPayload) {
 
     const slug = toSlug(data.title) + "-" + Date.now().toString(36);
 
-    const topic = await prisma.matchWordTopic.create({
-      data: {
-        gameId: game.id,
-        name: data.title,
-        slug,
-        ageGroup: data.gradeLevel || "kids-2-5",
-        icon: defaultIcon,
-        thumbnailUrl: data.thumbnailUrl || null,
-        audioMode: "NONE",
-        gameMode: targetGameMode,
-        teacherId: session?.user?.id || null,
-      },
-    });
+    const topic = await prisma.$transaction(async (tx) => {
+      const created = await tx.matchWordTopic.create({
+        data: {
+          gameId: game.id,
+          name: data.title,
+          slug,
+          ageGroup: data.gradeLevel || "kids-2-5",
+          icon: defaultIcon,
+          thumbnailUrl: data.thumbnailUrl || null,
+          audioMode: "NONE",
+          gameMode: targetGameMode,
+          teacherId: session?.user?.id || null,
+        },
+      });
 
-    if (sanitizedFlatItems.length > 0) {
-      await prisma.matchWordItem.createMany({
+      await tx.matchWordItem.createMany({
         data: sanitizedFlatItems.map((item) => ({
-          topicId: topic.id,
+          topicId: created.id,
           roundIndex: item.roundIndex,
           word: item.word,
           imageUrl: item.imageUrl,
@@ -260,22 +266,28 @@ export async function saveCandyQuizGameAction(data: SaveCandyQuizPayload) {
           audioBUrl: null,
         })),
       });
-    }
 
-    await syncSetToTeacherLibrary({
-      teacherId: session?.user?.id || null,
-      title: data.title,
-      subType: "quiz",
-      gradeLevel: data.gradeLevel || "kids-2-5",
-      audioMode: "NONE",
-      thumbnailUrl: data.thumbnailUrl || null,
-      items: sanitizedFlatItems.map((item) => ({
-        roundIndex: item.roundIndex,
-        word: item.word,
-        imageUrl: item.imageUrl,
-        labelB: item.labelB,
-      })),
+      return created;
     });
+
+    try {
+      await syncSetToTeacherLibrary({
+        teacherId: session?.user?.id || null,
+        title: data.title,
+        subType: "quiz",
+        gradeLevel: data.gradeLevel || "kids-2-5",
+        audioMode: "NONE",
+        thumbnailUrl: data.thumbnailUrl || null,
+        items: sanitizedFlatItems.map((item) => ({
+          roundIndex: item.roundIndex,
+          word: item.word,
+          imageUrl: item.imageUrl,
+          labelB: item.labelB,
+        })),
+      });
+    } catch (syncErr) {
+      console.warn("Failed to sync quiz game to teacher library:", syncErr);
+    }
 
     revalidatePath("/teacher");
     return { success: true, id: topic.id, topicId: topic.id, slug: topic.slug };

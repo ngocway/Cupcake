@@ -513,7 +513,7 @@ export default function CreateChoiceShooterPage() {
 
       // Save to Database
       try {
-        await saveTeacherChoiceGameAction({
+        const saveRes = await saveTeacherChoiceGameAction({
           code: createdCode,
           title: gameTitle,
           gameType: "shooter",
@@ -523,8 +523,16 @@ export default function CreateChoiceShooterPage() {
           questions,
           thumbnailUrl: generatedThumbnailUrl,
         });
+        if (!saveRes?.success) {
+          toast.dismiss();
+          toast.error(saveRes?.error || "Không thể lưu bài tập lên hệ thống. Vui lòng thử lại!");
+          return;
+        }
       } catch (e) {
         console.error("Failed to save choice shooter to DB:", e);
+        toast.dismiss();
+        toast.error("Có lỗi khi lưu bài tập lên hệ thống. Vui lòng thử lại!");
+        return;
       }
 
       // Save to localStorage as local fallback
