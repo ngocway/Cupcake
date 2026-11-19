@@ -54,13 +54,81 @@ interface CompatibleGameOption {
   descEn: string;
   imageUrl?: string;
   videoId?: string;
+  isRecommended?: boolean;
+  recommendLabelVi?: string;
+  recommendLabelEn?: string;
   buildHref: (setId: string) => string;
 }
 
-
-function getCompatibleGamesForSubType(subType: LibrarySubType): CompatibleGameOption[] {
+function getCompatibleGamesForSubType(subType: LibrarySubType, item?: LibrarySetItem): CompatibleGameOption[] {
   if (subType === "image-text") {
     return [
+      {
+        id: "train-vocab",
+        titleVi: "Đoàn Tàu Từ Vựng",
+        titleEn: "Vocabulary Train",
+        badgeVi: "Đoàn tàu",
+        badgeEn: "Train",
+        badgeColor: "bg-amber-500",
+        descVi: "Học sinh kéo thả từ vựng lên đúng toa tàu mang hình ảnh minh họa.",
+        descEn: "Students load vocabulary cards onto matching train carriages.",
+        videoId: "Tb2nH6nprXk",
+        imageUrl: "https://media.dolcake.com/images/games/train-vocab.png",
+        isRecommended: true,
+        recommendLabelVi: "Khuyên dùng ⭐",
+        recommendLabelEn: "Recommended ⭐",
+        buildHref: (id) =>
+          `/teacher/games/match-image-text/create?type=image-text&gameMode=train&librarySetId=${id}&returnTab=lib-global`,
+      },
+      {
+        id: "cut-rope-image-text",
+        titleVi: "Cắt Dây Ảnh - Chữ",
+        titleEn: "Cut the Rope Image - Word",
+        badgeVi: "Cắt dây",
+        badgeEn: "Cut Rope",
+        badgeColor: "bg-rose-500",
+        descVi: "Học sinh chém đứt dây thừng để thả ảnh rơi trúng từ vựng.",
+        descEn: "Students slice ropes to drop images onto matching words.",
+        videoId: "Dsb7Rm9Je4Y",
+        imageUrl: "https://media.dolcake.com/images/games/cut-rope.png",
+        isRecommended: true,
+        recommendLabelVi: "Khuyên dùng ⭐",
+        recommendLabelEn: "Recommended ⭐",
+        buildHref: (id) =>
+          `/teacher/games/match-image-text/create?type=image-text&gameMode=cut-rope&librarySetId=${id}&returnTab=lib-global`,
+      },
+      {
+        id: "conveyor-drop",
+        titleVi: "Băng Chuyền Thả Khối",
+        titleEn: "Conveyor Drop",
+        badgeVi: "Băng chuyền",
+        badgeEn: "Conveyor",
+        badgeColor: "bg-cyan-500",
+        descVi: "Học sinh thả khối hình rơi xuống đúng ô trên băng chuyền đang chạy.",
+        descEn: "Students drop blocks onto matching slots along a moving conveyor belt.",
+        videoId: "JTMQ83gi9wo",
+        isRecommended: true,
+        recommendLabelVi: "Khuyên dùng ⭐",
+        recommendLabelEn: "Recommended ⭐",
+        buildHref: (id) =>
+          `/teacher/games/conveyor-drop/create?librarySetId=${id}&returnTab=lib-global`,
+      },
+      {
+        id: "flip-image-text",
+        titleVi: "Lật Ảnh - Chữ (Memory Flip)",
+        titleEn: "Flip Image - Word (Memory)",
+        badgeVi: "Lật ảnh",
+        badgeEn: "Flip Cards",
+        badgeColor: "bg-pink-500",
+        descVi: "Học sinh lật mở các ô thẻ úp để tìm cặp Hình ảnh và Từ vựng trùng khớp.",
+        descEn: "Students flip memory cards to pair illustrations with words.",
+        videoId: "30Ov93AvLwY",
+        isRecommended: true,
+        recommendLabelVi: "Khuyên dùng ⭐",
+        recommendLabelEn: "Recommended ⭐",
+        buildHref: (id) =>
+          `/teacher/games/flip/create?type=FLIP_IMAGE_TEXT&gameMode=flip-image-text&librarySetId=${id}&returnTab=lib-global`,
+      },
       {
         id: "match-image-text",
         titleVi: "Nối Cặp Ảnh - Chữ (Thẻ bài)",
@@ -88,78 +156,90 @@ function getCompatibleGamesForSubType(subType: LibrarySubType): CompatibleGameOp
         buildHref: (id) =>
           `/teacher/games/match-image-text/create?type=image-text&gameMode=line&librarySetId=${id}&returnTab=lib-global`,
       },
-      {
-        id: "cut-rope-image-text",
-        titleVi: "Cắt Dây Ảnh - Chữ",
-        titleEn: "Cut the Rope Image - Word",
-        badgeVi: "Cắt dây",
-        badgeEn: "Cut Rope",
-        badgeColor: "bg-rose-500",
-        descVi: "Học sinh chém đứt dây thừng để thả ảnh rơi trúng từ vựng.",
-        descEn: "Students slice ropes to drop images onto matching words.",
-        videoId: "Dsb7Rm9Je4Y",
-        imageUrl: "https://media.dolcake.com/images/games/cut-rope.png",
-        buildHref: (id) =>
-          `/teacher/games/match-image-text/create?type=image-text&gameMode=cut-rope&librarySetId=${id}&returnTab=lib-global`,
-      },
-      {
-        id: "train-vocab",
-        titleVi: "Đoàn Tàu Từ Vựng",
-        titleEn: "Vocabulary Train",
-        badgeVi: "Đoàn tàu",
-        badgeEn: "Train",
-        badgeColor: "bg-amber-500",
-        descVi: "Học sinh kéo thả từ vựng lên đúng toa tàu mang hình ảnh.",
-        descEn: "Students load vocabulary cards onto matching train carriages.",
-        videoId: "Tb2nH6nprXk",
-        imageUrl: "https://media.dolcake.com/images/games/train-vocab.png",
-        buildHref: (id) =>
-          `/teacher/games/match-image-text/create?type=image-text&gameMode=train&librarySetId=${id}&returnTab=lib-global`,
-      },
-      {
-        id: "conveyor-drop",
-        titleVi: "Băng Chuyền Thả Khối",
-        titleEn: "Conveyor Drop",
-        badgeVi: "Băng chuyền",
-        badgeEn: "Conveyor",
-        badgeColor: "bg-cyan-500",
-        descVi: "Học sinh thả khối hình rơi xuống đúng ô trên băng chuyền đang chạy.",
-        descEn: "Students drop blocks onto matching slots along a moving conveyor belt.",
-        videoId: "JTMQ83gi9wo",
-        buildHref: (id) =>
-          `/teacher/games/conveyor-drop/create?librarySetId=${id}&returnTab=lib-global`,
-      },
-      {
-        id: "flip-image-text",
-        titleVi: "Lật Ảnh - Chữ (Memory Flip)",
-        titleEn: "Flip Image - Word (Memory)",
-        badgeVi: "Lật ảnh",
-        badgeEn: "Flip Cards",
-        badgeColor: "bg-pink-500",
-        descVi: "Học sinh lật mở các ô thẻ úp để tìm cặp Hình ảnh và Từ vựng trùng khớp.",
-        descEn: "Students flip memory cards to pair illustrations with words.",
-        videoId: "30Ov93AvLwY",
-        buildHref: (id) =>
-          `/teacher/games/flip/create?type=FLIP_IMAGE_TEXT&gameMode=flip-image-text&librarySetId=${id}&returnTab=lib-global`,
-      },
     ];
   }
 
   if (subType === "text-text") {
+    const lowerName = (item?.name || "").toLowerCase();
+    const isConversation =
+      lowerName.includes("conversation") ||
+      lowerName.includes("sentence") ||
+      lowerName.includes("hội thoại") ||
+      lowerName.includes("mẫu câu");
+
+    if (isConversation) {
+      return [
+        {
+          id: "match-text-text",
+          titleVi: "Nối Cặp Hội Thoại (Câu hỏi - Trả lời)",
+          titleEn: "Match Conversations (Q&A Pairs)",
+          badgeVi: "Hội thoại",
+          badgeEn: "Dialogue",
+          badgeColor: "bg-teal-600",
+          descVi: "Đọc câu hỏi, nối với câu trả lời tương ứng (có audio đọc chuẩn tiếng Anh từng câu).",
+          descEn: "Read dialogue questions and match them with appropriate replies with audio.",
+          videoId: "qkE6qYZ-DDU",
+          imageUrl: "https://media.dolcake.com/images/games/word-match.png",
+          isRecommended: true,
+          recommendLabelVi: "Khuyên dùng ⭐",
+          recommendLabelEn: "Recommended ⭐",
+          buildHref: (id) =>
+            `/teacher/games/match-image-text/create?type=text-text&librarySetId=${id}&returnTab=lib-global`,
+        },
+        {
+          id: "line-text-text",
+          titleVi: "Nối Dây Mẫu Câu Hội Thoại",
+          titleEn: "Line Match Conversations",
+          badgeVi: "Nối dây",
+          badgeEn: "Line Match",
+          badgeColor: "bg-violet-500",
+          descVi: "Kẻ dây nối từ câu hỏi/lời thoại vế A sang câu trả lời vế B tương ứng.",
+          descEn: "Draw lines connecting dialogue prompts to matching conversation responses.",
+          videoId: "qkE6qYZ-DDU",
+          imageUrl: "https://media.dolcake.com/images/games/word-match.png",
+          isRecommended: true,
+          recommendLabelVi: "Khuyên dùng ⭐",
+          recommendLabelEn: "Recommended ⭐",
+          buildHref: (id) =>
+            `/teacher/games/match-image-text/create?type=text-text&gameMode=line&librarySetId=${id}&returnTab=lib-global`,
+        },
+      ];
+    }
+
     return [
       {
         id: "match-text-text",
-        titleVi: "Nối Cặp Chữ - Chữ (Từ vựng / Định nghĩa)",
-        titleEn: "Match Word - Word (Pairs)",
-        badgeVi: "Chữ - Chữ",
-        badgeEn: "Word - Word",
-        badgeColor: "bg-indigo-500",
-        descVi: "Học sinh ghép cặp từ vựng tiếng Anh với nghĩa hoặc câu hội thoại tương ứng.",
-        descEn: "Students match words with definitions, translations, or conversation replies.",
+        titleVi: "Nối Cặp Chữ - Chữ (Anh - Việt)",
+        titleEn: "Match Word - Word (Bilingual)",
+        badgeVi: "Anh - Việt",
+        badgeEn: "Bilingual",
+        badgeColor: "bg-indigo-600",
+        descVi: "Ghép thẻ từ vựng tiếng Anh với nghĩa tiếng Việt tương ứng, giúp ghi nhớ từ vựng sâu sắc.",
+        descEn: "Pair English words with their Vietnamese translations to reinforce vocabulary recall.",
         videoId: "qkE6qYZ-DDU",
         imageUrl: "https://media.dolcake.com/images/games/word-match.png",
+        isRecommended: true,
+        recommendLabelVi: "Khuyên dùng ⭐",
+        recommendLabelEn: "Recommended ⭐",
         buildHref: (id) =>
           `/teacher/games/match-image-text/create?type=text-text&librarySetId=${id}&returnTab=lib-global`,
+      },
+      {
+        id: "line-text-text",
+        titleVi: "Nối Dây Song Ngữ Anh - Việt",
+        titleEn: "Line Match English - Vietnamese",
+        badgeVi: "Nối dây",
+        badgeEn: "Line Match",
+        badgeColor: "bg-violet-500",
+        descVi: "Kẻ dây nối trực tiếp từ vựng tiếng Anh ở cột trái sang nghĩa tiếng Việt ở cột phải.",
+        descEn: "Draw lines directly between English words and Vietnamese translations.",
+        videoId: "qkE6qYZ-DDU",
+        imageUrl: "https://media.dolcake.com/images/games/word-match.png",
+        isRecommended: true,
+        recommendLabelVi: "Khuyên dùng ⭐",
+        recommendLabelEn: "Recommended ⭐",
+        buildHref: (id) =>
+          `/teacher/games/match-image-text/create?type=text-text&gameMode=line&librarySetId=${id}&returnTab=lib-global`,
       },
     ];
   }
@@ -173,10 +253,13 @@ function getCompatibleGamesForSubType(subType: LibrarySubType): CompatibleGameOp
         badgeVi: "Kẹo ngọt",
         badgeEn: "Candy World",
         badgeColor: "bg-pink-500",
-        descVi: "Trả lời câu hỏi trắc nghiệm 4 đáp án trên bản đồ Kẹo Ngọt vui nhộn.",
+        descVi: "Trả lời câu hỏi trắc nghiệm 4 đáp án trên bản đồ Kẹo Ngọt vui nhộn, âm thanh sống động.",
         descEn: "Answer 4-option multiple choice questions in a lively Candy World.",
         videoId: "m6_CohSIXpo",
         imageUrl: "https://media.dolcake.com/images/games/candy-quiz.jpg",
+        isRecommended: true,
+        recommendLabelVi: "Khuyên dùng ⭐",
+        recommendLabelEn: "Recommended ⭐",
         buildHref: (id) =>
           `/teacher/games/candy-quiz/create?librarySetId=${id}&returnTab=lib-global`,
       },
@@ -187,10 +270,13 @@ function getCompatibleGamesForSubType(subType: LibrarySubType): CompatibleGameOp
         badgeVi: "Kho báu",
         badgeEn: "Treasure Hunt",
         badgeColor: "bg-amber-500",
-        descVi: "Trả lời câu hỏi trắc nghiệm để lật mở bản đồ kho báu và săn rương vàng.",
-        descEn: "Answer multiple-choice questions to unlock pirate treasure chests.",
+        descVi: "Trả lời câu hỏi trắc nghiệm để lật mở bản đồ kho báu và săn rương vàng bí mật.",
+        descEn: "Answer multiple-choice questions to unlock pirate treasure chests on a mystery island.",
         videoId: "9juS0TQRyHw",
         imageUrl: "https://media.dolcake.com/games/mystery-treasure-grid-assets/assets/webp/background-stage.webp",
+        isRecommended: true,
+        recommendLabelVi: "Khuyên dùng ⭐",
+        recommendLabelEn: "Recommended ⭐",
         buildHref: (id) =>
           `/teacher/games/treasure-hunt/create?librarySetId=${id}&returnTab=lib-global`,
       },
@@ -201,10 +287,13 @@ function getCompatibleGamesForSubType(subType: LibrarySubType): CompatibleGameOp
         badgeVi: "Bắn súng",
         badgeEn: "Space Shooter",
         badgeColor: "bg-purple-600",
-        descVi: "Điều khiển tàu vũ trụ bắn tia laser vào đáp án đúng đang bay.",
+        descVi: "Điều khiển tàu vũ trụ bắn tia laser vào quả cầu mang đáp án đúng đang bay.",
         descEn: "Pilot a space cannon and shoot the orb carrying the correct answer.",
         videoId: "MxrxyO1a8gM",
         imageUrl: "https://media.dolcake.com/images/games/shooter-quiz.jpg",
+        isRecommended: true,
+        recommendLabelVi: "Khuyên dùng ⭐",
+        recommendLabelEn: "Recommended ⭐",
         buildHref: (id) =>
           `/teacher/games/shooter-quiz/create?librarySetId=${id}&returnTab=lib-global`,
       },
@@ -970,25 +1059,7 @@ export function GlobalSuccessLibraryList() {
     } else {
       cacheSetForInstantStudioLoad(setItem);
     }
-    const games = getCompatibleGamesForSubType(setItem.subType);
-    if (games.length === 1) {
-      const game = games[0];
-      const studioLang = locale === "en" ? "en" : "vi";
-      const targetHref = withLangParam(game.buildHref(setItem.id), studioLang);
-      setTransitionModal({
-        mode: "create_game_redirecting",
-        setName: setItem.name,
-        gameTitle: locale === "vi" ? game.titleVi : game.titleEn,
-      });
-      trackEvent("teacher_library_action", {
-        action: "global_success_create_game",
-        setId: setItem.id,
-        subType: setItem.subType,
-        gameId: game.id,
-      });
-      router.push(targetHref);
-      return;
-    }
+    // Always open Game Picker modal with pedagogical recommendations
     setPickerSet(setItem);
   };
 
@@ -2163,7 +2234,7 @@ export function GlobalSuccessLibraryList() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 overflow-y-auto pr-1 pb-1">
-              {getCompatibleGamesForSubType(pickerSet.subType).map((game) => {
+              {getCompatibleGamesForSubType(pickerSet.subType, pickerSet).map((game) => {
                 const thumbSrc =
                   game.imageUrl ||
                   (game.videoId
@@ -2197,7 +2268,11 @@ export function GlobalSuccessLibraryList() {
                       });
                       router.push(targetHref);
                     }}
-                    className="group text-left rounded-2xl border-2 border-slate-200/80 dark:border-slate-800 hover:border-emerald-500 dark:hover:border-emerald-500 bg-white dark:bg-slate-800/80 hover:shadow-xl transition-all duration-300 flex flex-col overflow-hidden cursor-pointer"
+                    className={`group text-left rounded-2xl border-2 ${
+                      game.isRecommended
+                        ? "border-amber-300 dark:border-amber-600/80 hover:border-amber-500 dark:hover:border-amber-400 shadow-md hover:shadow-xl"
+                        : "border-slate-200/80 dark:border-slate-800 hover:border-emerald-500 dark:hover:border-emerald-500 hover:shadow-xl"
+                    } bg-white dark:bg-slate-800/80 transition-all duration-300 flex flex-col overflow-hidden cursor-pointer`}
                   >
                     {/* Visual 16:9 Gameplay Thumbnail */}
                     <div className="relative aspect-video w-full overflow-hidden bg-slate-900">
@@ -2220,13 +2295,19 @@ export function GlobalSuccessLibraryList() {
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 pointer-events-none" />
 
-                      {/* Badge top-left */}
-                      <div className="absolute top-2.5 left-2.5 z-10">
+                      {/* Badges top-left */}
+                      <div className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5 flex-wrap">
                         <span
                           className={`px-2.5 py-1 rounded-full text-[10px] font-black text-white uppercase tracking-wider shadow-md ${game.badgeColor}`}
                         >
                           {badgeLabel}
                         </span>
+                        {game.isRecommended && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-gradient-to-r from-amber-400 to-yellow-400 text-amber-950 shadow-md flex items-center gap-1 border border-amber-300/80">
+                            <Sparkles className="w-3 h-3 text-amber-900 fill-amber-900" />
+                            <span>{locale === "vi" ? (game.recommendLabelVi || "Khuyên dùng ⭐") : (game.recommendLabelEn || "Recommended ⭐")}</span>
+                          </span>
+                        )}
                       </div>
                     </div>
 

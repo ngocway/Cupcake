@@ -355,6 +355,38 @@ function getBaseClassifiedTeacherGame(topic: {
     };
   }
 
+  const isTextText =
+    mode === "match-text-text" ||
+    mode === "library-text-text" ||
+    containerGameName.toLowerCase().includes("chữ - chữ") ||
+    containerGameName.toLowerCase().includes("chữ-chữ") ||
+    name.toLowerCase().includes("chữ - chữ") ||
+    name.toLowerCase().includes("conversations") ||
+    name.toLowerCase().includes("english - vietnamese");
+
+  if (isTextText) {
+    return {
+      id: topic.id,
+      title: name,
+      slug: topic.slug,
+      gameMode: mode || "match-text-text",
+      group: "match",
+      groupLabel: "Nối cặp",
+      gameModeLabel: "Nối Cặp Chữ - Chữ",
+      badge: "CHỮ - CHỮ",
+      badgeBg: "bg-indigo-600 text-white",
+      badgeColor: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20",
+      icon: "extension",
+      videoId: "qkE6qYZ-DDU",
+      desc: "Ghép cặp từ vựng với định nghĩa hoặc câu hỏi với câu trả lời hội thoại tương ứng.",
+      itemCount: topic._count?.items ?? 0,
+      createdAt: topic.createdAt.toISOString(),
+      playUrl: `/student/game/match-text-text?topicId=${topic.id}`,
+      isPublished,
+      teacher: topic.teacher || null,
+    };
+  }
+
   const isImageText = name.toLowerCase().includes("ảnh - chữ") || name.toLowerCase().includes("ảnh-chữ");
   return {
     id: topic.id,

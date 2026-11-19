@@ -25,7 +25,9 @@ import {
   Info,
   Loader2,
   HelpCircle,
+  Link2,
 } from "lucide-react";
+import { PairVisualGuideBanner } from "@/components/games/PairVisualGuideBanner";
 import { TeacherGameGuideButton } from "@/app/teacher/_components/TeacherGameGuideButton";
 import { toast } from "sonner";
 import { uploadMedia } from "@/actions/upload-actions";
@@ -1527,34 +1529,29 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType?: string } = {}
               </div>
             </div>
 
-            {/* Instruction Tip Banner */}
-            <div className="p-3.5 bg-sky-50/70 dark:bg-sky-950/30 rounded-2xl border border-sky-200/60 dark:border-sky-800/60 flex items-start gap-2.5 text-xs text-sky-800 dark:text-sky-200">
-              <Info className="w-4 h-4 text-sky-500 shrink-0 mt-0.5" />
-              <p className="leading-relaxed">
-                {currentGameMode === "train" ? (
-                  <>
-                    <strong>Hướng dẫn phân bổ Chuyến tàu:</strong> Mỗi Vòng tương ứng với <strong>1 Chuyến tàu gồm tối đa 4 toa</strong> để hình ảnh và chữ hiển thị to rõ nhất cho bé. Khi Học sinh nối xong 4 toa của Vòng 1, đoàn tàu sẽ hú còi và tự động đón tiếp Vòng 2!
-                  </>
-                ) : (
-                  <>
-                    <strong>Hướng dẫn phân bổ Vòng chơi:</strong> Mỗi Vòng chứa tối đa <strong>7 cặp thẻ</strong> để Học sinh nối trực quan không bị rối mắt. Khi Học sinh nối hết toàn bộ thẻ của Vòng 1, game sẽ tự động chuyển tiếp sang Vòng 2!
-                  </>
-                )}
-              </p>
-            </div>
+            {/* Visual Pair Guide Banner (Step 1: Enter Pair -> Step 2: How Students Match) */}
+            <PairVisualGuideBanner
+              gameMode={currentGameMode}
+              maxPairsPerRound={maxPairsPerRound}
+            />
 
             {/* Card Pairs Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pt-2">
               {pairs.map((pair, index) => (
                 <div 
                   key={pair.id}
-                  className="group relative bg-white dark:bg-slate-800/90 rounded-2xl border-2 border-slate-200/80 dark:border-slate-700 p-4 space-y-3 shadow-sm hover:border-purple-300 dark:hover:border-purple-600 hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+                  className="group relative bg-white dark:bg-slate-800/90 rounded-2xl border-2 border-slate-200/80 dark:border-slate-700 p-4 space-y-2.5 shadow-sm hover:border-purple-300 dark:hover:border-purple-600 hover:shadow-md transition-all duration-200 flex flex-col justify-between"
                 >
                   {/* Pair Header & Delete */}
                   <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700/60 pb-2">
-                    <span className="w-6 h-6 rounded-full bg-sky-500 text-white font-black text-xs flex items-center justify-center shadow-sm">
-                      {index + 1}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-6 h-6 rounded-full bg-sky-500 text-white font-black text-xs flex items-center justify-center shadow-sm">
+                        {index + 1}
+                      </span>
+                      <span className="text-xs font-extrabold text-slate-600 dark:text-slate-300">
+                        {currentGameMode === "train" ? `Toa #${index + 1}` : `Cặp #${index + 1}`}
+                      </span>
+                    </div>
                     {pairs.length > 1 && (
                       <button
                         type="button"
@@ -1567,17 +1564,32 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType?: string } = {}
                     )}
                   </div>
 
-                  {/* Image Slot / Preview Dropzone */}
-                  <div 
-                    onDragOver={e => handleDragOver(e, pair.id)}
-                    onDragLeave={handleDragLeave}
-                    onDrop={e => handleDropImage(e, pair.id)}
-                    className={`relative aspect-square rounded-[4px] bg-slate-50 dark:bg-slate-900 border-2 border-dashed overflow-hidden flex items-center justify-center transition-all ${
-                      dragActivePairId === pair.id 
-                        ? "border-sky-500 bg-sky-50 dark:bg-sky-950/60 scale-[1.02]" 
-                        : "border-slate-200/80 dark:border-slate-700"
-                    }`}
-                  >
+                  {/* Piece 1 Label: Image */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between px-0.5">
+                      <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wide text-sky-600 dark:text-sky-400">
+                        <ImageIcon className="w-3 h-3" />
+                        <span>Mảnh 1 • Hình ảnh</span>
+                      </span>
+                      {pair.imageUrl && !brokenImageIds[pair.id] && (
+                        <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
+                          <Check className="w-3 h-3" />
+                          <span>Đã chọn</span>
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Image Slot / Preview Dropzone */}
+                    <div 
+                      onDragOver={e => handleDragOver(e, pair.id)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={e => handleDropImage(e, pair.id)}
+                      className={`relative aspect-square rounded-xl bg-slate-50 dark:bg-slate-900 border-2 border-dashed overflow-hidden flex items-center justify-center transition-all ${
+                        dragActivePairId === pair.id 
+                          ? "border-sky-500 bg-sky-50 dark:bg-sky-950/60 scale-[1.02]" 
+                          : "border-slate-200/80 dark:border-slate-700"
+                      }`}
+                    >
                     {pair.imageUrl && !brokenImageIds[pair.id] ? (
                       <div
                         draggable
@@ -1676,12 +1688,25 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType?: string } = {}
                         </div>
                       </div>
                     )}
+                    </div>
                   </div>
 
-                  {/* Word Input */}
+                  {/* Visual Pair Link Connector */}
+                  <div className="relative flex items-center justify-center py-0.5">
+                    <div className="absolute inset-x-0 top-1/2 border-t border-dashed border-sky-200 dark:border-sky-800/80" />
+                    <span className="relative z-10 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-sky-50 dark:bg-sky-950/80 border border-sky-200/80 dark:border-sky-800 text-[10px] font-extrabold text-sky-600 dark:text-sky-300 shadow-2xs">
+                      <Link2 className="w-3 h-3" />
+                      <span>{currentGameMode === "train" ? "Ghép vào toa" : "Nối cặp với"}</span>
+                    </span>
+                  </div>
+
+                  {/* Piece 2: Word Input */}
                   <div className="space-y-1">
-                    <div className="flex items-center justify-between px-1">
-                      <span className="text-[10px] font-bold text-slate-400">Từ vựng / Câu</span>
+                    <div className="flex items-center justify-between px-0.5">
+                      <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
+                        <FileText className="w-3 h-3" />
+                        <span>Mảnh 2 • Chữ tương ứng</span>
+                      </span>
                       <span className={`text-[10px] font-extrabold ${countWords(pair.word) > MAX_TEXT_WORDS ? "text-rose-600" : "text-slate-400"}`}>
                         {countWords(pair.word)}/5 từ
                       </span>
@@ -1690,11 +1715,11 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType?: string } = {}
                       type="text"
                       value={pair.word}
                       onChange={e => handleUpdateWord(pair.id, e.target.value)}
-                      placeholder="Nhập Chữ/Từ..."
+                      placeholder="VD: Apple (chữ nối với ảnh)..."
                       className={`w-full px-3 py-2 border rounded-xl text-xs font-black text-center focus:ring-2 outline-none transition-all ${
                         countWords(pair.word) > MAX_TEXT_WORDS
                           ? "border-rose-500 bg-rose-50/40 text-rose-900 focus:ring-rose-500/20 focus:border-rose-500"
-                          : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 focus:ring-purple-500/20 focus:border-purple-500"
+                          : "bg-emerald-50/30 dark:bg-slate-900 border-emerald-200/80 dark:border-slate-700 focus:ring-emerald-500/20 focus:border-emerald-500"
                       }`}
                     />
                     {countWords(pair.word) > MAX_TEXT_WORDS && (

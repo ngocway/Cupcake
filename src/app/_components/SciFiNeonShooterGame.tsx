@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ChoiceShooterGame, ChoiceShooterQuestion } from "@/lib/choice-shooter-storage";
-import { Volume2, VolumeX, X, ArrowLeft, RefreshCw, Play } from "lucide-react"; import { TeacherLocaleSwitch, TeacherDomTranslator } from "@/i18n/teacher-locale";
+import { Volume2, VolumeX, X, ArrowLeft, RefreshCw, Play } from "lucide-react";
+import { TeacherLocaleSwitch, TeacherDomTranslator, useTeacherLocale } from "@/i18n/teacher-locale";
 
 interface SciFiNeonShooterGameProps {
   game: ChoiceShooterGame;
@@ -131,7 +132,61 @@ class WebAudioEngine {
   }
 }
 
+// ==========================================
+// SPEED MULTIPLIER CONFIG
+// ==========================================
+const SPEED_OPTIONS = [
+  { value: 0.7, emoji: "🐢", labelVi: "Chậm", labelEn: "Slow", tag: "0.7x" },
+  { value: 1.0, emoji: "⚡", labelVi: "Chuẩn", labelEn: "Normal", tag: "1.0x" },
+  { value: 1.3, emoji: "🚀", labelVi: "Nhanh", labelEn: "Fast", tag: "1.3x" },
+] as const;
+
+function ShooterSpeedSelector({
+  speedMultiplier,
+  onChange,
+}: {
+  speedMultiplier: number;
+  onChange: (val: number) => void;
+}) {
+  const { isVi } = useTeacherLocale();
+  return (
+    <div
+      className="flex items-center p-1 rounded-2xl glass-panel border border-cyan-400/40 shadow-[0_0_20px_rgba(6,182,212,0.25)] gap-1 bg-black/60 backdrop-blur-md"
+      title={isVi ? "Tốc độ rơi của đáp án" : "Target falling speed"}
+    >
+      {SPEED_OPTIONS.map((opt) => {
+        const isSelected = speedMultiplier === opt.value;
+        const label = isVi ? opt.labelVi : opt.labelEn;
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => onChange(opt.value)}
+            className={`px-2.5 py-1 md:px-3 md:py-1 rounded-xl text-xs md:text-sm font-sci-fi font-bold transition-all flex items-center gap-1 cursor-pointer active:scale-95 border ${
+              isSelected
+                ? opt.value === 0.7
+                  ? "bg-emerald-500/30 border-emerald-400 text-emerald-300 shadow-[0_0_12px_rgba(52,211,153,0.6)]"
+                  : opt.value === 1.3
+                  ? "bg-amber-500/30 border-amber-400 text-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.6)]"
+                  : "bg-cyan-500/30 border-cyan-400 text-cyan-300 shadow-[0_0_12px_rgba(34,211,238,0.6)]"
+                : "bg-transparent border-transparent text-slate-400 hover:text-white hover:bg-white/10"
+            }`}
+            title={`${label} (${opt.tag})`}
+          >
+            <span className="text-xs md:text-sm select-none">{opt.emoji}</span>
+            <span className="font-extrabold tracking-tight">{opt.tag}</span>
+            <span className="text-[11px] opacity-90 hidden sm:inline font-sans">
+              ({label})
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export function SciFiNeonShooterGame({ game, onClose, isModal = false }: SciFiNeonShooterGameProps) {
+  const { isVi } = useTeacherLocale();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const audioRef = useRef<WebAudioEngine | null>(null);
 
@@ -144,23 +199,62 @@ export function SciFiNeonShooterGame({ game, onClose, isModal = false }: SciFiNe
   const [typewriterText, setTypewriterText] = useState("");
   const [muted, setMuted] = useState(false);
   const [isPortrait, setIsPortrait] = useState(false);
+  const [dimensions, setDimensions] = useState({
+    w: typeof window !== "undefined" ? window.innerWidth : 1000,
+    h: typeof window !== "undefined" ? window.innerHeight : 600,
+    isPortrait: typeof window !== "undefined" ? window.innerHeight > window.innerWidth : false,
+  });
+  const [speedMultiplier, setSpeedMultiplier] = useState<number>(1.0);
+  const speedMultiplierRef = useRef<number>(1.0);
+
+  // Restore preferred speed from localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("preferred_shooter_speed");
+        if (saved) {
+          const val = parseFloat(saved);
+          if (SPEED_OPTIONS.some((opt) => opt.value === val)) {
+            setSpeedMultiplier(val);
+            speedMultiplierRef.current = val;
+          }
+        }
+      } catch (e) {}
+    }
+  }, []);
+
+  const handleSpeedChange = (val: number) => {
+    setSpeedMultiplier(val);
+    speedMultiplierRef.current = val;
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("preferred_shooter_speed", String(val));
+      } catch (e) {}
+    }
+  };
 
   const questions = game.questions || [];
   const endMode = game.endMode || "finish";
 
-  // Check orientation for iPad / Mobile tablets
+  // Check orientation and window dimensions
   useEffect(() => {
-    const checkOrientation = () => {
+    const updateSize = () => {
       if (typeof window !== "undefined") {
-        setIsPortrait(window.innerHeight > window.innerWidth * 1.15);
+        const isPort = window.innerHeight > window.innerWidth;
+        setDimensions({
+          w: window.innerWidth,
+          h: window.innerHeight,
+          isPortrait: isPort,
+        });
+        setIsPortrait(isPort);
       }
     };
-    checkOrientation();
-    window.addEventListener("resize", checkOrientation);
-    window.addEventListener("orientationchange", checkOrientation);
+    updateSize();
+    window.addEventListener("resize", updateSize);
+    window.addEventListener("orientationchange", updateSize);
     return () => {
-      window.removeEventListener("resize", checkOrientation);
-      window.removeEventListener("orientationchange", checkOrientation);
+      window.removeEventListener("resize", updateSize);
+      window.removeEventListener("orientationchange", updateSize);
     };
   }, []);
 
@@ -195,8 +289,27 @@ export function SciFiNeonShooterGame({ game, onClose, isModal = false }: SciFiNe
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    let width = (canvas.width = window.innerWidth);
-    let height = (canvas.height = window.innerHeight);
+    const getGameDimensions = () => {
+      const isPort = window.innerHeight > window.innerWidth;
+      return {
+        w: isPort ? window.innerHeight : window.innerWidth,
+        h: isPort ? window.innerWidth : window.innerHeight,
+      };
+    };
+
+    const initialDims = getGameDimensions();
+    let width = (canvas.width = initialDims.w);
+    let height = (canvas.height = initialDims.h);
+
+    const mapScreenToGame = (screenX: number, screenY: number) => {
+      if (window.innerHeight > window.innerWidth) {
+        return {
+          x: screenY,
+          y: window.innerWidth - screenX,
+        };
+      }
+      return { x: screenX, y: screenY };
+    };
 
     let animId: number;
     let localScore = 0;
@@ -494,14 +607,20 @@ export function SciFiNeonShooterGame({ game, onClose, isModal = false }: SciFiNe
 
     const onMouseMove = (e: MouseEvent) => {
       if (isTouchActive) return;
-      mouse.x = e.clientX;
-      mouse.y = e.clientY;
+      const pt = mapScreenToGame(e.clientX, e.clientY);
+      mouse.x = pt.x;
+      mouse.y = pt.y;
     };
 
     const onClick = (e: MouseEvent) => {
       // Prevent double firing when touch triggered
       if (isTouchActive) return;
-      handlePointerAction(e.clientX, e.clientY);
+      const target = e.target as HTMLElement | null;
+      if (target && (target.closest("button") || target.closest(".pointer-events-auto"))) {
+        return;
+      }
+      const pt = mapScreenToGame(e.clientX, e.clientY);
+      handlePointerAction(pt.x, pt.y);
     };
 
     const onTouchStart = (e: TouchEvent) => {
@@ -513,15 +632,17 @@ export function SciFiNeonShooterGame({ game, onClose, isModal = false }: SciFiNe
         if (el && (el.closest("button") || el.closest(".pointer-events-auto"))) {
           return;
         }
-        handlePointerAction(touch.clientX, touch.clientY);
+        const pt = mapScreenToGame(touch.clientX, touch.clientY);
+        handlePointerAction(pt.x, pt.y);
       }
     };
 
     const onTouchMove = (e: TouchEvent) => {
       if (e.touches && e.touches[0]) {
         const touch = e.touches[0];
-        mouse.x = touch.clientX;
-        mouse.y = touch.clientY;
+        const pt = mapScreenToGame(touch.clientX, touch.clientY);
+        mouse.x = pt.x;
+        mouse.y = pt.y;
       }
     };
 
@@ -533,8 +654,9 @@ export function SciFiNeonShooterGame({ game, onClose, isModal = false }: SciFiNe
     };
 
     const onResize = () => {
-      width = canvas.width = window.innerWidth;
-      height = canvas.height = window.innerHeight;
+      const dims = getGameDimensions();
+      width = canvas.width = dims.w;
+      height = canvas.height = dims.h;
       turret.x = width / 2;
       turret.y = height - 15;
     };
@@ -683,8 +805,9 @@ export function SciFiNeonShooterGame({ game, onClose, isModal = false }: SciFiNe
 
       // Update & Draw Targets
       isTargetLocked = false;
+      const speedMult = speedMultiplierRef.current || 1.0;
       targets.forEach((t) => {
-        t.y += t.speed;
+        t.y += t.speed * speedMult;
         t.rotation += t.rotSpeed;
         t.pulseAngle += 0.05;
         if (t.scale < 1) t.scale += 0.05;
@@ -1123,8 +1246,28 @@ export function SciFiNeonShooterGame({ game, onClose, isModal = false }: SciFiNe
   }, [gameState, questions, endMode]);
 
   return (
-    <div className="fixed inset-0 z-[100] bg-[#050510] text-white font-sans select-none overflow-hidden flex flex-col touch-none">
-      <style flex-inline="true">{`
+    <div className="fixed inset-0 z-[100] bg-[#050510] overflow-hidden select-none touch-none">
+      <div
+        style={
+          dimensions.isPortrait
+            ? {
+                width: `${dimensions.h}px`,
+                height: `${dimensions.w}px`,
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%) rotate(90deg)",
+                transformOrigin: "center center",
+              }
+            : {
+                width: "100%",
+                height: "100%",
+                position: "relative",
+              }
+        }
+        className="text-white font-sans overflow-hidden flex flex-col touch-none"
+      >
+        <style flex-inline="true">{`
         @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@700&family=Roboto:wght@700;900&display=swap');
         .font-sci-fi { font-family: 'Roboto Mono', Courier, monospace; }
         .glass-panel {
@@ -1156,7 +1299,7 @@ export function SciFiNeonShooterGame({ game, onClose, isModal = false }: SciFiNe
             {/* Score Board */}
             <div className="pointer-events-auto flex flex-col items-center glass-panel p-3 md:p-4 rounded-2xl w-32 relative">
               <span className="text-cyan-400/80 text-xs font-sci-fi tracking-widest uppercase font-bold">
-                Điểm Số
+                {isVi ? "Điểm Số" : "Score"}
               </span>
               <span className="text-cyan-300 text-3xl md:text-4xl font-black font-sci-fi drop-shadow-[0_0_10px_rgba(34,211,238,0.8)]">
                 {score}
@@ -1207,44 +1350,72 @@ export function SciFiNeonShooterGame({ game, onClose, isModal = false }: SciFiNe
               );
             })()}
 
-            {/* Controls: Sound Toggle & Exit */}
-            <div className="pointer-events-auto flex items-center gap-2"> <TeacherLocaleSwitch />
-              <button
-                type="button"
-                onClick={toggleMute}
-                className="w-11 h-11 rounded-2xl glass-panel hover:border-cyan-400 text-cyan-300 flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95"
-                title={muted ? "Bật âm thanh" : "Tắt âm thanh"}
-              >
-                {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-              </button>
-
-              {onClose && (
+            {/* Controls: Sound Toggle, Exit & Speed Selector */}
+            <div className="pointer-events-auto flex flex-col items-end gap-2">
+              <div className="flex items-center gap-2">
+                <TeacherLocaleSwitch />
                 <button
                   type="button"
-                  onClick={onClose}
-                  className="w-11 h-11 rounded-2xl glass-panel hover:border-rose-400 text-rose-400 flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95"
-                  title="Thoát game"
+                  onClick={toggleMute}
+                  className="w-11 h-11 rounded-2xl glass-panel hover:border-cyan-400 text-cyan-300 flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95"
+                  title={muted ? (isVi ? "Bật âm thanh" : "Unmute") : (isVi ? "Tắt âm thanh" : "Mute")}
                 >
-                  <X className="w-5 h-5" />
+                  {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
                 </button>
-              )}
+
+                {onClose && (
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="w-11 h-11 rounded-2xl glass-panel hover:border-rose-400 text-rose-400 flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95"
+                    title={isVi ? "Thoát game" : "Exit game"}
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                )}
+              </div>
+
+              {/* Speed Adjustment 3-step Pills */}
+              <ShooterSpeedSelector
+                speedMultiplier={speedMultiplier}
+                onChange={handleSpeedChange}
+              />
             </div>
           </div>
         </div>
       )}
 
-      {/* Portrait Mode Hint for Tablets / Phones */}
-      {isPortrait && gameState === "playing" && (
+      {/* Portrait Mode Hint on Start Screen */}
+      {dimensions.isPortrait && gameState === "start" && (
         <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-40 pointer-events-none px-4 py-2 rounded-2xl glass-panel border border-cyan-400/40 text-cyan-300 text-xs font-sci-fi font-bold flex items-center gap-2 shadow-[0_0_20px_rgba(6,182,212,0.4)] animate-pulse whitespace-nowrap">
-          <span className="text-base">📱</span>
-          <span>Xoay ngang màn hình để chơi đã mắt nhất!</span>
+          <span className="text-base">🔄</span>
+          <span>{isVi ? "Xoay ngang điện thoại để chơi bằng 2 tay" : "Turn phone sideways to play"}</span>
         </div>
       )}
 
       {/* START OVERLAY SCREEN - STYLIZED PLAY BUTTON ONLY */}
       {gameState === "start" && (
 
-        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center pointer-events-auto z-50 p-6"> <div className="absolute top-4 right-4 z-50"><TeacherLocaleSwitch /></div>
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center pointer-events-auto z-50 p-6">
+          <div className="absolute top-4 right-4 z-50 flex flex-col items-end gap-2">
+            <div className="flex items-center gap-2">
+              <TeacherLocaleSwitch />
+              {onClose && (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="w-11 h-11 rounded-2xl glass-panel hover:border-rose-400 text-rose-400 flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-95"
+                  title={isVi ? "Thoát game" : "Exit game"}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              )}
+            </div>
+            <ShooterSpeedSelector
+              speedMultiplier={speedMultiplier}
+              onChange={handleSpeedChange}
+            />
+          </div>
           <div className="flex flex-col items-center gap-4 animate-in zoom-in-95 duration-300">
             <button
               type="button"
@@ -1261,7 +1432,7 @@ export function SciFiNeonShooterGame({ game, onClose, isModal = false }: SciFiNe
             </button>
 
             <span className="font-sci-fi font-black text-cyan-300 text-sm md:text-base uppercase tracking-widest text-glow drop-shadow-[0_0_10px_rgba(34,211,238,0.8)]">
-              BẮT ĐẦU CHƠI
+              {isVi ? "BẮT ĐẦU CHƠI" : "START GAME"}
             </span>
 
             {onClose && (
@@ -1270,7 +1441,7 @@ export function SciFiNeonShooterGame({ game, onClose, isModal = false }: SciFiNe
                 onClick={onClose}
                 className="mt-2 px-5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 font-bold text-xs uppercase tracking-wider transition-all cursor-pointer"
               >
-                Quay lại
+                {isVi ? "Quay lại" : "Back"}
               </button>
             )}
           </div>
@@ -1287,13 +1458,13 @@ export function SciFiNeonShooterGame({ game, onClose, isModal = false }: SciFiNe
 
             <div className="space-y-1">
               <h2 className="text-3xl md:text-4xl font-black font-sci-fi text-cyan-300 tracking-wide uppercase">
-                HOÀN THÀNH!
+                {isVi ? "HOÀN THÀNH!" : "VICTORY!"}
               </h2>
             </div>
 
             <div className="bg-black/50 rounded-2xl p-5 border border-cyan-500/30">
               <span className="text-xs font-sci-fi text-cyan-400/70 uppercase tracking-widest block font-bold mb-1">
-                TỔNG ĐIỂM ĐẠT ĐƯỢC
+                {isVi ? "TỔNG ĐIỂM ĐẠT ĐƯỢC" : "TOTAL SCORE"}
               </span>
               <span className="text-5xl font-black font-sci-fi text-cyan-300 drop-shadow-[0_0_15px_rgba(34,211,238,0.8)]">
                 {score}
@@ -1306,7 +1477,7 @@ export function SciFiNeonShooterGame({ game, onClose, isModal = false }: SciFiNe
                 onClick={startGame}
                 className="flex-1 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black font-sci-fi rounded-2xl text-sm uppercase tracking-wider shadow-[0_0_25px_rgba(6,182,212,0.4)] active:scale-95 transition-all cursor-pointer"
               >
-                CHƠI LẠI
+                {isVi ? "CHƠI LẠI" : "PLAY AGAIN"}
               </button>
 
               {onClose && (
@@ -1315,13 +1486,14 @@ export function SciFiNeonShooterGame({ game, onClose, isModal = false }: SciFiNe
                   onClick={onClose}
                   className="px-6 py-4 bg-white/10 hover:bg-white/20 text-white font-bold rounded-2xl text-sm uppercase transition-all cursor-pointer"
                 >
-                  Đóng
+                  {isVi ? "Đóng" : "Close"}
                 </button>
               )}
             </div>
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

@@ -77,6 +77,7 @@ export function MatchTextTextCreatorUI() {
   const librarySetId = searchParams?.get("librarySetId") || null;
   const editLibrarySetId = searchParams?.get("editLibrarySetId") || null;
   const returnTab = searchParams?.get("returnTab") || "lib-match";
+  const requestedGameMode = searchParams?.get("gameMode") || "match-text-text";
 
   const [title, setTitle] = useState("");
   const [titleError, setTitleError] = useState(false);
@@ -644,6 +645,7 @@ export function MatchTextTextCreatorUI() {
         description: description.trim(),
         audioMode,
         gameType: "text-text",
+        gameMode: requestedGameMode || "match-text-text",
         pairs: allPairsToSave,
         thumbnailUrl: generatedThumbnailUrl,
       });
@@ -1127,7 +1129,7 @@ export function MatchTextTextCreatorUI() {
         onClose={() => setIsSuccessModalOpen(false)}
         title={title}
         gameType="Nối Cặp Chữ - Chữ"
-        playUrl={`/student/game/flashcard-match?topicId=${savedTopicId || topicId}`}
+        playUrl={`/student/game/match-text-text?topicId=${savedTopicId || topicId}`}
         redirectTab="my-match-games"
       />
     </div>

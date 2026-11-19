@@ -173,12 +173,25 @@ export async function getTeacherChoiceGamesAction() {
 
     const rawTopics = await prisma.matchWordTopic.findMany({
       where: whereCondition,
-      include: {
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        gameMode: true,
+        createdAt: true,
         items: {
+          take: 3,
           orderBy: { createdAt: "asc" },
+          select: {
+            id: true,
+            word: true,
+            labelB: true,
+          },
         },
-        game: {
-          select: { name: true },
+        _count: {
+          select: {
+            items: true,
+          },
         },
       },
       orderBy: { createdAt: "desc" },
@@ -212,7 +225,7 @@ export async function getTeacherChoiceGamesAction() {
         id: t.id,
         code: t.slug,
         title: t.name,
-        questionCount: t.items.length,
+        questionCount: t._count.items,
         createdAt: t.createdAt.toISOString(),
         gameType: isEgg ? ("egg" as const) : ("shooter" as const),
         endMode,

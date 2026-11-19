@@ -224,7 +224,7 @@ export async function saveMatchImageTextGameAction(data: SaveMatchImageTextPaylo
           icon: "🖼️",
           thumbnailUrl: data.thumbnailUrl || null,
           audioMode: data.audioMode || "AUTO_TTS",
-          gameMode: data.gameMode || "match",
+          gameMode: data.gameMode || (data.gameType === "text-text" ? "match-text-text" : "match"),
           teacherId: session?.user?.id || null,
         },
       });

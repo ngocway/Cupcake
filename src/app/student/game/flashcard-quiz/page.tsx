@@ -1,12 +1,11 @@
 "use client";
 
-import Link from "next/link";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useContentStore } from "@/store/useContentStore";
+import { ForcedLandscapeWrapper } from "@/components/games/ForcedLandscapeWrapper";
 import { GameStartOverlay } from "@/components/games/GameStartOverlay";
-
 
 function FlashcardQuizGameContent() {
   const searchParams = useSearchParams();
@@ -17,38 +16,31 @@ function FlashcardQuizGameContent() {
   const [hasStarted, setHasStarted] = useState(false);
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black flex flex-col">
-      {/* Top Bar Navigation */}
-      <div className="h-14 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center px-4 flex-shrink-0 z-10 shadow-sm relative">
-
-        <div className="absolute left-1/2 -translate-x-1/2 font-black text-primary uppercase tracking-widest hidden sm:block">
-          Flashcard Quiz
+    <ForcedLandscapeWrapper
+      backHref={topicId ? `/student/game/flashcard-quiz/select?age=${age}` : `/teacher?tab=my-games`}
+      backLabel="Thoát Game"
+      bgColor="#f1f5f9"
+    >
+      <GameStartOverlay
+        isOpen={!hasStarted}
+        onStart={() => setHasStarted(true)}
+        title="Trắc Nghiệm Flashcard"
+        gameMode="candy-quiz"
+      />
+      {isLoading && (
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#f1f5f9]">
+          <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
+          <span className="text-slate-600 font-bold tracking-widest uppercase animate-pulse">Loading Game...</span>
         </div>
-      </div>
-
-      {/* Game Iframe */}
-      <div className="flex-1 w-full bg-[#f1f5f9] overflow-hidden relative">
-        <GameStartOverlay
-          isOpen={!hasStarted}
-          onStart={() => setHasStarted(true)}
-          title="Trắc Nghiệm Flashcard"
-          gameMode="candy-quiz"
-        />
-        {isLoading && (
-          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#f1f5f9]">
-            <Loader2 className="w-12 h-12 text-primary animate-spin mb-4" />
-            <span className="text-slate-600 font-bold tracking-widest uppercase animate-pulse">Loading Game...</span>
-          </div>
-        )}
-        <iframe 
-          src={`/games/flashcard-quiz/index.html?age=${age}&nativeLanguage=${nativeLanguage}${topicId ? `&topicId=${topicId}` : ''}`} 
-          className={`w-full h-full border-none transition-opacity duration-700 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
-          title="Flashcard Quiz Game"
-          sandbox="allow-scripts allow-same-origin"
-          onLoad={() => setIsLoading(false)}
-        />
-      </div>
-    </div>
+      )}
+      <iframe 
+        src={`/games/flashcard-quiz/index.html?age=${age}&nativeLanguage=${nativeLanguage}${topicId ? `&topicId=${topicId}` : ''}`} 
+        className={`w-full h-full flex-1 border-none block transition-opacity duration-700 ${isLoading ? 'opacity-0' : 'opacity-100'}`}
+        title="Flashcard Quiz Game"
+        sandbox="allow-scripts allow-same-origin"
+        onLoad={() => setIsLoading(false)}
+      />
+    </ForcedLandscapeWrapper>
   );
 }
 
