@@ -24,6 +24,7 @@ import {
   GripVertical,
 } from "lucide-react";
 import { TeacherGameGuideButton } from "@/app/teacher/_components/TeacherGameGuideButton";
+import { QuizVisualGuideBanner } from "@/components/games/QuizVisualGuideBanner";
 import {
   DndContext,
   closestCenter,
@@ -478,6 +479,7 @@ export function CandyQuizCreatorUI() {
   // Multi-Round State
   const [rounds, setRounds] = useState<QuizRound[]>(INITIAL_ROUNDS);
   const [activeRoundIndex, setActiveRoundIndex] = useState(0);
+  const [previewQuestionIdx, setPreviewQuestionIdx] = useState(0);
 
   const currentRound = rounds[activeRoundIndex] || rounds[0];
   const questions = currentRound?.questions || [];
@@ -1671,7 +1673,7 @@ export function CandyQuizCreatorUI() {
 
       {/* QUESTIONS GRID SECTION */}
       <div className="space-y-6">
-        <div className="flex items-center justify-between px-1">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-1">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-pink-500 animate-pulse" />
             <h2 className="font-headline font-black text-lg text-slate-800 dark:text-slate-100">
@@ -1682,6 +1684,29 @@ export function CandyQuizCreatorUI() {
             Tối thiểu 2 câu • Click vào ký hiệu A/B/C/D để chọn đáp án ĐÚNG
           </span>
         </div>
+
+        {/* Live Visual Preview Banner (Candy Quiz) */}
+        <QuizVisualGuideBanner
+          gameMode="candy-quiz"
+          questions={questions.map((q) => ({
+            id: q.id,
+            questionText: q.question,
+            imageUrl: q.imageUrl,
+            options: q.options,
+          }))}
+          activeIndex={previewQuestionIdx}
+          onActiveIndexChange={setPreviewQuestionIdx}
+          onSelectQuestionIndex={(index) => {
+            const el = document.getElementById(`question-card-${index}`);
+            if (el) {
+              el.scrollIntoView({ behavior: "smooth", block: "center" });
+              el.classList.add("ring-4", "ring-pink-400", "rounded-3xl");
+              setTimeout(() => {
+                el.classList.remove("ring-4", "ring-pink-400", "rounded-3xl");
+              }, 1500);
+            }
+          }}
+        />
 
         <DndContext
           id="candy-quiz-questions-dnd"
@@ -1695,30 +1720,37 @@ export function CandyQuizCreatorUI() {
           >
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {questions.map((q, qIdx) => (
-                <SortableQuestionCard
+                <div
                   key={q.id}
-                  q={q}
-                  qIdx={qIdx}
-                  isImageBroken={Boolean(brokenImageIds[q.id])}
-                  onImageError={() => {
-                    setBrokenImageIds((prev) => {
-                      if (!prev[q.id]) {
-                        toast.error(`Ảnh của câu hỏi #${qIdx + 1} không tải được. Vui lòng kiểm tra lại!`);
-                      }
-                      return { ...prev, [q.id]: true };
-                    });
-                  }}
-                  handleDeleteQuestion={handleDeleteQuestion}
-                  handleQuestionTextChange={handleQuestionTextChange}
-                  updateQuestionImage={updateQuestionImage}
-                  handleUploadImageFile={handleUploadImageFile}
-                  handleOpenSearchImage={handleOpenSearchImage}
-                  handleAddOption={handleAddOption}
-                  handleSelectCorrectOption={handleSelectCorrectOption}
-                  handleOptionTextChange={handleOptionTextChange}
-                  handleDeleteOption={handleDeleteOption}
-                  handleReorderOptions={handleReorderOptions}
-                />
+                  id={`question-card-${qIdx}`}
+                  onFocusCapture={() => setPreviewQuestionIdx(qIdx)}
+                  onClick={() => setPreviewQuestionIdx(qIdx)}
+                  className="h-full"
+                >
+                  <SortableQuestionCard
+                    q={q}
+                    qIdx={qIdx}
+                    isImageBroken={Boolean(brokenImageIds[q.id])}
+                    onImageError={() => {
+                      setBrokenImageIds((prev) => {
+                        if (!prev[q.id]) {
+                          toast.error(`Ảnh của câu hỏi #${qIdx + 1} không tải được. Vui lòng kiểm tra lại!`);
+                        }
+                        return { ...prev, [q.id]: true };
+                      });
+                    }}
+                    handleDeleteQuestion={handleDeleteQuestion}
+                    handleQuestionTextChange={handleQuestionTextChange}
+                    updateQuestionImage={updateQuestionImage}
+                    handleUploadImageFile={handleUploadImageFile}
+                    handleOpenSearchImage={handleOpenSearchImage}
+                    handleAddOption={handleAddOption}
+                    handleSelectCorrectOption={handleSelectCorrectOption}
+                    handleOptionTextChange={handleOptionTextChange}
+                    handleDeleteOption={handleDeleteOption}
+                    handleReorderOptions={handleReorderOptions}
+                  />
+                </div>
               ))}
 
               {/* Add Question Card */}

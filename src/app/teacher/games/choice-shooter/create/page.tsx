@@ -24,6 +24,8 @@ import {
   Save,
 } from "lucide-react";
 import { TeacherGameGuideButton } from "@/app/teacher/_components/TeacherGameGuideButton";
+import { GameDemoVideoButton } from "@/components/games/GameDemoVideoButton";
+import { QuizVisualGuideBanner } from "@/components/games/QuizVisualGuideBanner";
 import { toast } from "sonner";
 import { GameSaveSuccessModal } from "@/app/teacher/_components/GameSaveSuccessModal";
 import { HomeShell } from "@/app/_components/HomeShell";
@@ -271,6 +273,7 @@ export default function CreateChoiceShooterPage() {
 
   // Wizard Step: 1 | 2
   const [step, setStep] = useState<1 | 2>(1);
+  const [previewQuestionIdx, setPreviewQuestionIdx] = useState(0);
 
   // Form States (Step 1)
   const { locale } = useTeacherLocale();
@@ -602,6 +605,18 @@ export default function CreateChoiceShooterPage() {
               <TeacherLibraryPickerButton
                 compatibleSubTypes={["choice"]}
                 onImportSet={handleImportFromLibrary}
+              />
+            )}
+
+            {step === 1 && (
+              <GameDemoVideoButton
+                gameId="shooter"
+                titleVi="Bắn Súng Toán Học"
+                titleEn="Math Shooter"
+                badgeVi="Bắn Súng"
+                badgeEn="Math Shooter"
+                badgeBg="bg-emerald-500 text-white"
+                videoId="vyQ8QBQ1m4E"
               />
             )}
 
@@ -983,11 +998,39 @@ export default function CreateChoiceShooterPage() {
               </div>
             </div>
 
+            {/* Live Visual Preview Banner (Math Shooter) */}
+            <QuizVisualGuideBanner
+              gameMode="choice-shooter"
+              questions={questions.map((item) => ({
+                id: item.id,
+                questionText: item.q,
+                options: [
+                  { id: "A", text: item.a, isCorrect: true },
+                  ...item.wrong.map((w, wi) => ({ id: `W${wi}`, text: w, isCorrect: false })),
+                ],
+              }))}
+              activeIndex={previewQuestionIdx}
+              onActiveIndexChange={setPreviewQuestionIdx}
+              onSelectQuestionIndex={(index) => {
+                const el = document.getElementById(`question-card-${index}`);
+                if (el) {
+                  el.scrollIntoView({ behavior: "smooth", block: "center" });
+                  el.classList.add("ring-4", "ring-emerald-400", "scale-[1.02]");
+                  setTimeout(() => {
+                    el.classList.remove("ring-4", "ring-emerald-400", "scale-[1.02]");
+                  }, 1500);
+                }
+              }}
+            />
+
             {/* Questions 4-Column Grid List */}
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
               {questions.map((item, idx) => (
                 <div
                   key={item.id}
+                  id={`question-card-${idx}`}
+                  onFocusCapture={() => setPreviewQuestionIdx(idx)}
+                  onClick={() => setPreviewQuestionIdx(idx)}
                   className="bg-white/95 dark:bg-slate-900/90 backdrop-blur-md rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-md flex flex-col justify-between gap-4 group hover:border-emerald-500/40 transition-all relative overflow-hidden"
                 >
                   {/* Card Header: Index + Question Text Input + Reroll Button */}

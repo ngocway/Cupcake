@@ -23,6 +23,7 @@ import {
   Copy,
   Share2,
   Plus,
+  Play,
   Volume2,
 } from "lucide-react";
 import {
@@ -30,6 +31,7 @@ import {
   ShareableGameOption,
   getShareableGameOptionsForSubType,
 } from "./MatchGameShareModal";
+import { GameVideoModal, VideoModalGame } from "./GameVideoModal";
 import {
   getGlobalSuccessGradeCountsAction,
   getGlobalSuccessSetsByGradeAction,
@@ -54,6 +56,7 @@ interface CompatibleGameOption {
   descEn: string;
   imageUrl?: string;
   videoId?: string;
+  videoUrl?: string;
   isRecommended?: boolean;
   recommendLabelVi?: string;
   recommendLabelEn?: string;
@@ -178,30 +181,13 @@ function getCompatibleGamesForSubType(subType: LibrarySubType, item?: LibrarySet
           badgeColor: "bg-teal-600",
           descVi: "Đọc câu hỏi, nối với câu trả lời tương ứng (có audio đọc chuẩn tiếng Anh từng câu).",
           descEn: "Read dialogue questions and match them with appropriate replies with audio.",
-          videoId: "qkE6qYZ-DDU",
-          imageUrl: "https://media.dolcake.com/images/games/word-match.png",
+          imageUrl: "https://media.dolcake.com/uploads/game-previews/match-text-text.png",
+          videoUrl: "https://media.dolcake.com/uploads/game-videos/match-text-text-demo.mp4",
           isRecommended: true,
           recommendLabelVi: "Khuyên dùng ⭐",
           recommendLabelEn: "Recommended ⭐",
           buildHref: (id) =>
             `/teacher/games/match-image-text/create?type=text-text&librarySetId=${id}&returnTab=lib-global`,
-        },
-        {
-          id: "line-text-text",
-          titleVi: "Nối Dây Mẫu Câu Hội Thoại",
-          titleEn: "Line Match Conversations",
-          badgeVi: "Nối dây",
-          badgeEn: "Line Match",
-          badgeColor: "bg-violet-500",
-          descVi: "Kẻ dây nối từ câu hỏi/lời thoại vế A sang câu trả lời vế B tương ứng.",
-          descEn: "Draw lines connecting dialogue prompts to matching conversation responses.",
-          videoId: "qkE6qYZ-DDU",
-          imageUrl: "https://media.dolcake.com/images/games/word-match.png",
-          isRecommended: true,
-          recommendLabelVi: "Khuyên dùng ⭐",
-          recommendLabelEn: "Recommended ⭐",
-          buildHref: (id) =>
-            `/teacher/games/match-image-text/create?type=text-text&gameMode=line&librarySetId=${id}&returnTab=lib-global`,
         },
       ];
     }
@@ -216,30 +202,13 @@ function getCompatibleGamesForSubType(subType: LibrarySubType, item?: LibrarySet
         badgeColor: "bg-indigo-600",
         descVi: "Ghép thẻ từ vựng tiếng Anh với nghĩa tiếng Việt tương ứng, giúp ghi nhớ từ vựng sâu sắc.",
         descEn: "Pair English words with their Vietnamese translations to reinforce vocabulary recall.",
-        videoId: "qkE6qYZ-DDU",
-        imageUrl: "https://media.dolcake.com/images/games/word-match.png",
+        imageUrl: "https://media.dolcake.com/uploads/game-previews/match-text-text.png",
+        videoUrl: "https://media.dolcake.com/uploads/game-videos/match-text-text-demo.mp4",
         isRecommended: true,
         recommendLabelVi: "Khuyên dùng ⭐",
         recommendLabelEn: "Recommended ⭐",
         buildHref: (id) =>
           `/teacher/games/match-image-text/create?type=text-text&librarySetId=${id}&returnTab=lib-global`,
-      },
-      {
-        id: "line-text-text",
-        titleVi: "Nối Dây Song Ngữ Anh - Việt",
-        titleEn: "Line Match English - Vietnamese",
-        badgeVi: "Nối dây",
-        badgeEn: "Line Match",
-        badgeColor: "bg-violet-500",
-        descVi: "Kẻ dây nối trực tiếp từ vựng tiếng Anh ở cột trái sang nghĩa tiếng Việt ở cột phải.",
-        descEn: "Draw lines directly between English words and Vietnamese translations.",
-        videoId: "qkE6qYZ-DDU",
-        imageUrl: "https://media.dolcake.com/images/games/word-match.png",
-        isRecommended: true,
-        recommendLabelVi: "Khuyên dùng ⭐",
-        recommendLabelEn: "Recommended ⭐",
-        buildHref: (id) =>
-          `/teacher/games/match-image-text/create?type=text-text&gameMode=line&librarySetId=${id}&returnTab=lib-global`,
       },
     ];
   }
@@ -447,6 +416,7 @@ export function GlobalSuccessLibraryList() {
     setName: string;
     gameTitle?: string;
   } | null>(null);
+  const [previewVideoGame, setPreviewVideoGame] = useState<VideoModalGame | null>(null);
 
   // Dropdown states
   const [gradeMenuOpen, setGradeMenuOpen] = useState(false);
@@ -2201,141 +2171,195 @@ export function GlobalSuccessLibraryList() {
       )}
 
       {/* MODAL 2: SELECT GAME FORMAT TO CREATE */}
-      {pickerSet && (
-        <div
-          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-200"
-          onClick={() => setPickerSet(null)}
-        >
+      {pickerSet && (() => {
+        const compatibleGames = getCompatibleGamesForSubType(pickerSet.subType, pickerSet);
+        const isSingle = compatibleGames.length === 1;
+        const isDouble = compatibleGames.length === 2;
+
+        return (
           <div
-            className="bg-white dark:bg-slate-900 rounded-3xl max-w-5xl w-full p-5 sm:p-7 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-5 max-h-[90vh] flex flex-col"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5 animate-in fade-in duration-200"
+            onClick={() => setPickerSet(null)}
           >
-            <div className="flex items-start justify-between gap-4 shrink-0">
-              <div>
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400 text-xs font-black uppercase tracking-wider mb-2">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>{pickerSet.name}</span>
+            <div
+              className={`bg-white dark:bg-slate-900 rounded-3xl ${
+                isSingle ? "max-w-lg" : isDouble ? "max-w-2xl" : "max-w-5xl"
+              } w-full p-5 sm:p-7 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-5 max-h-[90vh] flex flex-col`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between gap-4 shrink-0">
+                <div>
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400 text-xs font-black uppercase tracking-wider mb-2">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>{pickerSet.name}</span>
+                  </div>
+                  <h3 className="font-headline font-black text-xl sm:text-2xl text-slate-800 dark:text-white">
+                    {t.library.selectGameTitle}
+                  </h3>
+                  <p className="text-xs sm:text-sm font-medium text-slate-500 mt-1">
+                    {t.library.selectGameDesc}
+                  </p>
                 </div>
-                <h3 className="font-headline font-black text-xl sm:text-2xl text-slate-800 dark:text-white">
-                  {t.library.selectGameTitle}
-                </h3>
-                <p className="text-xs sm:text-sm font-medium text-slate-500 mt-1">
-                  {t.library.selectGameDesc}
-                </p>
+                <button
+                  type="button"
+                  onClick={() => setPickerSet(null)}
+                  className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white cursor-pointer shrink-0 transition-colors"
+                  aria-label="Close"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setPickerSet(null)}
-                className="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 flex items-center justify-center text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white cursor-pointer shrink-0 transition-colors"
-                aria-label="Close"
+
+              <div
+                className={`grid ${
+                  isSingle
+                    ? "grid-cols-1"
+                    : isDouble
+                    ? "grid-cols-1 sm:grid-cols-2"
+                    : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+                } gap-4 sm:gap-5 overflow-y-auto pr-1 pb-1`}
               >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+                {compatibleGames.map((game) => {
+                  const thumbSrc =
+                    game.imageUrl ||
+                    (game.videoId
+                      ? `https://img.youtube.com/vi/${game.videoId}/maxresdefault.jpg`
+                      : "https://media.dolcake.com/images/games/flashcard-quiz.png");
+                  const badgeLabel = locale === "vi" ? game.badgeVi : game.badgeEn;
+                  const titleLabel = locale === "vi" ? game.titleVi : game.titleEn;
+                  const descLabel = locale === "vi" ? game.descVi : game.descEn;
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 overflow-y-auto pr-1 pb-1">
-              {getCompatibleGamesForSubType(pickerSet.subType, pickerSet).map((game) => {
-                const thumbSrc =
-                  game.imageUrl ||
-                  (game.videoId
-                    ? `https://img.youtube.com/vi/${game.videoId}/maxresdefault.jpg`
-                    : "https://media.dolcake.com/images/games/flashcard-quiz.png");
-                const badgeLabel = locale === "vi" ? game.badgeVi : game.badgeEn;
-                const titleLabel = locale === "vi" ? game.titleVi : game.titleEn;
-                const descLabel = locale === "vi" ? game.descVi : game.descEn;
+                  return (
+                    <button
+                      key={game.id}
+                      type="button"
+                      onClick={() => {
+                        cacheSetForInstantStudioLoad(pickerSet);
+                        const studioLang = locale === "en" ? "en" : "vi";
+                        const targetHref = withLangParam(game.buildHref(pickerSet.id), studioLang);
+                        const pickedName = pickerSet.name;
+                        const pickedGameTitle = titleLabel;
+                        trackEvent("teacher_library_action", {
+                          action: "global_success_create_game",
+                          setId: pickerSet.id,
+                          subType: pickerSet.subType,
+                          gameId: game.id,
+                        });
+                        setPickerSet(null);
+                        setTransitionModal({
+                          mode: "create_game_redirecting",
+                          setName: pickedName,
+                          gameTitle: pickedGameTitle,
+                        });
+                        router.push(targetHref);
+                      }}
+                      className={`group text-left rounded-2xl border-2 ${
+                        game.isRecommended
+                          ? "border-amber-300 dark:border-amber-600/80 hover:border-amber-500 dark:hover:border-amber-400 shadow-md hover:shadow-xl"
+                          : "border-slate-200/80 dark:border-slate-800 hover:border-emerald-500 dark:hover:border-emerald-500 hover:shadow-xl"
+                      } bg-white dark:bg-slate-800/80 transition-all duration-300 flex flex-col overflow-hidden cursor-pointer`}
+                    >
+                      {/* Visual 16:9 Gameplay Thumbnail */}
+                      <div className="relative aspect-video w-full overflow-hidden bg-slate-900">
+                        <img
+                          src={thumbSrc}
+                          onError={(e) => {
+                            const target = e.currentTarget;
+                            if (target.dataset.fallbackDone) return;
+                            target.dataset.fallbackDone = "true";
+                            if (game.videoId) {
+                              target.src = `https://img.youtube.com/vi/${game.videoId}/hqdefault.jpg`;
+                            } else {
+                              target.src = "https://media.dolcake.com/images/games/flashcard-quiz.png";
+                            }
+                          }}
+                          alt={titleLabel}
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                          loading="lazy"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 pointer-events-none" />
 
-                return (
-                  <button
-                    key={game.id}
-                    type="button"
-                    onClick={() => {
-                      cacheSetForInstantStudioLoad(pickerSet);
-                      const studioLang = locale === "en" ? "en" : "vi";
-                      const targetHref = withLangParam(game.buildHref(pickerSet.id), studioLang);
-                      const pickedName = pickerSet.name;
-                      const pickedGameTitle = titleLabel;
-                      trackEvent("teacher_library_action", {
-                        action: "global_success_create_game",
-                        setId: pickerSet.id,
-                        subType: pickerSet.subType,
-                        gameId: game.id,
-                      });
-                      setPickerSet(null);
-                      setTransitionModal({
-                        mode: "create_game_redirecting",
-                        setName: pickedName,
-                        gameTitle: pickedGameTitle,
-                      });
-                      router.push(targetHref);
-                    }}
-                    className={`group text-left rounded-2xl border-2 ${
-                      game.isRecommended
-                        ? "border-amber-300 dark:border-amber-600/80 hover:border-amber-500 dark:hover:border-amber-400 shadow-md hover:shadow-xl"
-                        : "border-slate-200/80 dark:border-slate-800 hover:border-emerald-500 dark:hover:border-emerald-500 hover:shadow-xl"
-                    } bg-white dark:bg-slate-800/80 transition-all duration-300 flex flex-col overflow-hidden cursor-pointer`}
-                  >
-                    {/* Visual 16:9 Gameplay Thumbnail */}
-                    <div className="relative aspect-video w-full overflow-hidden bg-slate-900">
-                      <img
-                        src={thumbSrc}
-                        onError={(e) => {
-                          const target = e.currentTarget;
-                          if (game.videoId && !target.dataset.fallback) {
-                            target.dataset.fallback = "true";
-                            target.src = `https://img.youtube.com/vi/${game.videoId}/hqdefault.jpg`;
-                          } else if (game.imageUrl && target.src !== game.imageUrl) {
-                            target.src = game.imageUrl;
-                          } else {
-                            target.src = "https://media.dolcake.com/images/games/flashcard-quiz.png";
-                          }
-                        }}
-                        alt={titleLabel}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                        loading="lazy"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 pointer-events-none" />
-
-                      {/* Badges top-left */}
-                      <div className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5 flex-wrap">
-                        <span
-                          className={`px-2.5 py-1 rounded-full text-[10px] font-black text-white uppercase tracking-wider shadow-md ${game.badgeColor}`}
-                        >
-                          {badgeLabel}
-                        </span>
-                        {game.isRecommended && (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-gradient-to-r from-amber-400 to-yellow-400 text-amber-950 shadow-md flex items-center gap-1 border border-amber-300/80">
-                            <Sparkles className="w-3 h-3 text-amber-900 fill-amber-900" />
-                            <span>{locale === "vi" ? (game.recommendLabelVi || "Khuyên dùng ⭐") : (game.recommendLabelEn || "Recommended ⭐")}</span>
+                        {/* Badges top-left */}
+                        <div className="absolute top-2.5 left-2.5 z-10 flex items-center gap-1.5 flex-wrap">
+                          <span
+                            className={`px-2.5 py-1 rounded-full text-[10px] font-black text-white uppercase tracking-wider shadow-md ${game.badgeColor}`}
+                          >
+                            {badgeLabel}
                           </span>
+                          {game.isRecommended && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-gradient-to-r from-amber-400 to-yellow-400 text-amber-950 shadow-md flex items-center gap-1 border border-amber-300/80">
+                              <Sparkles className="w-3 h-3 text-amber-900 fill-amber-900" />
+                              <span>{locale === "vi" ? (game.recommendLabelVi || "Khuyên dùng ⭐") : (game.recommendLabelEn || "Recommended ⭐")}</span>
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Watch Demo Video Button */}
+                        {(game.videoId || game.videoUrl) && (
+                          <div
+                            role="button"
+                            tabIndex={0}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              trackEvent("teacher_video_open", {
+                                gameId: game.id,
+                                gameTitle: titleLabel,
+                                category: "library_picker",
+                                videoType: "demo",
+                              });
+                              setPreviewVideoGame({
+                                id: game.id,
+                                title: titleLabel,
+                                badge: badgeLabel,
+                                badgeBg: game.badgeColor,
+                                videoId: game.videoId || "",
+                                videoUrl: game.videoUrl,
+                                createHref: withLangParam(game.buildHref(pickerSet.id), locale === "en" ? "en" : "vi"),
+                              });
+                            }}
+                            className="absolute bottom-2.5 right-2.5 z-20 px-3 py-1.5 rounded-full bg-slate-950/85 hover:bg-black text-white text-[11px] font-bold flex items-center gap-1.5 backdrop-blur-md border border-white/20 transition-all hover:scale-105 shadow-xl active:scale-95 cursor-pointer"
+                            title={locale === "vi" ? "Xem video minh họa cách chơi" : "Watch gameplay demo"}
+                          >
+                            <Play className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                            <span>{locale === "vi" ? "Xem video" : "Watch video"}</span>
+                          </div>
                         )}
                       </div>
-                    </div>
 
-                    {/* Card Content & Action */}
-                    <div className="p-4 flex-1 flex flex-col justify-between gap-3">
-                      <div>
-                        <h4 className="font-headline font-black text-sm text-slate-800 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors line-clamp-1">
-                          {titleLabel}
-                        </h4>
-                        <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 line-clamp-2 mt-1 leading-relaxed">
-                          {descLabel}
-                        </p>
-                      </div>
+                      {/* Card Content & Action */}
+                      <div className="p-4 flex-1 flex flex-col justify-between gap-3">
+                        <div>
+                          <h4 className="font-headline font-black text-sm text-slate-800 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors line-clamp-1">
+                            {titleLabel}
+                          </h4>
+                          <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 line-clamp-2 mt-1 leading-relaxed">
+                            {descLabel}
+                          </p>
+                        </div>
 
-                      <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs font-bold text-emerald-600 dark:text-emerald-400 group-hover:translate-x-0.5 transition-transform">
-                        <span className="flex items-center gap-1.5">
-                          <Plus className="w-3.5 h-3.5" />
-                          <span>{locale === "vi" ? "Tạo game này" : "Create game"}</span>
-                        </span>
-                        <ArrowRight className="w-4 h-4 text-emerald-500 group-hover:translate-x-1 transition-transform" />
+                        <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs font-bold text-emerald-600 dark:text-emerald-400 group-hover:translate-x-0.5 transition-transform">
+                          <span className="flex items-center gap-1.5">
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>{locale === "vi" ? "Tạo game này" : "Create game"}</span>
+                          </span>
+                          <ArrowRight className="w-4 h-4 text-emerald-500 group-hover:translate-x-1 transition-transform" />
+                        </div>
                       </div>
-                    </div>
-                  </button>
-                );
-              })}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
-        </div>
+        );
+      })()}
+
+      {/* VIDEO PREVIEW MODAL */}
+      {previewVideoGame && (
+        <GameVideoModal
+          game={previewVideoGame}
+          onClose={() => setPreviewVideoGame(null)}
+        />
       )}
 
       {/* MODAL 3: SHARE PRE-BUILT GAME DIRECTLY */}

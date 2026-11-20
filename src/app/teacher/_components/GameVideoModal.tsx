@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Play, Pause, Plus, X, RotateCcw, Volume2, VolumeX, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -12,7 +13,8 @@ export interface VideoModalGame {
   title: string;
   badge: string;
   badgeBg: string;
-  videoId: string;
+  videoId?: string;
+  videoUrl?: string;
   createHref: string;
   videoType?: "demo" | "guide";
 }
@@ -22,6 +24,7 @@ interface GameVideoModalProps {
   onClose: () => void;
   isAuthenticated?: boolean;
   onRequireAuth?: (createHref: string, gameId?: string, gameTitle?: string) => void;
+  hideCreateButton?: boolean;
 }
 
 export function GameVideoModal({
@@ -29,12 +32,14 @@ export function GameVideoModal({
   onClose,
   isAuthenticated = true,
   onRequireAuth,
+  hideCreateButton = false,
 }: GameVideoModalProps) {
   const pathname = usePathname();
   const isTeacherPortal = pathname.startsWith("/teacher");
   const { t } = useTeacherLocale();
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
 
@@ -54,7 +59,7 @@ export function GameVideoModal({
       setIsPlaying(true);
       setIsMuted(false);
     }
-  }, [game?.videoId]);
+  }, [game?.videoId, game?.videoUrl]);
 
   // Force YouTube player to switch to highest HD resolution (1080p / highres)
   useEffect(() => {
@@ -111,10 +116,20 @@ export function GameVideoModal({
     };
   }, [game, onClose]);
 
-  if (!game || !game.videoId) return null;
+  if (!game || (!game.videoId && !game.videoUrl)) return null;
 
   const togglePlay = (e?: React.MouseEvent) => {
     e?.stopPropagation();
+    if (game.videoUrl && videoRef.current) {
+      if (videoRef.current.paused) {
+        videoRef.current.play();
+        setIsPlaying(true);
+      } else {
+        videoRef.current.pause();
+        setIsPlaying(false);
+      }
+      return;
+    }
     if (isPlaying) {
       sendCommand("pauseVideo");
       setIsPlaying(false);
@@ -126,6 +141,12 @@ export function GameVideoModal({
 
   const handleReplay = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (game.videoUrl && videoRef.current) {
+      videoRef.current.currentTime = 0;
+      videoRef.current.play();
+      setIsPlaying(true);
+      return;
+    }
     sendCommand("seekTo", [0, true]);
     sendCommand("setPlaybackQuality", ["hd1080"]);
     sendCommand("playVideo");
@@ -134,6 +155,11 @@ export function GameVideoModal({
 
   const toggleMute = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (game.videoUrl && videoRef.current) {
+      videoRef.current.muted = !isMuted;
+      setIsMuted(!isMuted);
+      return;
+    }
     if (isMuted) {
       sendCommand("unMute");
       setIsMuted(false);
@@ -143,7 +169,7 @@ export function GameVideoModal({
     }
   };
 
-  return (
+  const modalContent = (
     <div
       onClick={onClose}
       className="fixed inset-0 z-[200] bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 md:p-8 animate-in fade-in duration-200 select-none"
@@ -170,17 +196,19 @@ export function GameVideoModal({
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <Link
-              href={isTeacherPortal ? game.createHref : "/teacher"} data-no-global-loader={isTeacherPortal && !isAuthenticated ? "true" : undefined}
-              onClick={(e) => { trackEvent("teacher_create_click", { gameId: game.id, gameTitle: game.title, category: game.badge, source: "video_modal", isAuthenticated }); if (isTeacherPortal && !isAuthenticated && onRequireAuth) { e.preventDefault(); onClose(); onRequireAuth(game.createHref, game.id, game.title); } else { onClose(); } }}
-              className="px-3.5 sm:px-4 py-2 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-sky-500/25 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer whitespace-nowrap"
-              title={isTeacherPortal ? t.common.createThisExercise : t.common.loginToCreate}
-            >
-              <Plus className="w-4 h-4 stroke-[3px] shrink-0" />
-              <span>
-                {isTeacherPortal ? t.common.createThisExercise : t.common.loginToCreate}
-              </span>
-            </Link>
+            {!hideCreateButton && game.createHref && (
+              <Link
+                href={isTeacherPortal ? game.createHref : "/teacher"} data-no-global-loader={isTeacherPortal && !isAuthenticated ? "true" : undefined}
+                onClick={(e) => { trackEvent("teacher_create_click", { gameId: game.id, gameTitle: game.title, category: game.badge, source: "video_modal", isAuthenticated }); if (isTeacherPortal && !isAuthenticated && onRequireAuth) { e.preventDefault(); onClose(); onRequireAuth(game.createHref, game.id, game.title); } else { onClose(); } }}
+                className="px-3.5 sm:px-4 py-2 bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-sky-500/25 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer whitespace-nowrap"
+                title={isTeacherPortal ? t.common.createThisExercise : t.common.loginToCreate}
+              >
+                <Plus className="w-4 h-4 stroke-[3px] shrink-0" />
+                <span>
+                  {isTeacherPortal ? t.common.createThisExercise : t.common.loginToCreate}
+                </span>
+              </Link>
+            )}
 
             <button
               type="button"
@@ -204,14 +232,27 @@ export function GameVideoModal({
             - vq=hd1080: Forces YouTube embed to initialize at 1080p resolution.
             - pointer-events-none: Prevents YouTube from rendering internal hover titles, settings, or pause overlays.
           */}
-          <iframe
-            ref={iframeRef}
-            src={`https://www.youtube.com/embed/${game.videoId}?autoplay=1&controls=0&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1&enablejsapi=1&playsinline=1&vq=hd1080`}
-            title={game.title}
-            className="absolute w-[118%] h-[118%] -top-[9%] -left-[9%] border-0 pointer-events-none"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
+          {game.videoUrl ? (
+            <video
+              ref={videoRef}
+              src={game.videoUrl}
+              autoPlay
+              loop
+              playsInline
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
+              className="w-full h-full object-contain bg-black"
+            />
+          ) : (
+            <iframe
+              ref={iframeRef}
+              src={`https://www.youtube.com/embed/${game.videoId}?autoplay=1&controls=0&rel=0&modestbranding=1&iv_load_policy=3&disablekb=1&enablejsapi=1&playsinline=1&vq=hd1080`}
+              title={game.title}
+              className="absolute w-[118%] h-[118%] -top-[9%] -left-[9%] border-0 pointer-events-none"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          )}
 
           {/* Center Play Indicator when Paused */}
           {!isPlaying && (
@@ -280,4 +321,8 @@ export function GameVideoModal({
       </div>
     </div>
   );
+
+  return typeof document !== "undefined"
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 }

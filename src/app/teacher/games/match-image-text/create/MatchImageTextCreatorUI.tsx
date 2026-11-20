@@ -382,6 +382,10 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType?: string } = {}
   };
 
   const handleOpenImageSearch = (pair: CardPair) => {
+    if (!pair.word?.trim()) {
+      toast.warning("Vui lòng nhập từ vựng trước khi tìm ảnh!");
+      return;
+    }
     setActivePairIdForSearch(pair.id);
     setSearchQuery(pair.word || "");
     setSearchResults([]);
@@ -1533,6 +1537,22 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType?: string } = {}
             <PairVisualGuideBanner
               gameMode={currentGameMode}
               maxPairsPerRound={maxPairsPerRound}
+              pairs={pairs}
+              currentRoundTitle={currentRound?.title}
+              onSelectPairIndex={(index) => {
+                if (index < pairs.length) {
+                  const el = document.getElementById(`pair-card-${index}`);
+                  if (el) {
+                    el.scrollIntoView({ behavior: "smooth", block: "center" });
+                    el.classList.add("ring-4", "ring-amber-400", "scale-[1.02]");
+                    setTimeout(() => {
+                      el.classList.remove("ring-4", "ring-amber-400", "scale-[1.02]");
+                    }, 1500);
+                  }
+                } else if (pairs.length < maxPairsPerRound) {
+                  handleAddPair();
+                }
+              }}
             />
 
             {/* Card Pairs Grid */}
@@ -1540,7 +1560,8 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType?: string } = {}
               {pairs.map((pair, index) => (
                 <div 
                   key={pair.id}
-                  className="group relative bg-white dark:bg-slate-800/90 rounded-2xl border-2 border-slate-200/80 dark:border-slate-700 p-4 space-y-2.5 shadow-sm hover:border-purple-300 dark:hover:border-purple-600 hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+                  id={`pair-card-${index}`}
+                  className="group relative bg-white dark:bg-slate-800/90 rounded-2xl border-2 border-slate-200/80 dark:border-slate-700 p-4 space-y-2.5 shadow-sm hover:border-purple-300 dark:hover:border-purple-600 hover:shadow-md transition-all duration-300 flex flex-col justify-between scroll-mt-24"
                 >
                   {/* Pair Header & Delete */}
                   <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-700/60 pb-2">
@@ -1564,158 +1585,13 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType?: string } = {}
                     )}
                   </div>
 
-                  {/* Piece 1 Label: Image */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between px-0.5">
-                      <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wide text-sky-600 dark:text-sky-400">
-                        <ImageIcon className="w-3 h-3" />
-                        <span>Mảnh 1 • Hình ảnh</span>
-                      </span>
-                      {pair.imageUrl && !brokenImageIds[pair.id] && (
-                        <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
-                          <Check className="w-3 h-3" />
-                          <span>Đã chọn</span>
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Image Slot / Preview Dropzone */}
-                    <div 
-                      onDragOver={e => handleDragOver(e, pair.id)}
-                      onDragLeave={handleDragLeave}
-                      onDrop={e => handleDropImage(e, pair.id)}
-                      className={`relative aspect-square rounded-xl bg-slate-50 dark:bg-slate-900 border-2 border-dashed overflow-hidden flex items-center justify-center transition-all ${
-                        dragActivePairId === pair.id 
-                          ? "border-sky-500 bg-sky-50 dark:bg-sky-950/60 scale-[1.02]" 
-                          : "border-slate-200/80 dark:border-slate-700"
-                      }`}
-                    >
-                    {pair.imageUrl && !brokenImageIds[pair.id] ? (
-                      <div
-                        draggable
-                        onDragStart={e => {
-                          e.dataTransfer.setData("text/plain", pair.id);
-                          e.dataTransfer.effectAllowed = "move";
-                          setDragSourcePairId(pair.id);
-                        }}
-                        onDragEnd={() => {
-                          setDragSourcePairId(null);
-                          setDragActivePairId(null);
-                        }}
-                        className="relative w-full h-full group/img cursor-grab active:cursor-grabbing bg-slate-900/5 dark:bg-slate-900/40 flex items-center justify-center overflow-hidden"
-                        title="Kéo thả ảnh sang thẻ khác để di chuyển hoặc tráo đổi vị trí"
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img 
-                          src={pair.imageUrl} 
-                          alt={pair.word || "Card image"} 
-                          onError={() => {
-                            setBrokenImageIds((prev) => ({ ...prev, [pair.id]: true }));
-                            toast.error(`Thẻ "${pair.word || 'này'}" không tải được ảnh. Vui lòng kiểm tra lại!`);
-                          }}
-                          className="w-full h-full object-contain pointer-events-none select-none transition-transform duration-200 group-hover/img:scale-105"
-                        />
-                        <div className="absolute inset-0 bg-slate-950/50 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleOpenImageSearch(pair)}
-                            className="p-2 bg-white/90 hover:bg-white text-slate-800 rounded-xl shadow-lg transition-transform hover:scale-110 cursor-pointer"
-                            title="Đổi ảnh khác"
-                          >
-                            <Search className="w-4 h-4 text-sky-600" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenImageUpload(pair.id)}
-                            className="p-2 bg-white/90 hover:bg-white text-slate-800 rounded-xl shadow-lg transition-transform hover:scale-110 cursor-pointer"
-                            title="Tải ảnh khác từ máy"
-                          >
-                            <Upload className="w-4 h-4 text-purple-600" />
-                          </button>
-                        </div>
-                      </div>
-                    ) : pair.imageUrl && brokenImageIds[pair.id] ? (
-                      <div className="flex flex-col items-center justify-center p-3 text-center space-y-2 bg-amber-500/5 dark:bg-amber-950/20 w-full h-full">
-                        <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-xs">
-                          <AlertCircle className="w-5 h-5" />
-                        </div>
-                        <div className="space-y-0.5">
-                          <span className="text-[11px] font-bold text-amber-700 dark:text-amber-400 block">Ảnh lỗi tải / Chặn link</span>
-                          <span className="text-[10px] text-slate-400 dark:text-slate-500 block">Vui lòng chọn ảnh khác</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 pt-0.5">
-                          <button
-                            type="button"
-                            onClick={() => handleOpenImageSearch(pair)}
-                            className="px-2.5 py-1 bg-sky-500 hover:bg-sky-600 text-white font-bold text-[11px] rounded-lg transition-all flex items-center gap-1 cursor-pointer shadow-sm active:scale-95"
-                          >
-                            <Search className="w-3 h-3" />
-                            <span>Đổi ảnh</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenImageUpload(pair.id)}
-                            className="px-2.5 py-1 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold text-[11px] rounded-lg transition-all flex items-center gap-1 cursor-pointer"
-                          >
-                            <Upload className="w-3 h-3" />
-                            <span>Tải file</span>
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center p-3 text-center space-y-2">
-                        <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-500 flex items-center justify-center">
-                          <ImageIcon className="w-5 h-5" />
-                        </div>
-                        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Chưa chọn ảnh</span>
-                        <div className="flex items-center gap-1.5 pt-1">
-                          <button
-                            type="button"
-                            onClick={() => handleOpenImageSearch(pair)}
-                            className="px-2.5 py-1 bg-sky-500 hover:bg-sky-600 text-white font-bold text-[11px] rounded-lg transition-all flex items-center gap-1 cursor-pointer shadow-sm active:scale-95"
-                          >
-                            <Search className="w-3 h-3" />
-                            <span>Tìm ảnh</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenImageUpload(pair.id)}
-                            className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-200 font-bold text-[11px] rounded-lg transition-all flex items-center gap-1 cursor-pointer"
-                          >
-                            <Upload className="w-3 h-3" />
-                            <span>Tải file</span>
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                    </div>
-                  </div>
-
-                  {/* Visual Pair Link Connector */}
-                  <div className="relative flex items-center justify-center py-0.5">
-                    <div className="absolute inset-x-0 top-1/2 border-t border-dashed border-sky-200 dark:border-sky-800/80" />
-                    <span className="relative z-10 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-sky-50 dark:bg-sky-950/80 border border-sky-200/80 dark:border-sky-800 text-[10px] font-extrabold text-sky-600 dark:text-sky-300 shadow-2xs">
-                      <Link2 className="w-3 h-3" />
-                      <span>{currentGameMode === "train" ? "Ghép vào toa" : "Nối cặp với"}</span>
-                    </span>
-                  </div>
-
-                  {/* Piece 2: Word Input */}
+                  {/* Word Input (Placed above image) */}
                   <div className="space-y-1">
-                    <div className="flex items-center justify-between px-0.5">
-                      <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
-                        <FileText className="w-3 h-3" />
-                        <span>Mảnh 2 • Chữ tương ứng</span>
-                      </span>
-                      <span className={`text-[10px] font-extrabold ${countWords(pair.word) > MAX_TEXT_WORDS ? "text-rose-600" : "text-slate-400"}`}>
-                        {countWords(pair.word)}/5 từ
-                      </span>
-                    </div>
                     <input
                       type="text"
                       value={pair.word}
                       onChange={e => handleUpdateWord(pair.id, e.target.value)}
-                      placeholder="VD: Apple (chữ nối với ảnh)..."
+                      placeholder="Nhập từ / cụm từ..."
                       className={`w-full px-3 py-2 border rounded-xl text-xs font-black text-center focus:ring-2 outline-none transition-all ${
                         countWords(pair.word) > MAX_TEXT_WORDS
                           ? "border-rose-500 bg-rose-50/40 text-rose-900 focus:ring-rose-500/20 focus:border-rose-500"
@@ -1728,6 +1604,134 @@ export function MatchImageTextCreatorUI({ gameType }: { gameType?: string } = {}
                         Vượt quá 5 từ ({countWords(pair.word)}/5 từ). Vui lòng rút gọn!
                       </p>
                     )}
+                  </div>
+
+                  {/* Image Slot / Preview Dropzone */}
+                  <div 
+                    onDragOver={e => handleDragOver(e, pair.id)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={e => handleDropImage(e, pair.id)}
+                    className={`relative aspect-square rounded-xl bg-slate-50 dark:bg-slate-900 border-2 border-dashed overflow-hidden flex items-center justify-center transition-all ${
+                      dragActivePairId === pair.id 
+                        ? "border-sky-500 bg-sky-50 dark:bg-sky-950/60 scale-[1.02]" 
+                        : "border-slate-200/80 dark:border-slate-700"
+                    }`}
+                  >
+                  {pair.imageUrl && !brokenImageIds[pair.id] ? (
+                    <div
+                      draggable
+                      onDragStart={e => {
+                        e.dataTransfer.setData("text/plain", pair.id);
+                        e.dataTransfer.effectAllowed = "move";
+                        setDragSourcePairId(pair.id);
+                      }}
+                      onDragEnd={() => {
+                        setDragSourcePairId(null);
+                        setDragActivePairId(null);
+                      }}
+                      className="relative w-full h-full group/img cursor-grab active:cursor-grabbing bg-slate-900/5 dark:bg-slate-900/40 flex items-center justify-center overflow-hidden"
+                      title="Kéo thả ảnh sang thẻ khác để di chuyển hoặc tráo đổi vị trí"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img 
+                        src={pair.imageUrl} 
+                        alt={pair.word || "Card image"} 
+                        onError={() => {
+                          setBrokenImageIds((prev) => ({ ...prev, [pair.id]: true }));
+                          toast.error(`Thẻ "${pair.word || 'này'}" không tải được ảnh. Vui lòng kiểm tra lại!`);
+                        }}
+                        className="w-full h-full object-contain pointer-events-none select-none transition-transform duration-200 group-hover/img:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-slate-950/50 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenImageSearch(pair)}
+                          disabled={!pair.word?.trim()}
+                          title={!pair.word?.trim() ? "Vui lòng nhập từ trước khi tìm ảnh" : "Đổi ảnh khác"}
+                          className={`p-2 rounded-xl shadow-lg transition-transform ${
+                            !pair.word?.trim()
+                              ? "bg-slate-200/90 text-slate-400 cursor-not-allowed opacity-50"
+                              : "bg-white/90 hover:bg-white text-slate-800 hover:scale-110 cursor-pointer"
+                          }`}
+                        >
+                          <Search className={`w-4 h-4 ${!pair.word?.trim() ? "text-slate-400" : "text-sky-600"}`} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenImageUpload(pair.id)}
+                          className="p-2 bg-white/90 hover:bg-white text-slate-800 rounded-xl shadow-lg transition-transform hover:scale-110 cursor-pointer"
+                          title="Tải ảnh khác từ máy"
+                        >
+                          <Upload className="w-4 h-4 text-purple-600" />
+                        </button>
+                      </div>
+                    </div>
+                  ) : pair.imageUrl && brokenImageIds[pair.id] ? (
+                    <div className="flex flex-col items-center justify-center p-3 text-center space-y-2 bg-amber-500/5 dark:bg-amber-950/20 w-full h-full">
+                      <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-xs">
+                        <AlertCircle className="w-5 h-5" />
+                      </div>
+                      <div className="space-y-0.5">
+                        <span className="text-[11px] font-bold text-amber-700 dark:text-amber-400 block">Ảnh lỗi tải / Chặn link</span>
+                        <span className="text-[10px] text-slate-400 dark:text-slate-500 block">Vui lòng chọn ảnh khác</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 pt-0.5">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenImageSearch(pair)}
+                          disabled={!pair.word?.trim()}
+                          title={!pair.word?.trim() ? "Vui lòng nhập từ trước khi tìm ảnh" : "Đổi ảnh"}
+                          className={`px-2.5 py-1 font-bold text-[11px] rounded-lg transition-all flex items-center gap-1 shadow-sm active:scale-95 ${
+                            !pair.word?.trim()
+                              ? "bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-50"
+                              : "bg-sky-500 hover:bg-sky-600 text-white cursor-pointer"
+                          }`}
+                        >
+                          <Search className="w-3 h-3" />
+                          <span>Đổi ảnh</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenImageUpload(pair.id)}
+                          className="px-2.5 py-1 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold text-[11px] rounded-lg transition-all flex items-center gap-1 cursor-pointer"
+                        >
+                          <Upload className="w-3 h-3" />
+                          <span>Tải file</span>
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center p-3 text-center space-y-2">
+                      <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-500 flex items-center justify-center">
+                        <ImageIcon className="w-5 h-5" />
+                      </div>
+                      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Chưa chọn ảnh</span>
+                      <div className="flex items-center gap-1.5 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenImageSearch(pair)}
+                          disabled={!pair.word?.trim()}
+                          title={!pair.word?.trim() ? "Vui lòng nhập từ trước khi tìm ảnh" : "Tìm ảnh trực tuyến"}
+                          className={`px-2.5 py-1 font-bold text-[11px] rounded-lg transition-all flex items-center gap-1 shadow-sm active:scale-95 ${
+                            !pair.word?.trim()
+                              ? "bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-50"
+                              : "bg-sky-500 hover:bg-sky-600 text-white cursor-pointer"
+                          }`}
+                        >
+                          <Search className="w-3 h-3" />
+                          <span>Tìm ảnh</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleOpenImageUpload(pair.id)}
+                          className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-200 font-bold text-[11px] rounded-lg transition-all flex items-center gap-1 cursor-pointer"
+                        >
+                          <Upload className="w-3 h-3" />
+                          <span>Tải file</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
                   </div>
 
                   {/* Optional Custom Audio Controls */}

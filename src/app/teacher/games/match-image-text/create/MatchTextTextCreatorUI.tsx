@@ -23,6 +23,7 @@ import {
   Type,
 } from "lucide-react";
 import { TeacherGameGuideButton } from "@/app/teacher/_components/TeacherGameGuideButton";
+import { PairVisualGuideBanner } from "@/components/games/PairVisualGuideBanner";
 import { toast } from "sonner";
 import { saveMatchImageTextGameAction, getMatchImageTextGameDetailsAction } from "@/actions/match-image-text-actions";
 import { GameSaveSuccessModal } from "@/app/teacher/_components/GameSaveSuccessModal";
@@ -813,6 +814,26 @@ export function MatchTextTextCreatorUI() {
           </button>
         </div>
 
+        {/* Live Visual Preview Banner (Text-Text) */}
+        <PairVisualGuideBanner
+          gameType="text-text"
+          maxPairsPerRound={MAX_PAIRS_PER_ROUND}
+          textTextPairs={pairs}
+          currentRoundTitle={currentRound?.title}
+          onSelectPairIndex={(index) => {
+            if (index < pairs.length) {
+              const el = document.getElementById(`pair-card-${index}`);
+              if (el) {
+                el.scrollIntoView({ behavior: "smooth", block: "center" });
+                el.classList.add("ring-4", "ring-sky-400", "scale-[1.02]");
+                setTimeout(() => {
+                  el.classList.remove("ring-4", "ring-sky-400", "scale-[1.02]");
+                }, 1500);
+              }
+            }
+          }}
+        />
+
         {/* Text Pair Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {pairs.map((pair, pIdx) => {
@@ -824,6 +845,7 @@ export function MatchTextTextCreatorUI() {
             return (
               <div
                 key={pair.id}
+                id={`pair-card-${pIdx}`}
                 className="bg-white dark:bg-slate-900 p-4 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm transition-all hover:border-sky-300 dark:hover:border-sky-900 flex flex-col justify-between"
               >
                 {/* Pair Header Bar */}

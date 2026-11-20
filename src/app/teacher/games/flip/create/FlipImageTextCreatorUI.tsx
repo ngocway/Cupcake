@@ -27,6 +27,7 @@ import {
   HelpCircle
 } from "lucide-react";
 import { TeacherGameGuideButton } from "@/app/teacher/_components/TeacherGameGuideButton";
+import { PairVisualGuideBanner } from "@/components/games/PairVisualGuideBanner";
 import { toast } from "sonner";
 import { searchImagesClient } from "@/lib/image-search-client";
 import { saveMatchImageTextGameAction, getMatchImageTextGameDetailsAction } from "@/actions/match-image-text-actions";
@@ -516,6 +517,10 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
   };
 
   const handleOpenImageSearch = (pair: CardPair) => {
+    if (!pair.word?.trim()) {
+      toast.warning("Vui lòng nhập từ vựng trước khi tìm ảnh!");
+      return;
+    }
     setActivePairIdForSearch(pair.id);
     setSearchQuery(pair.word || "");
     setSearchResults([]);
@@ -1353,19 +1358,33 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
               </div>
             </div>
 
-            {/* Instruction Tip Banner */}
-            <div className="p-3.5 bg-orange-50/70 dark:bg-orange-950/30 rounded-2xl border border-orange-200/60 dark:border-orange-800/60 flex items-start gap-2.5 text-xs text-orange-900 dark:text-orange-200">
-              <Info className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" />
-              <p className="leading-relaxed">
-                <strong>Hướng dẫn phân bổ Vòng chơi:</strong> Mỗi Vòng chứa tối đa <strong>8 cặp thẻ</strong> để Học sinh lật ghép không bị rối mắt. Khi Học sinh hoàn thành Vòng 1, game sẽ tự động chuyển tiếp sang Vòng 2!
-              </p>
-            </div>
+            {/* Live Visual Preview Banner (Flip Image-Text) */}
+            <PairVisualGuideBanner
+              gameMode="flip"
+              gameType="image-text"
+              maxPairsPerRound={MAX_PAIRS_PER_ROUND}
+              pairs={pairs}
+              currentRoundTitle={currentRound?.title}
+              onSelectPairIndex={(index) => {
+                if (index < pairs.length) {
+                  const el = document.getElementById(`pair-card-${index}`);
+                  if (el) {
+                    el.scrollIntoView({ behavior: "smooth", block: "center" });
+                    el.classList.add("ring-4", "ring-orange-400", "scale-[1.02]");
+                    setTimeout(() => {
+                      el.classList.remove("ring-4", "ring-orange-400", "scale-[1.02]");
+                    }, 1500);
+                  }
+                }
+              }}
+            />
 
             {/* Card Pairs Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pt-2">
               {pairs.map((pair, index) => (
                 <div
                   key={pair.id}
+                  id={`pair-card-${index}`}
                   className="group relative bg-white dark:bg-slate-800/90 rounded-2xl border-2 border-slate-200/80 dark:border-slate-700 p-4 space-y-3 shadow-sm hover:border-orange-300 dark:hover:border-orange-600 hover:shadow-md transition-all duration-200 flex flex-col justify-between"
                 >
                   {/* Pair Header & Delete */}
@@ -1382,6 +1401,26 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
+                    )}
+                  </div>
+
+                  {/* Word Input (Placed above image) */}
+                  <div className="space-y-1">
+                    <input
+                      type="text"
+                      value={pair.word}
+                      onChange={e => handleUpdateWord(pair.id, e.target.value)}
+                      placeholder="Nhập Chữ/Từ..."
+                      className={`w-full px-3 py-2 border rounded-xl text-xs font-black text-center focus:ring-2 outline-none transition-all ${countWords(pair.word) > MAX_TEXT_WORDS
+                        ? "border-rose-500 bg-rose-50/40 text-rose-900 focus:ring-rose-500/20 focus:border-rose-500"
+                        : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 focus:ring-orange-500/20 focus:border-orange-500"
+                        }`}
+                    />
+                    {countWords(pair.word) > MAX_TEXT_WORDS && (
+                      <p className="text-[10px] font-bold text-rose-500 flex items-center justify-center gap-1 mt-0.5">
+                        <AlertCircle className="w-3 h-3 shrink-0" />
+                        Vượt quá 5 từ ({countWords(pair.word)}/5 từ). Vui lòng rút gọn!
+                      </p>
                     )}
                   </div>
 
@@ -1424,10 +1463,15 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
                           <button
                             type="button"
                             onClick={() => handleOpenImageSearch(pair)}
-                            className="p-2 bg-white/90 hover:bg-white text-slate-800 rounded-xl shadow-lg transition-transform hover:scale-110 cursor-pointer"
-                            title="Đổi ảnh khác"
+                            disabled={!pair.word?.trim()}
+                            title={!pair.word?.trim() ? "Vui lòng nhập từ trước khi tìm ảnh" : "Đổi ảnh khác"}
+                            className={`p-2 rounded-xl shadow-lg transition-transform ${
+                              !pair.word?.trim()
+                                ? "bg-slate-200/90 text-slate-400 cursor-not-allowed opacity-50"
+                                : "bg-white/90 hover:bg-white text-slate-800 hover:scale-110 cursor-pointer"
+                            }`}
                           >
-                            <Search className="w-4 h-4 text-sky-600" />
+                            <Search className={`w-4 h-4 ${!pair.word?.trim() ? "text-slate-400" : "text-sky-600"}`} />
                           </button>
                           <button
                             type="button"
@@ -1452,7 +1496,13 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
                           <button
                             type="button"
                             onClick={() => handleOpenImageSearch(pair)}
-                            className="px-2.5 py-1 bg-sky-500 hover:bg-sky-600 text-white font-bold text-[11px] rounded-lg transition-all flex items-center gap-1 cursor-pointer shadow-sm active:scale-95"
+                            disabled={!pair.word?.trim()}
+                            title={!pair.word?.trim() ? "Vui lòng nhập từ trước khi tìm ảnh" : "Đổi ảnh"}
+                            className={`px-2.5 py-1 font-bold text-[11px] rounded-lg transition-all flex items-center gap-1 shadow-sm active:scale-95 ${
+                              !pair.word?.trim()
+                                ? "bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-50"
+                                : "bg-sky-500 hover:bg-sky-600 text-white cursor-pointer"
+                            }`}
                           >
                             <Search className="w-3 h-3" />
                             <span>Đổi ảnh</span>
@@ -1477,7 +1527,13 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
                           <button
                             type="button"
                             onClick={() => handleOpenImageSearch(pair)}
-                            className="px-2.5 py-1 bg-sky-500 hover:bg-sky-600 text-white font-bold text-[11px] rounded-lg transition-all flex items-center gap-1 cursor-pointer shadow-sm active:scale-95"
+                            disabled={!pair.word?.trim()}
+                            title={!pair.word?.trim() ? "Vui lòng nhập từ trước khi tìm ảnh" : "Tìm ảnh trực tuyến"}
+                            className={`px-2.5 py-1 font-bold text-[11px] rounded-lg transition-all flex items-center gap-1 shadow-sm active:scale-95 ${
+                              !pair.word?.trim()
+                                ? "bg-slate-200 dark:bg-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed opacity-50"
+                                : "bg-sky-500 hover:bg-sky-600 text-white cursor-pointer"
+                            }`}
                           >
                             <Search className="w-3 h-3" />
                             <span>Tìm ảnh</span>
@@ -1492,32 +1548,6 @@ export function FlipImageTextCreatorUI({ gameType }: { gameType: string }) {
                           </button>
                         </div>
                       </div>
-                    )}
-                  </div>
-
-                  {/* Word Input */}
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between px-1">
-                      <span className="text-[10px] font-bold text-slate-400">Từ vựng / Câu</span>
-                      <span className={`text-[10px] font-extrabold ${countWords(pair.word) > MAX_TEXT_WORDS ? "text-rose-600" : "text-slate-400"}`}>
-                        {countWords(pair.word)}/5 từ
-                      </span>
-                    </div>
-                    <input
-                      type="text"
-                      value={pair.word}
-                      onChange={e => handleUpdateWord(pair.id, e.target.value)}
-                      placeholder="Nhập Chữ/Từ..."
-                      className={`w-full px-3 py-2 border rounded-xl text-xs font-black text-center focus:ring-2 outline-none transition-all ${countWords(pair.word) > MAX_TEXT_WORDS
-                        ? "border-rose-500 bg-rose-50/40 text-rose-900 focus:ring-rose-500/20 focus:border-rose-500"
-                        : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 focus:ring-orange-500/20 focus:border-orange-500"
-                        }`}
-                    />
-                    {countWords(pair.word) > MAX_TEXT_WORDS && (
-                      <p className="text-[10px] font-bold text-rose-500 flex items-center justify-center gap-1 mt-0.5">
-                        <AlertCircle className="w-3 h-3 shrink-0" />
-                        Vượt quá 5 từ ({countWords(pair.word)}/5 từ). Vui lòng rút gọn!
-                      </p>
                     )}
                   </div>
 

@@ -17,6 +17,8 @@ import {
   Save,
 } from "lucide-react";
 import { TeacherGameGuideButton } from "@/app/teacher/_components/TeacherGameGuideButton";
+import { GameDemoVideoButton } from "@/components/games/GameDemoVideoButton";
+import { QuizVisualGuideBanner } from "@/components/games/QuizVisualGuideBanner";
 import { toast } from "sonner";
 import { HomeShell } from "@/app/_components/HomeShell";
 import { saveChoiceEggGame, getChoiceEggGameById, ChoiceEggGame } from "@/lib/choice-egg-storage";
@@ -261,6 +263,7 @@ export default function CreateChoiceEggPage() {
 
   // Wizard Step: 1 | 2
   const [step, setStep] = useState<1 | 2>(1);
+  const [previewQuestionIdx, setPreviewQuestionIdx] = useState(0);
 
   // Form States (Step 1)
   const { locale } = useTeacherLocale();
@@ -548,6 +551,18 @@ export default function CreateChoiceEggPage() {
               compatibleSubTypes={["choice"]}
               onImportSet={handleImportFromLibrary}
             />
+
+            {step === 1 && (
+              <GameDemoVideoButton
+                gameId="egg-crack"
+                titleVi="Đập Trứng Toán Học"
+                titleEn="Egg Smash Math"
+                badgeVi="Đập Trứng"
+                badgeEn="Egg Smash"
+                badgeBg="bg-amber-500 text-white"
+                videoId="R6fn9PnMmog"
+              />
+            )}
 
             <TeacherGameGuideButton
               game={{
@@ -903,11 +918,39 @@ export default function CreateChoiceEggPage() {
               </div>
             </div>
 
+            {/* Live Visual Preview Banner (Egg Smash Math) */}
+            <QuizVisualGuideBanner
+              gameMode="choice-egg"
+              questions={questions.map((item) => ({
+                id: item.id,
+                questionText: item.q,
+                options: [
+                  { id: "A", text: item.a, isCorrect: true },
+                  ...item.wrong.map((w, wi) => ({ id: `W${wi}`, text: w, isCorrect: false })),
+                ],
+              }))}
+              activeIndex={previewQuestionIdx}
+              onActiveIndexChange={setPreviewQuestionIdx}
+              onSelectQuestionIndex={(index) => {
+                const el = document.getElementById(`question-card-${index}`);
+                if (el) {
+                  el.scrollIntoView({ behavior: "smooth", block: "center" });
+                  el.classList.add("ring-4", "ring-amber-400", "scale-[1.02]");
+                  setTimeout(() => {
+                    el.classList.remove("ring-4", "ring-amber-400", "scale-[1.02]");
+                  }, 1500);
+                }
+              }}
+            />
+
             {/* Questions Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
               {questions.map((item, idx) => (
                 <div
                   key={item.id}
+                  id={`question-card-${idx}`}
+                  onFocusCapture={() => setPreviewQuestionIdx(idx)}
+                  onClick={() => setPreviewQuestionIdx(idx)}
                   className="bg-white/95 dark:bg-slate-900/90 backdrop-blur-md rounded-3xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-md flex flex-col justify-between gap-4 group hover:border-amber-500/40 transition-all relative overflow-hidden"
                 >
                   <div className="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">

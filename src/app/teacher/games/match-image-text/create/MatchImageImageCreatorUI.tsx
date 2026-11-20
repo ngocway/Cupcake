@@ -35,6 +35,7 @@ import { uploadImageFast, uploadExternalImageUrlFast } from "@/lib/direct-upload
 import { AutoGenerateTopicModal, GeneratedPairResult } from "@/components/games/AutoGenerateTopicModal";
 import { TeacherLibraryPickerButton } from "@/components/games/TeacherLibraryPickerButton";
 import { getTeacherLibrarySetByIdAction, updateTeacherLibrarySetAction, LibrarySetItem } from "@/actions/teacher-library-actions";
+import { PairVisualGuideBanner } from "@/components/games/PairVisualGuideBanner";
 import { GameCardThumbnailPreview } from "@/components/games/thumbnails/GameCardThumbnailPreview";
 import { useGameThumbnailCapture } from "@/hooks/useGameThumbnailCapture";
 
@@ -1250,6 +1251,29 @@ export function MatchImageImageCreatorUI() {
             </div>
           </div>
 
+          {/* Visual Pair Guide Banner (Image-Image Live Preview) */}
+          <PairVisualGuideBanner
+            gameMode={gameMode}
+            gameType="image-image"
+            maxPairsPerRound={MAX_PAIRS_PER_ROUND}
+            imageImagePairs={pairs}
+            currentRoundTitle={currentRound?.title}
+            onSelectPairIndex={(index) => {
+              if (index < pairs.length) {
+                const el = document.getElementById(`pair-card-${index}`);
+                if (el) {
+                  el.scrollIntoView({ behavior: "smooth", block: "center" });
+                  el.classList.add("ring-4", "ring-emerald-400", "scale-[1.02]");
+                  setTimeout(() => {
+                    el.classList.remove("ring-4", "ring-emerald-400", "scale-[1.02]");
+                  }, 1500);
+                }
+              } else if (pairs.length < MAX_PAIRS_PER_ROUND) {
+                handleAddPair();
+              }
+            }}
+          />
+
           {/* Pair Items 3-Column Grid Container */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {pairs.map((pair, pIdx) => {
@@ -1259,6 +1283,7 @@ export function MatchImageImageCreatorUI() {
               return (
                 <div
                   key={pair.id}
+                  id={`pair-card-${pIdx}`}
                   className="bg-white dark:bg-slate-900 p-4 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-sm transition-all hover:border-sky-200 dark:hover:border-sky-900 flex flex-col justify-between"
                 >
                   <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100 dark:border-slate-800">
