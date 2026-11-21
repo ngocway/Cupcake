@@ -4,9 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Match the Pairs! 🌟</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Quicksand:wght@600;700;800&display=swap');
-
         * {
             box-sizing: border-box;
             user-select: none;
@@ -20,7 +21,7 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
-            font-family: 'Fredoka One', 'Quicksand', cursive, sans-serif;
+            font-family: 'Nunito', 'Baloo 2', system-ui, -apple-system, sans-serif;
             background: #c2e9fb;
         }
 
@@ -62,7 +63,8 @@
         .round-text {
             color: #ff6b6b;
             font-size: 1.45rem;
-            font-family: 'Fredoka One', cursive;
+            font-family: 'Baloo 2', 'Nunito', sans-serif;
+            font-weight: 800;
             letter-spacing: 0.5px;
             white-space: nowrap;
             text-shadow: 1px 1px 0 rgba(255,255,255,0.8);
@@ -90,7 +92,8 @@
         .progress-count {
             color: #7048e8;
             font-size: 1.35rem;
-            font-family: 'Fredoka One', cursive;
+            font-family: 'Baloo 2', 'Nunito', sans-serif;
+            font-weight: 800;
             white-space: nowrap;
             letter-spacing: 1px;
         }
@@ -366,8 +369,10 @@
             border: 4px dashed #4dabf7;
             border-radius: 12px;
             padding: 12px 16px;
-            font-size: 1.35rem;
-            line-height: 1.28;
+            font-family: 'Nunito', system-ui, -apple-system, sans-serif;
+            font-weight: 800;
+            font-size: 1.3rem;
+            line-height: 1.32;
             color: #1c7ed6;
             background: rgba(231, 245, 255, 0.9);
             text-align: center;
@@ -490,7 +495,8 @@
             transform: translateX(-50%);
             background: linear-gradient(180deg, #ff9f43 0%, #ee5253 100%);
             color: #ffffff;
-            font-family: 'Fredoka One', cursive;
+            font-family: 'Baloo 2', 'Nunito', sans-serif;
+            font-weight: 800;
             font-size: 1.35rem;
             letter-spacing: 1.5px;
             padding: 12px 42px;
@@ -575,7 +581,8 @@
             margin-top: 20px;
             letter-spacing: 2px;
             text-shadow: 1px 2px 4px rgba(0,0,0,0.15);
-            font-family: 'Fredoka One', cursive;
+            font-family: 'Baloo 2', 'Nunito', sans-serif;
+            font-weight: 800;
         }
         @keyframes spin {
             100% { transform: rotate(360deg); }
@@ -890,14 +897,19 @@
         return typeof str === 'string' && (str.startsWith('/') || str.startsWith('http') || str.startsWith('data:'));
     }
 
-    function preloadImagesWithTimeout(imageUrls, timeoutMs = 1200) {
-        const promises = imageUrls.filter(isValidImageUrl).map(url => {
+    function preloadImagesWithTimeout(imageUrls, timeoutMs = 4500, onProgress = null) {
+        const validUrls = imageUrls.filter(isValidImageUrl);
+        let loaded = 0;
+        const total = validUrls.length;
+        const promises = validUrls.map(url => {
             return new Promise((resolve) => {
                 const img = new Image();
                 let done = false;
                 const finish = () => {
                     if (!done) {
                         done = true;
+                        loaded++;
+                        if (typeof onProgress === 'function') onProgress(loaded, total);
                         resolve();
                     }
                 };
@@ -960,7 +972,10 @@
                 });
 
                 if (round1Urls.length > 0) {
-                    await preloadImagesWithTimeout(round1Urls, 1200);
+                    const loaderText = document.querySelector('#boardLoadingState .board-loader-text');
+                    await preloadImagesWithTimeout(round1Urls, 4500, (loaded, total) => {
+                        if (loaderText) loaderText.textContent = `Đang tải hình ảnh (${loaded}/${total})...`;
+                    });
                 }
 
                 // Hide board loading state smoothly

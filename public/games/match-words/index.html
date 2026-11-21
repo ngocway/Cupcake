@@ -5,15 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="referrer" content="no-referrer">
     <title>Match the Words Game! 🌟</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
-        
         body {
             margin: 0;
             padding: 0;
             overflow: hidden;
             background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
-            font-family: 'Fredoka One', cursive;
+            font-family: 'Nunito', 'Baloo 2', system-ui, -apple-system, sans-serif;
+            font-weight: 800;
+            line-height: 1.3;
             user-select: none;
             touch-action: none; /* Prevent scroll on touch devices */
             display: flex;
@@ -62,7 +65,8 @@
             margin: 10px 0;
             width: 80%;
             font-size: 1.5rem;
-            font-family: 'Fredoka One', cursive;
+            font-family: 'Baloo 2', 'Nunito', sans-serif;
+            font-weight: 800;
             color: #ff9f43;
             cursor: pointer;
             box-shadow: 0 5px 0 #ff9f43;
@@ -304,7 +308,8 @@
         .play-btn {
             background: #ff6b6b;
             color: white;
-            font-family: 'Fredoka One', cursive;
+            font-family: 'Baloo 2', 'Nunito', sans-serif;
+            font-weight: 800;
             font-size: 3rem;
             padding: 20px 50px;
             border: 8px solid white;
@@ -1148,17 +1153,39 @@
                     defaultTopic = data.defaultTopic;
                     currentTopic = defaultTopic;
 
-                    // Preload all topic images in background
-                    Object.values(topicsData).forEach(topicCards => {
-                        if (Array.isArray(topicCards)) {
-                            topicCards.forEach(c => {
-                                if (c.imageUrl) {
+                    // Priority preload images of the active topic before starting (max 5s timeout)
+                    const activeItems = (topicsData[currentTopic] && Array.isArray(topicsData[currentTopic].items))
+                        ? topicsData[currentTopic].items
+                        : [];
+                    const activeUrls = activeItems
+                        .map(c => c.image || c.imageUrl)
+                        .filter(u => typeof u === 'string' && (u.startsWith('http') || u.startsWith('/') || u.startsWith('data:')));
+
+                    if (activeUrls.length > 0) {
+                        await Promise.all(activeUrls.map(url => new Promise((resolve) => {
+                            const img = new Image();
+                            let done = false;
+                            const finish = () => { if (!done) { done = true; resolve(); } };
+                            img.onload = finish;
+                            img.onerror = finish;
+                            img.src = url;
+                            setTimeout(finish, 5000);
+                        })));
+                    }
+
+                    // Background preload remaining topic images
+                    setTimeout(() => {
+                        Object.values(topicsData).forEach(topicObj => {
+                            const items = Array.isArray(topicObj) ? topicObj : (topicObj && Array.isArray(topicObj.items) ? topicObj.items : []);
+                            items.forEach(c => {
+                                const src = c.image || c.imageUrl;
+                                if (src && typeof src === 'string' && (src.startsWith('http') || src.startsWith('/'))) {
                                     const preImg = new Image();
-                                    preImg.src = c.imageUrl;
+                                    preImg.src = src;
                                 }
                             });
-                        }
-                    });
+                        });
+                    }, 150);
                 } else {
                     document.getElementById('titleText').textContent = 'No Topics Found';
                 }

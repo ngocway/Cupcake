@@ -63,6 +63,22 @@ const DEFAULT_GAME_DATA = [
       const data = await res.json();
       if (data.success && Array.isArray(data.rounds) && data.rounds.length > 0) {
         gameRounds = data.rounds;
+        // Priority preload first 2 questions' images before revealing the board (max 4.5s)
+        const firstRoundQs = Array.isArray(gameRounds[0]?.questions) ? gameRounds[0].questions.slice(0, 2) : [];
+        const priorityImgs = firstRoundQs
+          .map(q => q?.imageUrl)
+          .filter(u => typeof u === 'string' && u.trim() !== '');
+        if (priorityImgs.length > 0) {
+          await Promise.all(priorityImgs.map(url => new Promise((resolve) => {
+            const img = new Image();
+            let done = false;
+            const finish = () => { if (!done) { done = true; resolve(); } };
+            img.onload = finish;
+            img.onerror = finish;
+            img.src = url;
+            setTimeout(finish, 4500);
+          })));
+        }
       } else {
         console.warn('Cannot load topic data, falling back to default:', data.error);
       }

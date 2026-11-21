@@ -324,6 +324,53 @@ function MemoryGameContent() {
         }));
 
         const finalRounds = parsedRounds.length > 0 ? parsedRounds : [defaultRound];
+
+        // Priority preload Round 1 images before showing the board (max 4.5s timeout)
+        const round1Urls: string[] = [];
+        (finalRounds[0]?.pairs || []).forEach((p: any) => {
+          if (p?.imageUrl && typeof p.imageUrl === 'string') round1Urls.push(p.imageUrl);
+          if (p?.imageBUrl && typeof p.imageBUrl === 'string') round1Urls.push(p.imageBUrl);
+        });
+        if (round1Urls.length > 0 && typeof window !== 'undefined') {
+          await Promise.all(
+            round1Urls.map(
+              (url) =>
+                new Promise<void>((resolve) => {
+                  const img = new window.Image();
+                  let done = false;
+                  const finish = () => {
+                    if (!done) {
+                      done = true;
+                      resolve();
+                    }
+                  };
+                  img.onload = finish;
+                  img.onerror = finish;
+                  img.src = url;
+                  setTimeout(finish, 4500);
+                })
+            )
+          );
+        }
+
+        // Background preload remaining rounds
+        if (finalRounds.length > 1 && typeof window !== 'undefined') {
+          setTimeout(() => {
+            finalRounds.slice(1).forEach((r) => {
+              (r.pairs || []).forEach((p: any) => {
+                if (p?.imageUrl) {
+                  const i1 = new window.Image();
+                  i1.src = p.imageUrl;
+                }
+                if (p?.imageBUrl) {
+                  const i2 = new window.Image();
+                  i2.src = p.imageBUrl;
+                }
+              });
+            });
+          }, 150);
+        }
+
         setRounds(finalRounds);
         startRound(0, finalRounds, isImgImg);
       }

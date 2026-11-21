@@ -16,7 +16,7 @@ html, body {
   height: 100%;
   overflow: hidden;
   background: #1290e6;
-  font-family: 'Fredoka', 'Nunito', ui-rounded, "Arial Rounded MT Bold", "Trebuchet MS", system-ui, sans-serif;
+  font-family: 'Nunito', 'Baloo 2', system-ui, -apple-system, sans-serif;
 }
 button { font: inherit; }
 .app, .game-root {
@@ -103,7 +103,7 @@ button { font: inherit; }
   display: none;
 }
 .value {
-  font-family: 'Fredoka', 'Nunito', sans-serif;
+  font-family: 'Baloo 2', 'Nunito', sans-serif;
   font-size: clamp(14px, 1.4vw, 26px);
   font-weight: 800;
   color: #ffd93f;
@@ -181,7 +181,7 @@ button { font: inherit; }
   z-index: 9;
 }
 .question-text {
-  font-family: 'Fredoka', 'Nunito', sans-serif;
+  font-family: 'Baloo 2', 'Nunito', sans-serif;
   font-size: clamp(32px, 5.4vw, 98px);
   font-weight: 800;
   color: #522109;
@@ -266,7 +266,7 @@ button { font: inherit; }
   left: 50%;
   top: 53%;
   transform: translate(-50%, -50%);
-  font-family: 'Fredoka', 'Nunito', sans-serif;
+  font-family: 'Baloo 2', 'Nunito', sans-serif;
   font-size: clamp(42px, 6.4vw, 118px);
   font-weight: 800;
   color: #ffffff;
@@ -464,7 +464,7 @@ button { font: inherit; }
   background: linear-gradient(180deg, #ffe066, #ff9900);
   border: 3.5px solid #ffffff;
   color: #4a2200;
-  font-family: 'Fredoka', 'Nunito', sans-serif;
+  font-family: 'Baloo 2', 'Nunito', sans-serif;
   font-weight: 900;
   font-size: clamp(16px, 1.4vw, 26px);
   z-index: 100;

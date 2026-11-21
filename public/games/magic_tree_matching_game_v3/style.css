@@ -384,11 +384,11 @@ button { font: inherit; }
 }
 
 .card-error-fallback .fallback-word {
-  font-family: 'Fredoka', var(--ui-font);
+  font-family: 'Nunito', 'Baloo 2', var(--ui-font);
   font-size: clamp(10px, 1.1vw, 16px);
-  font-weight: 900;
+  font-weight: 800;
   color: #78350f;
-  line-height: 1.1;
+  line-height: 1.25;
   word-break: break-word;
   max-width: 95%;
 }
@@ -493,9 +493,9 @@ button { font: inherit; }
   align-items: center;
   justify-content: center;
   gap: 0.05em;
-  font-family: "Fredoka", "Arial Rounded MT Bold", "Nunito", "Trebuchet MS", sans-serif;
+  font-family: 'Baloo 2', 'Nunito', system-ui, sans-serif;
   font-size: clamp(14px, 1.8vw, 36px);
-  font-weight: 900;
+  font-weight: 800;
   text-transform: uppercase;
   user-select: none;
   transition: transform 0.25s ease, filter 0.25s ease;
@@ -683,9 +683,9 @@ button { font: inherit; }
 }
 
 .round-transition-text {
-  font-family: "Fredoka", "Arial Rounded MT Bold", sans-serif;
+  font-family: 'Baloo 2', 'Nunito', system-ui, sans-serif;
   font-size: clamp(32px, 4.2vw, 68px);
-  font-weight: 900;
+  font-weight: 800;
   color: #d97706;
   text-shadow: 0 3px 0 #fff, 0 6px 14px rgba(180, 83, 9, 0.35);
   letter-spacing: 0.05em;
@@ -693,7 +693,7 @@ button { font: inherit; }
 }
 
 .round-transition-sub {
-  font-family: "Fredoka", "Arial Rounded MT Bold", sans-serif;
+  font-family: 'Nunito', 'Baloo 2', system-ui, sans-serif;
   font-size: clamp(14px, 1.6vw, 24px);
   font-weight: 800;
   color: #92400e;
@@ -978,9 +978,9 @@ button { font: inherit; }
 }
 
 .loading-title {
-  font-family: 'Fredoka', var(--ui-font);
+  font-family: 'Baloo 2', 'Nunito', var(--ui-font);
   font-size: clamp(14px, 1.4vw, 18px);
-  font-weight: 900;
+  font-weight: 800;
   color: #1e3a5f;
   letter-spacing: 0.5px;
   text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);

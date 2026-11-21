@@ -443,6 +443,10 @@ export async function getAdminTeacherGamesAction(): Promise<{
       prisma.matchWordTopic.findMany({
         where: {
           teacherId: { not: null },
+          OR: [
+            { gameMode: null },
+            { NOT: { gameMode: { startsWith: "library-" } } },
+          ],
         },
         include: {
           teacher: {
@@ -541,6 +545,10 @@ export async function getPublishedTeacherGamesAction(): Promise<AdminTeacherGame
     const rawTopics = await prisma.matchWordTopic.findMany({
       where: {
         id: { in: publishedIds },
+        OR: [
+          { gameMode: null },
+          { NOT: { gameMode: { startsWith: "library-" } } },
+        ],
       },
       include: {
         teacher: {

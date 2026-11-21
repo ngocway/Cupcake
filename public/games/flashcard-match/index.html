@@ -5,9 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="referrer" content="no-referrer">
     <title>Flashcard Match! 🌟</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap');
-
         html, body {
             margin: 0;
             padding: 0;
@@ -18,7 +19,9 @@
 
         body {
             background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
-            font-family: 'Fredoka One', cursive;
+            font-family: 'Nunito', 'Baloo 2', system-ui, -apple-system, sans-serif;
+            font-weight: 800;
+            line-height: 1.3;
             user-select: none;
             touch-action: none;
             display: flex;
@@ -314,7 +317,8 @@
         #nextRoundBtn {
             background: #ff6b6b;
             color: white;
-            font-family: 'Fredoka One', cursive;
+            font-family: 'Baloo 2', 'Nunito', sans-serif;
+            font-weight: 800;
             font-size: 1.8rem;
             padding: 14px 44px;
             border: 6px solid white;
@@ -370,7 +374,8 @@
         }
         .play-btn {
             background: #ff6b6b; color: white;
-            font-family: 'Fredoka One', cursive;
+            font-family: 'Baloo 2', 'Nunito', sans-serif;
+            font-weight: 800;
             font-size: 2.5rem; padding: 18px 54px;
             border: 8px solid white; border-radius: 50px; cursor: pointer;
             box-shadow: 0 10px 0 #ee5253, 0 20px 30px rgba(0,0,0,0.2);
@@ -1138,17 +1143,51 @@
                 allCards = data.cards;
                 isTeacherGame = Boolean(data.isTeacherGame);
 
-                // Background Preload all card images
-                allCards.forEach(c => {
-                    if (c.imageUrl) {
-                        const preImg = new Image();
-                        preImg.src = c.imageUrl;
-                    }
-                    if (c.imageBUrl) {
-                        const preImgB = new Image();
-                        preImgB.src = c.imageBUrl;
-                    }
+                // Priority preload Round 1 images before allowing play (max 5s timeout)
+                const minRoundIdx = Math.min(...allCards.map(c => (c.roundIndex !== undefined && c.roundIndex !== null) ? c.roundIndex : 0));
+                const round1Cards = allCards.filter(c => ((c.roundIndex !== undefined && c.roundIndex !== null) ? c.roundIndex : 0) === minRoundIdx).slice(0, 8);
+                const round1Urls = [];
+                round1Cards.forEach(c => {
+                    if (c.imageUrl) round1Urls.push(c.imageUrl);
+                    if (c.imageBUrl) round1Urls.push(c.imageBUrl);
                 });
+
+                if (round1Urls.length > 0) {
+                    let loaded = 0;
+                    const total = round1Urls.length;
+                    const loadTextEl = loadingEl ? loadingEl.querySelector('.loadText') : null;
+                    if (loadTextEl) loadTextEl.textContent = `ĐANG TẢI HÌNH ẢNH (0/${total})...`;
+                    await Promise.all(round1Urls.map(url => new Promise((resolve) => {
+                        const img = new Image();
+                        let done = false;
+                        const finish = () => {
+                            if (!done) {
+                                done = true;
+                                loaded++;
+                                if (loadTextEl) loadTextEl.textContent = `ĐANG TẢI HÌNH ẢNH (${loaded}/${total})...`;
+                                resolve();
+                            }
+                        };
+                        img.onload = finish;
+                        img.onerror = finish;
+                        img.src = url;
+                        setTimeout(finish, 5000);
+                    })));
+                }
+
+                // Background Preload remaining card images
+                setTimeout(() => {
+                    allCards.forEach(c => {
+                        if (c.imageUrl) {
+                            const preImg = new Image();
+                            preImg.src = c.imageUrl;
+                        }
+                        if (c.imageBUrl) {
+                            const preImgB = new Image();
+                            preImgB.src = c.imageBUrl;
+                        }
+                    });
+                }, 100);
             } else {
                 loadingEl.querySelector('.loadText').textContent = 'No cards found 😢';
                 return;

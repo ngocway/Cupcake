@@ -668,6 +668,33 @@ function MysteryTreasureGridContent() {
               };
             });
 
+            // Priority preload first 3 questions' images of Round 1 (max 4.5s timeout)
+            const priorityImgUrls = (parsedRounds[0]?.questions || [])
+              .slice(0, 3)
+              .map((q) => q.imageUrl)
+              .filter((u): u is string => Boolean(u && typeof u === 'string'));
+            if (priorityImgUrls.length > 0 && typeof window !== 'undefined') {
+              await Promise.all(
+                priorityImgUrls.map(
+                  (url) =>
+                    new Promise<void>((resolve) => {
+                      const img = new window.Image();
+                      let done = false;
+                      const finish = () => {
+                        if (!done) {
+                          done = true;
+                          resolve();
+                        }
+                      };
+                      img.onload = finish;
+                      img.onerror = finish;
+                      img.src = url;
+                      setTimeout(finish, 4500);
+                    })
+                )
+              );
+            }
+
             setRounds(parsedRounds);
             setCurrentRoundIndex(0);
           } else {
