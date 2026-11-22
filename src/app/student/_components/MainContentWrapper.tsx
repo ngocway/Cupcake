@@ -16,6 +16,7 @@ export function MainContentWrapper({
     pathname?.includes('/quiz') || 
     pathname?.includes('/play') ||
     pathname?.includes('/unit-review') ||
+    pathname?.includes('/unit-grammar') ||
     (pathname?.includes('/books/') && pathname !== '/student/books')
 
   const [isEmbedded, setIsEmbedded] = useState(false)

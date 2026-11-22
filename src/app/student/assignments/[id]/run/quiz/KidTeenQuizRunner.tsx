@@ -15,6 +15,7 @@ import {
   Volume2,
   VolumeX,
   ArrowLeft,
+  BookOpen,
 } from "lucide-react";
 
 import { LoginModal } from "@/components/LoginButton";
@@ -77,6 +78,11 @@ interface Props {
   onRetry?: () => void;
   isEmbeddedInCanvas?: boolean;
   isAdmin?: boolean;
+  audioOnlyAfterCheck?: boolean;
+  customBookButton?: {
+    title?: string;
+    onClick: () => void;
+  };
 }
 
 export default function KidTeenQuizRunner({
@@ -100,6 +106,8 @@ export default function KidTeenQuizRunner({
   onRetry,
   isEmbeddedInCanvas = false,
   isAdmin = false,
+  audioOnlyAfterCheck = false,
+  customBookButton,
 }: Props) {
   const [rawQuestions, setRawQuestions] = useState<any[]>(rawQuestionsProp);
   const [attemptSeed, setAttemptSeed] = useState<string>(() => {
@@ -752,13 +760,24 @@ export default function KidTeenQuizRunner({
               {/* Card Header Row */}
               <div className="flex items-center justify-between px-6 pt-5 pb-1 z-20">
                 <div className="flex items-center gap-2">
-                  <Suspense fallback={null}>
-                    <SidePanelToggleButton
-                      promise={extraDataPromise}
-                      isSidePanelOpen={isSidePanelOpen}
-                      setIsSidePanelOpen={setIsSidePanelOpen}
-                    />
-                  </Suspense>
+                  {customBookButton ? (
+                    <button
+                      type="button"
+                      onClick={customBookButton.onClick}
+                      className="flex items-center justify-center p-2 bg-white text-purple-600 rounded-full border-2 border-purple-100 hover:bg-purple-50 hover:border-purple-300 transition-all active:scale-95 shadow-sm hover:scale-105 duration-200 cursor-pointer"
+                      title={customBookButton.title || "Xem lại tóm tắt ngữ pháp"}
+                    >
+                      <BookOpen className="w-5 h-5 text-purple-500" />
+                    </button>
+                  ) : (
+                    <Suspense fallback={null}>
+                      <SidePanelToggleButton
+                        promise={extraDataPromise}
+                        isSidePanelOpen={isSidePanelOpen}
+                        setIsSidePanelOpen={setIsSidePanelOpen}
+                      />
+                    </Suspense>
+                  )}
                 </div>
 
                 {quizMode === "autoplay" && (
@@ -833,12 +852,14 @@ export default function KidTeenQuizRunner({
                     >
                       {questionText}
                     </h3>
-                    {!isListeningQuestion && (validAudioUrl || currentQuestion?.audioUrl) && (
-                      <QuestionAudioPlayButton
-                        src={validAudioUrl || currentQuestion?.audioUrl}
-                        playbackRate={audioEngine.getQuestionSpeed()}
-                      />
-                    )}
+                    {!isListeningQuestion &&
+                      (validAudioUrl || currentQuestion?.audioUrl) &&
+                      (!audioOnlyAfterCheck || isChecked) && (
+                        <QuestionAudioPlayButton
+                          src={validAudioUrl || currentQuestion?.audioUrl}
+                          playbackRate={audioOnlyAfterCheck ? 1.0 : audioEngine.getQuestionSpeed()}
+                        />
+                      )}
                   </div>
                 )}
 

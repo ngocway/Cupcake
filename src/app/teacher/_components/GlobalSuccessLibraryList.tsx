@@ -2,7 +2,9 @@
 
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { getUnitReviewCountsByGradeAction } from "@/actions/unit-review-actions";
+import { hasUnitGrammarLesson } from "@/data/global-success-grammar";
 import {
   BookOpen,
   Gamepad2,
@@ -403,6 +405,11 @@ export function GlobalSuccessLibraryList() {
   const [viewingSet, setViewingSet] = useState<LibrarySetItem | null>(null);
   const [sharingSet, setSharingSet] = useState<LibrarySetItem | null>(null);
   const [sharingReview, setSharingReview] = useState<{
+    grade: number;
+    unitNumber: number;
+    unitHeader: string;
+  } | null>(null);
+  const [sharingGrammar, setSharingGrammar] = useState<{
     grade: number;
     unitNumber: number;
     unitHeader: string;
@@ -1389,25 +1396,12 @@ export function GlobalSuccessLibraryList() {
       {selectedGrade === null ? (
         <div className="w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-[8px] border border-amber-200/80 dark:border-slate-800 p-6 sm:p-8 shadow-xs space-y-6">
           {/* Guided 2-Step Onboarding Banner */}
-          <div className="flex flex-col items-center text-center max-w-xl mx-auto space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100/90 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 text-[11px] font-extrabold uppercase tracking-wider">
-              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-              <span>
-                {locale === "vi"
-                  ? "Hướng dẫn: Chọn ① Khối lớp ➔ ② Bài học (Unit)"
-                  : "Quick Start: Choose ① Grade ➔ ② Unit"}
-              </span>
-            </div>
+          <div className="flex flex-col items-center text-center max-w-xl mx-auto">
             <h3 className="font-headline font-black text-xl sm:text-2xl text-slate-800 dark:text-white">
               {locale === "vi"
                 ? "Bước 1: Chọn Khối lớp (Grade) bạn đang dạy"
                 : "Step 1: Select your Grade level"}
             </h3>
-            <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400">
-              {locale === "vi"
-                ? "Bấm chọn một Khối lớp bên dưới để mở danh sách các Bài học (Unit) và bộ câu hỏi tương ứng."
-                : "Pick a Grade below to view its Units and ready-to-play question sets."}
-            </p>
           </div>
 
           {/* 12-Grade Interactive Bookshelf Grid */}
@@ -1524,18 +1518,66 @@ export function GlobalSuccessLibraryList() {
                 className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-[8px] border border-amber-200/70 dark:border-slate-800 p-5 sm:p-6 shadow-xs space-y-4"
               >
                 {/* Unit Section Header */}
-                <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
-                  <div className="flex items-center gap-3">
-                    <div className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-headline font-black text-xs shadow-xs">
+                <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-headline font-black text-xs shadow-xs shrink-0">
                       {t.library.gradeLabel} {selectedGrade}
                     </div>
-                    <h3 className="font-headline font-black text-lg text-slate-800 dark:text-white">
+                    <h3 className="font-headline font-black text-lg text-slate-800 dark:text-white truncate">
                       📘 {unitGroup.unitHeader}
                     </h3>
                   </div>
-                  <span className="px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[11px] font-extrabold">
-                    {unitGroup.items.length} {locale === "vi" ? "bộ câu hỏi" : "question sets"}
-                  </span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {selectedGrade !== null && hasUnitGrammarLesson(selectedGrade, unitGroup.unitNumber) && (
+                      <div className="inline-flex items-center gap-1">
+                        <Link
+                          href={`/student/unit-grammar?grade=${selectedGrade}&unit=${unitGroup.unitNumber}&returnUrl=${encodeURIComponent("/teacher?tab=lib-global")}`}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-extrabold text-xs shadow-sm shadow-indigo-500/20 hover:shadow-md transition-all active:scale-95"
+                          title={
+                            selectedGrade <= 2
+                              ? locale === "vi"
+                                ? "Xem tóm tắt mẫu câu trọng tâm & làm bài tập"
+                                : "Review key sentences & practice"
+                              : locale === "vi"
+                                ? "Xem tóm tắt ngữ pháp & làm bài tập"
+                                : "Review unit grammar & practice"
+                          }
+                        >
+                          <BookOpen className="w-3.5 h-3.5" />
+                          <span>
+                            {selectedGrade <= 2
+                              ? locale === "vi"
+                                ? "Mẫu câu trọng tâm"
+                                : "Key Sentences"
+                              : locale === "vi"
+                                ? "Ôn tập Ngữ pháp"
+                                : "Grammar Review"}
+                          </span>
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSharingGrammar({
+                              grade: selectedGrade,
+                              unitNumber: unitGroup.unitNumber,
+                              unitHeader: unitGroup.unitHeader,
+                            })
+                          }
+                          className="w-8 h-8 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/60 border border-indigo-200/80 dark:border-indigo-800 text-indigo-600 dark:text-indigo-300 flex items-center justify-center transition-all cursor-pointer active:scale-95"
+                          title={
+                            locale === "vi"
+                              ? "Chia sẻ link & mã QR ôn tập ngữ pháp cho học sinh"
+                              : "Share grammar review link & QR code"
+                          }
+                        >
+                          <Share2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+                    <span className="px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[11px] font-extrabold">
+                      {unitGroup.items.length} {locale === "vi" ? "bộ câu hỏi" : "question sets"}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Cards Grid for this Unit (3 items / row on desktop) */}
@@ -2390,6 +2432,28 @@ export function GlobalSuccessLibraryList() {
           gamePath={`/student/unit-review?grade=${sharingReview.grade}&unit=${sharingReview.unitNumber}`}
           isGlobalSuccess={true}
           gradeLevel={`Grade ${sharingReview.grade}`}
+          subType="quiz"
+        />
+      )}
+
+      {/* MODAL 3.6: SHARE UNIT GRAMMAR DIRECTLY */}
+      {sharingGrammar && (
+        <MatchGameShareModal
+          isOpen={Boolean(sharingGrammar)}
+          onClose={() => setSharingGrammar(null)}
+          topicName={`${sharingGrammar.unitHeader} (${
+            sharingGrammar.grade <= 2
+              ? locale === "vi"
+                ? "Mẫu câu trọng tâm"
+                : "Key Sentences"
+              : locale === "vi"
+                ? "Ôn tập Ngữ pháp"
+                : "Grammar Review"
+          })`}
+          topicId={`unit-grammar-${sharingGrammar.grade}-${sharingGrammar.unitNumber}`}
+          gamePath={`/student/unit-grammar?grade=${sharingGrammar.grade}&unit=${sharingGrammar.unitNumber}`}
+          isGlobalSuccess={true}
+          gradeLevel={`Grade ${sharingGrammar.grade}`}
           subType="quiz"
         />
       )}
