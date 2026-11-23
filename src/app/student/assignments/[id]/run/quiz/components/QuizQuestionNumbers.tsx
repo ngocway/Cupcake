@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import { Check, X } from "lucide-react";
 import { getQuestionStatus } from "../utils/quizHelpers";
 
@@ -21,6 +21,18 @@ export function QuizQuestionNumbers({
   isAutoRevealing,
   navigateTo,
 }: QuizQuestionNumbersProps) {
+  const activeBtnRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (activeBtnRef.current) {
+      activeBtnRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "center",
+      });
+    }
+  }, [currentIndex]);
+
   if (!questions || questions.length === 0) return null;
 
   const splitTwoRows = questions.length > 8;
@@ -81,6 +93,7 @@ export function QuizQuestionNumbers({
     return (
       <button
         key={q.id}
+        ref={active ? activeBtnRef : null}
         onClick={() => navigateTo(i)}
         disabled={isAutoRevealing}
         className={`relative w-8 h-8 sm:w-9 sm:h-9 rounded-full transition-all duration-200 shrink-0 flex items-center justify-center cursor-pointer select-none ${btnClass}`}
@@ -105,18 +118,20 @@ export function QuizQuestionNumbers({
 
   return (
     <div className="w-full mt-2.5 sm:mt-4 z-20 flex justify-center px-2 animate-in fade-in-50 duration-300">
-      <div className="bg-white/85 dark:bg-slate-900/85 backdrop-blur-md border-2 border-white/90 dark:border-slate-700/80 shadow-xl shadow-slate-900/10 rounded-[2rem] px-2.5 sm:px-5 py-2 sm:py-2.5 max-w-full overflow-x-auto no-scrollbar scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden flex flex-col gap-1.5 sm:gap-2 items-center justify-center">
-        {/* Hàng 1: Từ trái qua phải */}
-        <div className="flex items-center justify-center gap-1 sm:gap-2.5 flex-nowrap">
-          {row1.map((q, idx) => renderQuestionButton(q, idx))}
-        </div>
-
-        {/* Hàng 2: Từ trái qua phải */}
-        {row2.length > 0 && (
-          <div className="flex items-center justify-center gap-1 sm:gap-2.5 flex-nowrap">
-            {row2.map((q, idx) => renderQuestionButton(q, half + idx))}
+      <div className="bg-white/85 dark:bg-slate-900/85 backdrop-blur-md border-2 border-white/90 dark:border-slate-700/80 shadow-xl shadow-slate-900/10 rounded-[2rem] px-3 sm:px-5 py-2 sm:py-2.5 max-w-full overflow-x-auto no-scrollbar scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        <div className="w-max min-w-full flex flex-col gap-1.5 sm:gap-2 items-center">
+          {/* Hàng 1: Từ trái qua phải */}
+          <div className="flex items-center gap-1 sm:gap-2.5 flex-nowrap justify-start sm:justify-center min-w-full px-1">
+            {row1.map((q, idx) => renderQuestionButton(q, idx))}
           </div>
-        )}
+
+          {/* Hàng 2: Từ trái qua phải */}
+          {row2.length > 0 && (
+            <div className="flex items-center gap-1 sm:gap-2.5 flex-nowrap justify-start sm:justify-center min-w-full px-1">
+              {row2.map((q, idx) => renderQuestionButton(q, half + idx))}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
