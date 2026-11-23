@@ -180,6 +180,7 @@ function UnitGrammarContent() {
   const grade = parseInt(searchParams.get("grade") || "3", 10) || 3;
   const unit = parseInt(searchParams.get("unit") || "1", 10) || 1;
   const returnUrl = searchParams.get("returnUrl") || "/teacher?tab=lib-global";
+  const isEmbedded = searchParams.get("embedded") === "true";
 
   const [lesson, setLesson] = useState<UnitGrammarLesson | null>(null);
   const [isLoadingLesson, setIsLoadingLesson] = useState(true);
@@ -366,46 +367,48 @@ function UnitGrammarContent() {
       {/* ================= STAGE 1: GRAMMAR SUMMARY ================= */}
       {stage === "summary" && (
         <div className="pb-16">
-          <header className="sticky top-0 z-30 bg-white/85 dark:bg-slate-900/85 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-800">
-            <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <button
-                  type="button"
-                  onClick={() => router.push(returnUrl)}
-                  className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center shrink-0 transition-colors cursor-pointer"
-                  title={isVi ? "Quay lại Thư viện" : "Back to Library"}
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                </button>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-violet-600 text-white text-[10px] font-black uppercase tracking-wider">
-                      Grade {lesson.grade} • Unit {lesson.unit}
-                    </span>
-                    <span className="text-[11px] font-extrabold text-indigo-600 dark:text-indigo-400">
-                      {pageLabel}
-                    </span>
+          {!isEmbedded && (
+            <header className="sticky top-0 z-30 bg-white/85 dark:bg-slate-900/85 backdrop-blur-xl border-b border-slate-200/80 dark:border-slate-800">
+              <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => router.push(returnUrl)}
+                    className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 flex items-center justify-center shrink-0 transition-colors cursor-pointer"
+                    title={isVi ? "Quay lại Thư viện" : "Back to Library"}
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                  </button>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="px-2 py-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-violet-600 text-white text-[10px] font-black uppercase tracking-wider">
+                        Grade {lesson.grade} • Unit {lesson.unit}
+                      </span>
+                      <span className="text-[11px] font-extrabold text-indigo-600 dark:text-indigo-400">
+                        {pageLabel}
+                      </span>
+                    </div>
+                    <h1 className="font-headline font-black text-sm sm:text-base text-slate-800 dark:text-white truncate">
+                      {lesson.unitTitle}
+                    </h1>
                   </div>
-                  <h1 className="font-headline font-black text-sm sm:text-base text-slate-800 dark:text-white truncate">
-                    {lesson.unitTitle}
-                  </h1>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setShowShareModal(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sky-50 hover:bg-sky-100 dark:bg-sky-950/50 dark:hover:bg-sky-900/60 border border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-300 font-extrabold text-xs transition-all cursor-pointer active:scale-95"
+                    title={isVi ? "Chia sẻ link & mã QR cho học sinh" : "Share link & QR code"}
+                  >
+                    <Share2 className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">{isVi ? "Chia sẻ" : "Share"}</span>
+                  </button>
+                  <TeacherLocaleSwitch />
                 </div>
               </div>
-
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  type="button"
-                  onClick={() => setShowShareModal(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sky-50 hover:bg-sky-100 dark:bg-sky-950/50 dark:hover:bg-sky-900/60 border border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-300 font-extrabold text-xs transition-all cursor-pointer active:scale-95"
-                  title={isVi ? "Chia sẻ link & mã QR cho học sinh" : "Share link & QR code"}
-                >
-                  <Share2 className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">{isVi ? "Chia sẻ" : "Share"}</span>
-                </button>
-                <TeacherLocaleSwitch />
-              </div>
-            </div>
-          </header>
+            </header>
+          )}
 
           <main className="max-w-4xl mx-auto px-4 pt-6 space-y-6">
             {/* Hero Banner */}
@@ -540,6 +543,22 @@ function UnitGrammarContent() {
               customBookButton={{
                 title: isVi ? "Xem lại tóm tắt ngữ pháp" : "Review Grammar Summary",
                 onClick: () => setShowFormulaModal(true),
+              }}
+              onComplete={(score) => {
+                if (typeof window !== "undefined" && window.parent && window.parent !== window) {
+                  try {
+                    window.parent.postMessage(
+                      {
+                        type: "GS_STATION_COMPLETED",
+                        grade: lesson.grade,
+                        unit: lesson.unit,
+                        station: "grammar",
+                        score,
+                      },
+                      "*"
+                    );
+                  } catch {}
+                }
               }}
               onRetry={() => {
                 stopAudio();

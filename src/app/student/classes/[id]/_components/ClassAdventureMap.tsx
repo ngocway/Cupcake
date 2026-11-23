@@ -821,10 +821,10 @@ export function ClassAdventureMap({
                   })
                   scale(${
                     offset === 0 
-                      ? 1.22 
+                      ? 1.34 
                       : absOffset === 1 
-                        ? 0.73 
-                        : 0.46
+                        ? 0.80 
+                        : 0.50
                   })
                 `;
 
@@ -916,7 +916,7 @@ export function ClassAdventureMap({
                       <div className="absolute -top-6 sm:-top-8 left-1/2 -translate-x-1/2 flex flex-col items-center animate-bounce z-40 pointer-events-none whitespace-nowrap">
                         <div className="px-3 py-1 rounded-full bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white font-black text-xs sm:text-sm shadow-xl tracking-wide uppercase flex items-center gap-1.5 border-2 border-white ring-2 ring-amber-400/50">
                           <Flame className="w-4 h-4 fill-amber-300 text-amber-300" />
-                          <span>Bé đang ở đây!</span>
+                          <span>Bạn đang ở đây!</span>
                         </div>
                         <div className="w-2.5 h-2.5 bg-orange-500 rotate-45 -mt-1 shadow-xs border-r-2 border-b-2 border-white" />
                       </div>
@@ -983,9 +983,9 @@ export function ClassAdventureMap({
                         </div>
                       )}
 
-                      {/* ── CHUNKY 3D ACTION BUTTON DƯỚI ĐÁY ĐẢO TÂM ĐIỂM (🚀 MỞ / 🔒 ĐANG KHÓA) ── */}
+                      {/* ── CHUNKY 3D ACTION BUTTON DƯỚI ĐÁY ĐẢO TÂM ĐIỂM (🚀 MỞ ĐẢO / 🔒 ĐANG KHÓA) ── */}
                       {isCenter && (
-                        <div className="absolute bottom-1 sm:bottom-2 md:bottom-2.5 left-1/2 -translate-x-1/2 z-40 pointer-events-auto">
+                        <div className="absolute bottom-5 sm:bottom-6 md:bottom-7 left-1/2 -translate-x-1/2 z-40 pointer-events-auto">
                           {isLocked && !isCompleted ? (
                             <button
                               type="button"
@@ -1022,7 +1022,7 @@ export function ClassAdventureMap({
                               <div className="absolute inset-x-2 top-0.5 h-1.5 rounded-full bg-gradient-to-b from-white/70 to-transparent pointer-events-none" />
                               <span className="text-xs sm:text-sm">🚀</span>
                               <span className="tracking-wider uppercase drop-shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
-                                MỞ
+                                MỞ ĐẢO
                               </span>
                             </button>
                           )}
@@ -1159,7 +1159,7 @@ export function ClassAdventureMap({
                     }`}>
                       <div className="px-3 py-1 rounded-full bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white font-black text-[10px] sm:text-[11px] shadow-lg tracking-wide uppercase flex items-center gap-1.5 border-2 border-white ring-2 ring-amber-400/50">
                         <Flame className="w-3.5 h-3.5 fill-amber-300 text-amber-300" />
-                        <span>Bé đang ở đây!</span>
+                        <span>Bạn đang ở đây!</span>
                       </div>
                       <div className="w-2.5 h-2.5 bg-orange-500 rotate-45 -mt-1 shadow-xs border-r-2 border-b-2 border-white" />
                     </div>
@@ -1597,7 +1597,6 @@ export function ClassAdventureMap({
             return (
               <div 
                 className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/65 backdrop-blur-md animate-in fade-in duration-200"
-                onClick={() => setSelectedStation(null)}
               >
                 {/* Modal Container */}
                 <div 

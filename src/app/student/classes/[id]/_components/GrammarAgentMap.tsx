@@ -754,7 +754,6 @@ export function GrammarAgentMap({
       {selectedStation && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/65 backdrop-blur-md animate-in fade-in duration-200"
-          onClick={() => setSelectedStation(null)}
         >
           {/* Modal Container */}
           <div 

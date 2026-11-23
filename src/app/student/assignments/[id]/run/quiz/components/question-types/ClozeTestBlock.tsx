@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { EnlargedEmojiText } from "@/components/common/EmojiRenderer";
 
 interface ClozeTestBlockProps {
   q: any;
@@ -60,7 +61,7 @@ export function ClozeTestBlock({
             </span>
           );
         }
-        return <span key={i}>{part}</span>;
+        return <EnlargedEmojiText key={i} text={part} />;
       })}
     </div>
   );

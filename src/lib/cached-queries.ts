@@ -581,19 +581,24 @@ export async function getCachedPublicClasses(): Promise<PublicClassItemType[]> {
         const palette = palettes[index % palettes.length];
         const nameLower = (c.name || '').toLowerCase();
         const isVocab = c.id === 'tiny-vocab-wonders' || nameLower.includes('vocab') || nameLower.includes('từ vựng');
+        const isGlobalSuccess = c.id === 'global-success-primary' || nameLower.includes('global success');
         const isGrammar = c.id === 'cmuvbigbg0001vta43ikcsjbk' || nameLower.includes('grammar') || nameLower.includes('ngữ pháp');
 
-        const subjectBadge = isVocab ? 'Từ vựng' : isGrammar ? 'Ngữ pháp' : 'Tiếng Anh';
-        const audienceBadge = isVocab 
-          ? 'Mẫu giáo - Tiểu học' 
-          : isGrammar 
-            ? 'Lấy lại căn bản' 
-            : (c.gradeLevel ? (c.gradeLevel.toLowerCase().startsWith('lớp') ? c.gradeLevel : `Lớp ${c.gradeLevel}`) : 'Tiểu học');
-        const audienceBadgeClass = isVocab 
-          ? 'bg-[#ffedd5] text-[#c2410c] border-[#fed7aa]' 
-          : isGrammar 
-            ? 'bg-[#e0e7ff] text-[#3730a3] border-[#c7d2fe]' 
-            : 'bg-[#ecfdf5] text-[#047857] border-[#a7f3d0]';
+        const subjectBadge = isGlobalSuccess ? 'Global Success' : isVocab ? 'Từ vựng' : isGrammar ? 'Ngữ pháp' : 'Tiếng Anh';
+        const audienceBadge = isGlobalSuccess
+          ? 'Tiểu học (Lớp 1–5)'
+          : isVocab 
+            ? 'Mẫu giáo - Tiểu học' 
+            : isGrammar 
+              ? 'Lấy lại căn bản' 
+              : (c.gradeLevel ? (c.gradeLevel.toLowerCase().startsWith('lớp') ? c.gradeLevel : `Lớp ${c.gradeLevel}`) : 'Tiểu học');
+        const audienceBadgeClass = isGlobalSuccess
+          ? 'bg-[#e0f2fe] text-[#0369a1] border-[#bae6fd]'
+          : isVocab 
+            ? 'bg-[#ffedd5] text-[#c2410c] border-[#fed7aa]' 
+            : isGrammar 
+              ? 'bg-[#e0e7ff] text-[#3730a3] border-[#c7d2fe]' 
+              : 'bg-[#ecfdf5] text-[#047857] border-[#a7f3d0]';
 
         const grade = c.gradeLevel ? `Lớp ${c.gradeLevel}` : 'Tiểu học';
         const teacherName = c.teacher?.name || 'Giáo viên Dolcake';

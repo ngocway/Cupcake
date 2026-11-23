@@ -15,6 +15,7 @@ function UnitReviewContent() {
   const gradeParam = searchParams.get("grade") || "3";
   const unitParam = searchParams.get("unit") || "1";
   const returnUrl = searchParams.get("returnUrl") || "/teacher?tab=lib-global";
+  const isEmbedded = searchParams.get("embedded") === "true";
 
   const grade = parseInt(gradeParam, 10) || 3;
   const unitNumber = parseInt(unitParam, 10) || 1;
@@ -105,34 +106,36 @@ function UnitReviewContent() {
   return (
     <div className="min-h-screen bg-[#F0F2FF] dark:bg-slate-950 relative overflow-x-hidden">
       {/* Top Bar Navigation */}
-      <div className="h-14 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-purple-100 dark:border-slate-800 flex items-center justify-between px-4 sm:px-6 sticky top-0 z-40 shadow-2xs">
-        <Link
-          href={returnUrl}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs transition-all active:scale-95"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span className="hidden sm:inline">Quay lại Thư viện</span>
-        </Link>
+      {!isEmbedded && (
+        <div className="h-14 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-purple-100 dark:border-slate-800 flex items-center justify-between px-4 sm:px-6 sticky top-0 z-40 shadow-2xs">
+          <Link
+            href={returnUrl}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs transition-all active:scale-95"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span className="hidden sm:inline">Quay lại Thư viện</span>
+          </Link>
 
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-purple-600 to-indigo-600 text-white flex items-center justify-center shadow-xs text-xs font-black">
-            👑
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-purple-600 to-indigo-600 text-white flex items-center justify-center shadow-xs text-xs font-black">
+              👑
+            </div>
+            <div className="text-left">
+              <h1 className="font-headline font-black text-xs sm:text-sm text-slate-800 dark:text-white leading-tight">
+                {unitTitle} • Lớp {grade}
+              </h1>
+              <p className="text-[10px] font-semibold text-purple-600 dark:text-purple-400">
+                Đề Ôn Tập Tổng Hợp ({questions.length} câu)
+              </p>
+            </div>
           </div>
-          <div className="text-left">
-            <h1 className="font-headline font-black text-xs sm:text-sm text-slate-800 dark:text-white leading-tight">
-              {unitTitle} • Lớp {grade}
-            </h1>
-            <p className="text-[10px] font-semibold text-purple-600 dark:text-purple-400">
-              Đề Ôn Tập Tổng Hợp ({questions.length} câu)
-            </p>
+
+          <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200/80 text-[11px] font-black">
+            <Sparkles className="w-3 h-3 text-purple-500" />
+            <span>{questions.length} câu</span>
           </div>
         </div>
-
-        <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200/80 text-[11px] font-black">
-          <Sparkles className="w-3 h-3 text-purple-500" />
-          <span>{questions.length} câu</span>
-        </div>
-      </div>
+      )}
 
       {/* Quiz Runner */}
       <div className="w-full">
@@ -145,10 +148,23 @@ function UnitReviewContent() {
           questionTranslationsPromise={Promise.resolve({})}
           assignmentTranslationsPromise={Promise.resolve({})}
           isGuest={true}
-          cefrLevel="a1"
-          autoStart={false}
+          cefrLevel={grade <= 5 ? "a1" : "b1"}
+          autoStart={isEmbedded}
           onComplete={(score) => {
-            console.log(`Unit review completed with score: ${score}`);
+            if (typeof window !== "undefined" && window.parent && window.parent !== window) {
+              try {
+                window.parent.postMessage(
+                  {
+                    type: "GS_STATION_COMPLETED",
+                    grade,
+                    unit: unitNumber,
+                    station: "review",
+                    score,
+                  },
+                  "*"
+                );
+              } catch {}
+            }
           }}
         />
       </div>

@@ -74,6 +74,27 @@ const PUBLIC_CLASSES: PublicClassItem[] = [
     btnGradient: 'from-[#f59e0b] via-[#f97316] to-[#ec4899] hover:from-[#d97706] hover:to-[#db2777] shadow-amber-500/20',
   },
   {
+    id: 'global-success-primary',
+    title: 'Global Success Primary: English Island Journey (Grades 1–5)',
+    description: 'Free 3D sky-island class aligned 100% with Global Success Grades 1–5 (92 Units): Vocab, Conversations, Audio Grammar, Games & Unit Review.',
+    subjectBadge: 'Global Success',
+    subjectBadgeClass: 'bg-[#e0f2fe]/95 text-[#0369a1] border-[#bae6fd]/70',
+    audienceBadge: 'Grades 1–5',
+    audienceBadgeClass: 'bg-[#fef3c7]/95 text-[#92400e] border-[#fde68a]/70',
+    typeBadge: '🔥 Free',
+    typeBadgeClass: 'bg-[#fef9c3]/95 text-[#78350f] border-[#fde047]/70',
+    thumbnail: 'https://media.dolcake.com/assests/Classes/thumbnails/class-thumb-vocab-45-days.png',
+    joinCode: 'GLOBAL15',
+    teacher: {
+      name: 'Ms. Jessica Nguyen',
+      avatar: 'https://media.dolcake.com/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
+      role: 'Teacher',
+    },
+    lessonsCount: 92,
+    studentsCount: '120+ students',
+    btnGradient: 'from-[#0ea5e9] via-[#6366f1] to-[#8b5cf6] hover:from-[#0284c7] hover:to-[#7c3aed] shadow-indigo-500/20',
+  },
+  {
     id: 'cmuvbigbg0001vta43ikcsjbk',
     title: 'English Grammar Mastery (45 Days)',
     description: 'Master English grammar from zero to B1 with 268 interactive spaced-repetition exercises.',
@@ -171,6 +192,15 @@ function localizePublicClass(cls: PublicClassItem, isVi: boolean): PublicClassIt
         audienceBadge: 'Mẫu giáo - Tiểu học',
         typeBadge: '🔥 Miễn phí',
       };
+    case 'global-success-primary':
+      return {
+        ...cls,
+        title: 'Global Success Tiểu Học: Hành Trình Đảo Tiếng Anh (Lớp 1–5)',
+        description: 'Lớp học đảo bay 3D miễn phí bám sát 100% SGK Tiếng Anh Global Success Lớp 1–5 (92 Units): Từ vựng, Hội thoại, Ngữ pháp có loa chuẩn, Game vui & Kiểm tra tổng hợp.',
+        subjectBadge: 'Global Success',
+        audienceBadge: 'Tiểu học (Lớp 1–5)',
+        typeBadge: '🔥 Miễn phí',
+      };
     case 'cmuvbigbg0001vta43ikcsjbk':
       return {
         ...cls,
@@ -243,6 +273,7 @@ function findMatchingPublicClass(clsItem: { id?: string; name?: string; teacherN
       pTitle === cName ||
       (cName.length > 0 && pTitle.includes(cName)) ||
       (cName.length > 0 && cName.includes(pTitle)) ||
+      (cName.includes('global success') && pId === 'global-success-primary') ||
       (cName.includes('vocab') && pId.includes('vocab')) ||
       (cName.includes('từ vựng') && pId.includes('vocab')) ||
       (cName.includes('ngữ pháp') && (pId.includes('grammar') || pId === 'cmuvbigbg0001vta43ikcsjbk')) ||

@@ -49,6 +49,18 @@ function isValidDialogue(speakerA?: string | null, speakerB?: string | null): bo
 }
 
 /**
+ * Strips all emojis, pictograms, and residual empty brackets from a sentence.
+ * Ensures Sentence Builder word chips are 100% clean English words with no emoji chips.
+ */
+function stripEmojisAndIcons(text: string): string {
+  return text
+    .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}\u{200D}\u{FE0F}]/gu, "")
+    .replace(/\(\s*\)|\[\s*\]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
  * Builds a clean, pedagogical, 100% English review test for a Global Success Unit.
  * Ensures:
  * 1. Look at picture, choose word
@@ -264,37 +276,42 @@ export function generateUnitReviewQuestions(sets: LibrarySetItem[], grade: numbe
   // ──────────────────────────────────────────────────────────────────────────
   const sbCandidates: Array<{ sentence: string; contextHint?: string }> = [];
   legitimateDialogues.forEach((pair) => {
-    const cleanA = pair.word!.replace(/^["“]+|["”]+$/g, "").trim();
-    const cleanB = pair.labelB!.replace(/^["“]+|["”]+$/g, "").trim();
+    const rawCleanA = pair.word!.replace(/^["“]+|["”]+$/g, "").trim();
+    const rawCleanB = pair.labelB!.replace(/^["“]+|["”]+$/g, "").trim();
 
-    const bWords = cleanB.split(/\s+/).filter(Boolean);
-    const aWords = cleanA.split(/\s+/).filter(Boolean);
+    const cleanA = stripEmojisAndIcons(rawCleanA);
+    const cleanB = stripEmojisAndIcons(rawCleanB);
+
+    const bWords = cleanB.split(/\s+/).filter((w) => w.length > 0 && /[A-Za-z0-9]/.test(w));
+    const aWords = cleanA.split(/\s+/).filter((w) => w.length > 0 && /[A-Za-z0-9]/.test(w));
 
     if (bWords.length >= 3 && bWords.length <= 10) {
       sbCandidates.push({
-        sentence: cleanB,
-        contextHint: grade <= 9 ? `💬 "${cleanA}"` : undefined,
+        sentence: bWords.join(" "),
+        contextHint: grade <= 9 && cleanA ? `💬 "${cleanA}"` : undefined,
       });
     } else if (aWords.length >= 3 && aWords.length <= 10) {
       sbCandidates.push({
-        sentence: cleanA,
-        contextHint: grade <= 9 ? `💬 "${cleanB}"` : undefined,
+        sentence: aWords.join(" "),
+        contextHint: grade <= 9 && cleanB ? `💬 "${cleanB}"` : undefined,
       });
     }
   });
 
   shuffleArray(sbCandidates)
     .forEach((cand, idx) => {
-      const words = cand.sentence.split(/\s+/).filter(Boolean);
+      const words = cand.sentence.split(/\s+/).filter((w) => w.length > 0 && /[A-Za-z0-9]/.test(w));
       let shuffledWords = shuffleArray(words);
       if (words.length > 1 && shuffledWords.join(" ") === words.join(" ")) {
         shuffledWords = [...words.slice(1), words[0]];
       }
 
+      const targetSentence = words.join(" ");
+
       const qContent = {
         type: "SENTENCE_BUILDER",
         questionText: cand.contextHint || "Arrange the words to make a correct sentence:",
-        targetSentence: words.join(" "),
+        targetSentence,
         words,
         shuffledWords,
       };
@@ -303,7 +320,7 @@ export function generateUnitReviewQuestions(sets: LibrarySetItem[], grade: numbe
         id: `rev-sb-${idx}-${qCounter++}`,
         type: "SENTENCE_BUILDER",
         content: JSON.stringify(qContent),
-        explanation: `[EN] Correct sentence: "${words.join(" ")}".\n[VI] Câu đúng là: "${words.join(" ")}".`,
+        explanation: `[EN] Correct sentence: "${targetSentence}".\n[VI] Câu đúng là: "${targetSentence}".`,
       });
     });
 

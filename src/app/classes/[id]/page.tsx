@@ -8,6 +8,14 @@ import {
   CourseUnit 
 } from '@/lib/public-classes-data';
 import { ClassDetailClient } from './ClassDetailClient';
+import { GlobalSuccessPrimaryLandingClient } from './GlobalSuccessPrimaryLandingClient';
+import { auth } from '@/auth';
+import { cookies } from 'next/headers';
+import {
+  GLOBAL_SUCCESS_PRIMARY_CLASS_ID,
+  GLOBAL_SUCCESS_GRADE_COOKIE,
+  getUserGlobalSuccessProgress,
+} from '@/lib/global-success-primary-class';
 import prisma from '@/lib/prisma';
 
 export async function generateMetadata({ 
@@ -636,7 +644,30 @@ export default async function ClassDetailPage({
       </section>
 
       {/* Interactive Client View */}
-      <ClassDetailClient classData={classData} />
+      {resolvedId === GLOBAL_SUCCESS_PRIMARY_CLASS_ID ? (
+        await (async () => {
+          const [session, cookieStore] = await Promise.all([auth(), cookies()]);
+          const cookieGradeRaw = cookieStore.get(GLOBAL_SUCCESS_GRADE_COOKIE)?.value;
+          const cookieGrade = cookieGradeRaw ? Number(cookieGradeRaw) : null;
+          const validCookieGrade =
+            cookieGrade && Number.isInteger(cookieGrade) && cookieGrade >= 1 && cookieGrade <= 5
+              ? cookieGrade
+              : null;
+          let dbGrade: number | null = null;
+          if (session?.user?.id) {
+            const progress = await getUserGlobalSuccessProgress(session.user.id);
+            dbGrade = progress.grade;
+          }
+          return (
+            <GlobalSuccessPrimaryLandingClient
+              isLoggedIn={Boolean(session?.user?.id)}
+              currentGrade={dbGrade ?? validCookieGrade}
+            />
+          );
+        })()
+      ) : (
+        <ClassDetailClient classData={classData} />
+      )}
     </>
   );
 }

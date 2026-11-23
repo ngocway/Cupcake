@@ -147,20 +147,25 @@ export default function ClassesClient({ activeClasses, pendingRequests, translat
             const hasPending = item.pendingCount > 0;
 
             const nameLower = (item.class.name || '').toLowerCase();
+            const isGlobalSuccess = item.id === 'global-success-primary' || item.class.id === 'global-success-primary' || nameLower.includes('global success');
             const isVocab = item.id === 'tiny-vocab-wonders' || item.class.id === 'tiny-vocab-wonders' || nameLower.includes('vocab') || nameLower.includes('từ vựng');
             const isGrammar = item.id === 'cmuvbigbg0001vta43ikcsjbk' || item.class.id === 'cmuvbigbg0001vta43ikcsjbk' || nameLower.includes('grammar') || nameLower.includes('ngữ pháp');
 
-            const subjectLabel = isVocab 
-              ? (isEn ? 'Vocab' : 'Từ vựng') 
-              : isGrammar 
-                ? (isEn ? 'Grammar' : 'Ngữ pháp') 
-                : (isEn ? 'Class' : 'Lớp học');
+            const subjectLabel = isGlobalSuccess
+              ? 'Global Success'
+              : isVocab 
+                ? (isEn ? 'Vocab' : 'Từ vựng') 
+                : isGrammar 
+                  ? (isEn ? 'Grammar' : 'Ngữ pháp') 
+                  : (isEn ? 'Class' : 'Lớp học');
 
-            const audienceLabel = isVocab 
-              ? (isEn ? 'Preschool & Primary' : 'Mẫu giáo - Tiểu học') 
-              : isGrammar 
-                ? (isEn ? 'Foundation' : 'Lấy lại căn bản') 
-                : null;
+            const audienceLabel = isGlobalSuccess
+              ? (isEn ? 'Grades 1–5' : 'Tiểu học (Lớp 1–5)')
+              : isVocab 
+                ? (isEn ? 'Preschool & Primary' : 'Mẫu giáo - Tiểu học') 
+                : isGrammar 
+                  ? (isEn ? 'Foundation' : 'Lấy lại căn bản') 
+                  : null;
 
             return (
               <Link 

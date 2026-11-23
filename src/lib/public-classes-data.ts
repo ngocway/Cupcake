@@ -98,11 +98,13 @@ export type PublicClassDetail = {
 export const CLASS_SLUG_MAP: Record<string, string> = {
   'master-english-grammar-45-days': 'cmuvbigbg0001vta43ikcsjbk',
   'tiny-vocab-45-days': 'tiny-vocab-wonders',
+  'global-success-primary': 'global-success-primary',
 };
 
 export const CLASS_REVERSE_SLUG_MAP: Record<string, string> = {
   'cmuvbigbg0001vta43ikcsjbk': 'master-english-grammar-45-days',
   'tiny-vocab-wonders': 'tiny-vocab-45-days',
+  'global-success-primary': 'global-success-primary',
 };
 
 export function resolveClassId(slugOrId: string): string {
@@ -1647,6 +1649,261 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
     },
 
     // Backward compatibility direct getters mapped to English
+    get title() { return this.en.title; },
+    get shortDescription() { return this.en.shortDescription; },
+    get heroDescription() { return this.en.heroDescription; },
+    get subjectBadge() { return this.en.subjectBadge; },
+    get audienceBadge() { return this.en.audienceBadge; },
+    get typeBadge() { return this.en.typeBadge; },
+    get studentsCount() { return this.en.studentsCount; },
+    get lessonsCount() { return this.en.lessonsCount; },
+    get duration() { return this.en.duration; },
+    get language() { return this.en.language; },
+    get whatYouLearn() { return this.en.whatYouLearn; },
+    get units() { return this.en.units; },
+    get teacher() { return this.en.teacher; },
+    get reviews() { return this.en.reviews; },
+  },
+
+  'global-success-primary': {
+    id: 'global-success-primary',
+    thumbnail: 'https://media.dolcake.com/assests/Classes/thumbnails/class-thumb-vocab-45-days.png',
+    subjectBadgeClass: 'bg-[#e0f2fe] text-[#0369a1] border-[#bae6fd]',
+    audienceBadgeClass: 'bg-[#fef3c7] text-[#92400e] border-[#fde68a]',
+    typeBadgeClass: 'bg-[#dcfce7] text-[#15803d] border-[#86efac]',
+    rating: 5.0,
+    reviewsCount: 42,
+    btnGradient: 'from-[#0ea5e9] via-[#6366f1] to-[#8b5cf6] hover:from-[#0284c7] hover:to-[#7c3aed] shadow-indigo-500/25',
+    joinCode: 'GLOBAL15',
+
+    en: {
+      title: 'Global Success Primary: English Island Journey (Grades 1–5)',
+      shortDescription: 'Free interactive 3D sky-island class aligned 100% with the Global Success Primary textbook (Grades 1–5, 92 Units). 5 fun stations per Unit: Vocab, Conversations, Grammar with Native Audio, Games & Review!',
+      heroDescription: 'Explore 92 floating English islands covering every single Unit of Tiếng Anh Global Success Grades 1–5! Choose your grade once and jump freely into any Unit across Semester 1 & Semester 2 with 5 engaging stations: Vocabulary Games, Conversation Practice, Audio Grammar Review, Fun Quizzes, and Unit Mastery Tests.',
+      subjectBadge: 'Global Success',
+      audienceBadge: 'Primary (Grades 1–5)',
+      typeBadge: '🔥 Free',
+      studentsCount: '120+ students',
+      lessonsCount: 92,
+      duration: 'Self-paced (92 Units • Grades 1–5)',
+      language: 'English with Bilingual Vietnamese Support',
+      whatYouLearn: [
+        {
+          iconType: 'sparkles',
+          title: '92 Floating Unit Islands (Grades 1–5)',
+          description: 'Aligned 100% with Semester 1 & Semester 2 of the official Global Success Primary curriculum — freely jump to any Unit you are learning at school.',
+          colorScheme: 'sky',
+        },
+        {
+          iconType: 'book',
+          title: 'Key Sentences & Grammar with Native Audio',
+          description: 'Clear visual formulas, bilingual tips, native Deepgram pronunciation on every example, and 15 practice questions per Unit.',
+          colorScheme: 'purple',
+        },
+        {
+          iconType: 'game',
+          title: 'Interactive Vocabulary & Quiz Games',
+          description: 'Play Match Words, Conveyor Drop, Egg Smash, Candy Quiz, Train, and Treasure Hunt using your exact textbook Unit vocabulary.',
+          colorScheme: 'amber',
+        },
+        {
+          iconType: 'trophy',
+          title: '5-Station Progress & Star Rewards',
+          description: 'Track completed stations, earn XP, and unlock each Unit Star Chest across all 5 primary grades.',
+          colorScheme: 'yellow',
+        },
+      ],
+      units: [
+        {
+          id: 'gsp-g1',
+          unitIndex: 1,
+          title: 'Grade 1 — 16 Units (Semester 1 & 2)',
+          lessonsCount: 16,
+          isFreeTrial: true,
+          lessons: [
+            { id: 'gsp-g1-1', lessonIndex: 1, title: 'Semester 1: Units 1–8 (In the school playground → In the park)', type: 'island', isTrial: true },
+            { id: 'gsp-g1-2', lessonIndex: 2, title: 'Semester 2: Units 9–16 (In the shop → At home)', type: 'island', isTrial: true },
+          ],
+        },
+        {
+          id: 'gsp-g2',
+          unitIndex: 2,
+          title: 'Grade 2 — 16 Units (Semester 1 & 2)',
+          lessonsCount: 16,
+          isFreeTrial: true,
+          lessons: [
+            { id: 'gsp-g2-1', lessonIndex: 1, title: 'Semester 1: Units 1–8 (At my birthday party → In the village)', type: 'island', isTrial: true },
+            { id: 'gsp-g2-2', lessonIndex: 2, title: 'Semester 2: Units 9–16 (In the grocery store → At the campsites)', type: 'island', isTrial: true },
+          ],
+        },
+        {
+          id: 'gsp-g3',
+          unitIndex: 3,
+          title: 'Grade 3 — 20 Units (Semester 1 & 2)',
+          lessonsCount: 20,
+          isFreeTrial: true,
+          lessons: [
+            { id: 'gsp-g3-1', lessonIndex: 1, title: 'Semester 1: Units 1–10 (Hello → Break time activities)', type: 'island', isTrial: true },
+            { id: 'gsp-g3-2', lessonIndex: 2, title: 'Semester 2: Units 11–20 (My family → At the zoo)', type: 'island', isTrial: true },
+          ],
+        },
+        {
+          id: 'gsp-g4',
+          unitIndex: 4,
+          title: 'Grade 4 — 20 Units (Semester 1 & 2)',
+          lessonsCount: 20,
+          isFreeTrial: true,
+          lessons: [
+            { id: 'gsp-g4-1', lessonIndex: 1, title: 'Semester 1: Units 1–10 (My friends → Our summer holidays)', type: 'island', isTrial: true },
+            { id: 'gsp-g4-2', lessonIndex: 2, title: 'Semester 2: Units 11–20 (My home → At summer camp)', type: 'island', isTrial: true },
+          ],
+        },
+        {
+          id: 'gsp-g5',
+          unitIndex: 5,
+          title: 'Grade 5 — 20 Units (Semester 1 & 2)',
+          lessonsCount: 20,
+          isFreeTrial: true,
+          lessons: [
+            { id: 'gsp-g5-1', lessonIndex: 1, title: 'Semester 1: Units 1–10 (All about me! → Our school trip)', type: 'island', isTrial: true },
+            { id: 'gsp-g5-2', lessonIndex: 2, title: 'Semester 2: Units 11–20 (Family time → Our summer holidays)', type: 'island', isTrial: true },
+          ],
+        },
+      ],
+      teacher: {
+        name: 'Ms. Jessica Nguyen',
+        role: 'Primary English Curriculum Lead',
+        avatar: 'https://media.dolcake.com/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
+        degree: 'Bachelor of English & TESOL Young Learners Certified',
+        experience: 'Over 8 years designing interactive primary English pathways aligned with Global Success',
+        quote: '“When textbook review feels like exploring floating islands, kids look forward to practicing English every single day!”',
+      },
+      reviews: [
+        {
+          id: 'gsp-r1',
+          author: 'Minh Anh (Parent of 3rd Grader)',
+          avatar: 'https://media.dolcake.com/images/avatars/adult.png',
+          stars: 5,
+          timeAgo: '2 days ago',
+          content: '“Matches the exact Units my son learns at school! He loves opening each island and finishing all 5 stations before dinner.”',
+        },
+      ],
+    },
+
+    vi: {
+      title: 'Global Success Tiểu Học: Hành Trình Đảo Tiếng Anh (Lớp 1–5)',
+      shortDescription: 'Lớp học đảo bay 3D miễn phí bám sát 100% SGK Tiếng Anh Global Success Lớp 1–5 (92 Units). Mỗi Unit gồm 5 trạm: Từ vựng, Hội thoại, Ngữ pháp có loa chuẩn, Game vui và Kiểm tra tổng hợp.',
+      heroDescription: 'Khám phá 92 hòn đảo Tiếng Anh tương tác bao phủ trọn vẹn SGK Global Success Lớp 1–5! Bé chỉ cần chọn khối lớp đang học để mở ngay bản đồ Học kỳ 1 & Học kỳ 2, tự do chọn đúng Unit trên lớp với 5 trạm học mà chơi siêu cuốn.',
+      subjectBadge: 'Global Success',
+      audienceBadge: 'Tiểu học (Lớp 1–5)',
+      typeBadge: '🔥 Miễn phí',
+      studentsCount: '120+ học viên',
+      lessonsCount: 92,
+      duration: 'Tự học linh hoạt (92 Units • Lớp 1–5)',
+      language: 'Tiếng Anh kết hợp giải thích song ngữ Việt – Anh',
+      whatYouLearn: [
+        {
+          iconType: 'sparkles',
+          title: '92 Hòn Đảo Unit Chuẩn SGK (Lớp 1–5)',
+          description: 'Chia rõ Học kỳ 1 & Học kỳ 2 theo đúng sách Global Success — mở tự do để bé ôn ngay đúng bài đang học trên trường.',
+          colorScheme: 'sky',
+        },
+        {
+          iconType: 'book',
+          title: 'Ngữ Pháp & Mẫu Câu Có Loa Bản Xứ',
+          description: 'Tóm tắt công thức dễ hiểu, có loa đọc chuẩn từng ví dụ và 15 câu trắc nghiệm giải thích song ngữ cho mỗi Unit.',
+          colorScheme: 'purple',
+        },
+        {
+          iconType: 'game',
+          title: 'Kho Game Tương Tác Độc Quyền',
+          description: 'Nối từ, Băng chuyền, Đập trứng, Kẹo ngọt, Đoàn tàu, Truy tìm kho báu — xoay vòng sinh động giúp bé ghi nhớ sâu.',
+          colorScheme: 'amber',
+        },
+        {
+          iconType: 'trophy',
+          title: '5 Trạm Học & Rương Sao Mỗi Unit',
+          description: 'Lưu tự động tiến độ từng trạm, tích lũy XP và mở khóa Rương Sao khi chinh phục trọn vẹn cả 5 trạm trong đảo.',
+          colorScheme: 'yellow',
+        },
+      ],
+      units: [
+        {
+          id: 'gsp-vi-g1',
+          unitIndex: 1,
+          title: 'Lớp 1 — 16 Units (Học kỳ 1 & 2)',
+          lessonsCount: 16,
+          isFreeTrial: true,
+          lessons: [
+            { id: 'gsp-vi-g1-1', lessonIndex: 1, title: 'Học kỳ 1: Unit 1–8 (In the school playground → In the park)', type: 'island', isTrial: true },
+            { id: 'gsp-vi-g1-2', lessonIndex: 2, title: 'Học kỳ 2: Unit 9–16 (In the shop → At home)', type: 'island', isTrial: true },
+          ],
+        },
+        {
+          id: 'gsp-vi-g2',
+          unitIndex: 2,
+          title: 'Lớp 2 — 16 Units (Học kỳ 1 & 2)',
+          lessonsCount: 16,
+          isFreeTrial: true,
+          lessons: [
+            { id: 'gsp-vi-g2-1', lessonIndex: 1, title: 'Học kỳ 1: Unit 1–8 (At my birthday party → In the village)', type: 'island', isTrial: true },
+            { id: 'gsp-vi-g2-2', lessonIndex: 2, title: 'Học kỳ 2: Unit 9–16 (In the grocery store → At the campsites)', type: 'island', isTrial: true },
+          ],
+        },
+        {
+          id: 'gsp-vi-g3',
+          unitIndex: 3,
+          title: 'Lớp 3 — 20 Units (Học kỳ 1 & 2)',
+          lessonsCount: 20,
+          isFreeTrial: true,
+          lessons: [
+            { id: 'gsp-vi-g3-1', lessonIndex: 1, title: 'Học kỳ 1: Unit 1–10 (Hello → Break time activities)', type: 'island', isTrial: true },
+            { id: 'gsp-vi-g3-2', lessonIndex: 2, title: 'Học kỳ 2: Unit 11–20 (My family → At the zoo)', type: 'island', isTrial: true },
+          ],
+        },
+        {
+          id: 'gsp-vi-g4',
+          unitIndex: 4,
+          title: 'Lớp 4 — 20 Units (Học kỳ 1 & 2)',
+          lessonsCount: 20,
+          isFreeTrial: true,
+          lessons: [
+            { id: 'gsp-vi-g4-1', lessonIndex: 1, title: 'Học kỳ 1: Unit 1–10 (My friends → Our summer holidays)', type: 'island', isTrial: true },
+            { id: 'gsp-vi-g4-2', lessonIndex: 2, title: 'Học kỳ 2: Unit 11–20 (My home → At summer camp)', type: 'island', isTrial: true },
+          ],
+        },
+        {
+          id: 'gsp-vi-g5',
+          unitIndex: 5,
+          title: 'Lớp 5 — 20 Units (Học kỳ 1 & 2)',
+          lessonsCount: 20,
+          isFreeTrial: true,
+          lessons: [
+            { id: 'gsp-vi-g5-1', lessonIndex: 1, title: 'Học kỳ 1: Unit 1–10 (All about me! → Our school trip)', type: 'island', isTrial: true },
+            { id: 'gsp-vi-g5-2', lessonIndex: 2, title: 'Học kỳ 2: Unit 11–20 (Family time → Our summer holidays)', type: 'island', isTrial: true },
+          ],
+        },
+      ],
+      teacher: {
+        name: 'Cô Jessica Nguyễn',
+        role: 'Chuyên gia Chương trình Tiếng Anh Tiểu học',
+        avatar: 'https://media.dolcake.com/assests/Classes/avatars/teacher-avatar-ms-jessica.png',
+        degree: 'Cử nhân Ngôn ngữ Anh & Chứng chỉ TESOL Trẻ em',
+        experience: 'Hơn 8 năm thiết kế lộ trình học Tiếng Anh Tiểu học tương tác bám sát Global Success',
+        quote: '“Khi việc ôn bài trên lớp biến thành chuyến thám hiểm các hòn đảo bay, các bé sẽ tự giác mở máy học tiếng Anh mỗi ngày với niềm vui thích!”',
+      },
+      reviews: [
+        {
+          id: 'gsp-r1',
+          author: 'Phụ huynh bé Minh Anh (Lớp 3)',
+          avatar: 'https://media.dolcake.com/images/avatars/adult.png',
+          stars: 5,
+          timeAgo: '2 ngày trước',
+          content: '“Bám sát đúng từng Unit con học trên trường! Con mê nhất trò mở từng đảo và hoàn thành đủ 5 trạm mỗi tối.”',
+        },
+      ],
+    },
+
     get title() { return this.en.title; },
     get shortDescription() { return this.en.shortDescription; },
     get heroDescription() { return this.en.heroDescription; },

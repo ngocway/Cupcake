@@ -1,10 +1,19 @@
 import React, { Suspense } from 'react';
+import { cookies } from 'next/headers';
 import { auth } from '@/auth';
 import prisma from '@/lib/prisma';
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { Lock } from 'lucide-react';
 import { StudentAssignmentsView, StudentAssignmentGroup } from './_components/StudentAssignmentsView';
+import { GlobalSuccessPrimaryMap } from './_components/GlobalSuccessPrimaryMap';
+import {
+  GLOBAL_SUCCESS_PRIMARY_CLASS_ID,
+  GLOBAL_SUCCESS_GRADE_COOKIE,
+  getGlobalSuccessPrimaryUnits,
+  getUserGlobalSuccessProgress,
+  getProgressSettingKey,
+} from '@/lib/global-success-primary-class';
 import { sortGroupItems, isScoredAssignment } from './_utils/assignmentOrder';
 import { applyDailyDripProgression } from './_utils/dailyDripProgression';
 import { ClassHeroBento } from './_components/ClassHeroBento';
@@ -739,6 +748,78 @@ export default async function StudentClassDetailPage({
     params,
     searchParams ? searchParams : Promise.resolve({})
   ]);
+
+  if (id === GLOBAL_SUCCESS_PRIMARY_CLASS_ID) {
+    const [unitsByGrade, progress, cookieStore] = await Promise.all([
+      getGlobalSuccessPrimaryUnits(),
+      getUserGlobalSuccessProgress(session.user.id),
+      cookies(),
+    ]);
+
+    // Auto-enroll student in the free Global Success Primary class so it appears in /student/classes
+    prisma.classEnrollment
+      .upsert({
+        where: {
+          studentId_classId: {
+            studentId: session.user.id,
+            classId: GLOBAL_SUCCESS_PRIMARY_CLASS_ID,
+          },
+        },
+        update: { status: 'ACTIVE' },
+        create: {
+          classId: GLOBAL_SUCCESS_PRIMARY_CLASS_ID,
+          studentId: session.user.id,
+          status: 'ACTIVE',
+        },
+      })
+      .catch(() => {});
+
+    const queryGradeRaw = (resolvedSearchParams as any)?.grade;
+    const queryGrade = queryGradeRaw ? Number(queryGradeRaw) : null;
+    const validQueryGrade =
+      queryGrade && Number.isInteger(queryGrade) && queryGrade >= 1 && queryGrade <= 5
+        ? queryGrade
+        : null;
+
+    const cookieGradeRaw = cookieStore.get(GLOBAL_SUCCESS_GRADE_COOKIE)?.value;
+    const cookieGrade = cookieGradeRaw ? Number(cookieGradeRaw) : null;
+    const validCookieGrade =
+      cookieGrade && Number.isInteger(cookieGrade) && cookieGrade >= 1 && cookieGrade <= 5
+        ? cookieGrade
+        : null;
+
+    const effectiveGrade = validQueryGrade ?? progress.grade ?? validCookieGrade;
+
+    // Persist grade from query param or cookie into DB if needed
+    if (effectiveGrade && effectiveGrade !== progress.grade) {
+      prisma.systemSetting
+        .upsert({
+          where: { key: getProgressSettingKey(session.user.id) },
+          update: {
+            value: {
+              grade: effectiveGrade,
+              completedStations: progress.completedStations,
+            } as any,
+          },
+          create: {
+            key: getProgressSettingKey(session.user.id),
+            value: {
+              grade: effectiveGrade,
+              completedStations: progress.completedStations,
+            } as any,
+          },
+        })
+        .catch(() => {});
+    }
+
+    return (
+      <GlobalSuccessPrimaryMap
+        unitsByGrade={unitsByGrade}
+        initialGrade={effectiveGrade}
+        initialCompletedStations={progress.completedStations}
+      />
+    );
+  }
 
   return (
     <div className="relative min-h-screen">

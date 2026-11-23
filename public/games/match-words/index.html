@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,7 +8,9 @@
     <title>Match the Words Game! 🌟</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@700;800;900&display=swap"
+        rel="stylesheet">
     <style>
         body {
             margin: 0;
@@ -18,7 +21,8 @@
             font-weight: 800;
             line-height: 1.3;
             user-select: none;
-            touch-action: none; /* Prevent scroll on touch devices */
+            touch-action: none;
+            /* Prevent scroll on touch devices */
             display: flex;
             height: 100vh;
         }
@@ -28,7 +32,7 @@
             width: 250px;
             background: rgba(255, 255, 255, 0.4);
             backdrop-filter: blur(15px);
-            box-shadow: 5px 0 20px rgba(0,0,0,0.05);
+            box-shadow: 5px 0 20px rgba(0, 0, 0, 0.05);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -43,6 +47,7 @@
         .sidebar::-webkit-scrollbar {
             width: 6px;
         }
+
         .sidebar::-webkit-scrollbar-thumb {
             background-color: rgba(255, 107, 107, 0.4);
             border-radius: 10px;
@@ -82,7 +87,8 @@
             box-shadow: 0 10px 0 #ff9f43;
         }
 
-        .topic-btn:active, .topic-btn.active {
+        .topic-btn:active,
+        .topic-btn.active {
             transform: translateY(3px);
             box-shadow: 0 2px 0 #feca57;
             background: #ff9f43;
@@ -106,7 +112,7 @@
             color: #ff6b6b;
             text-align: center;
             width: 100%;
-            text-shadow: 3px 3px 0 #fff, -3px -3px 0 #fff, 3px -3px 0 #fff, -3px 3px 0 #fff, 6px 6px 15px rgba(0,0,0,0.2);
+            text-shadow: 3px 3px 0 #fff, -3px -3px 0 #fff, 3px -3px 0 #fff, -3px 3px 0 #fff, 6px 6px 15px rgba(0, 0, 0, 0.2);
             z-index: 100;
             pointer-events: none;
             animation: bounceIn 1s cubic-bezier(0.68, -0.55, 0.265, 1.55);
@@ -114,8 +120,15 @@
         }
 
         @keyframes bounceIn {
-            0% { transform: translate(-50%, -100px) scale(0.5); opacity: 0; }
-            100% { transform: translate(-50%, 0) scale(1); opacity: 1; }
+            0% {
+                transform: translate(-50%, -100px) scale(0.5);
+                opacity: 0;
+            }
+
+            100% {
+                transform: translate(-50%, 0) scale(1);
+                opacity: 1;
+            }
         }
 
         .game-item-image {
@@ -127,7 +140,7 @@
             background: rgba(255, 255, 255, 0.7);
             border: 5px dashed #ff9ff3;
             border-radius: 20px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
             transition: border-color 0.3s, background 0.3s;
             overflow: hidden;
             box-sizing: border-box;
@@ -169,7 +182,7 @@
             font-size: 2.2rem;
             line-height: 1;
             margin-bottom: 3px;
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.12));
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.12));
         }
 
         .card-image-fallback .fallback-text {
@@ -183,7 +196,7 @@
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
-            text-shadow: 0 1px 0 rgba(255,255,255,0.85);
+            text-shadow: 0 1px 0 rgba(255, 255, 255, 0.85);
         }
 
         .game-item-image.matched {
@@ -193,11 +206,25 @@
         }
 
         @keyframes happyDance {
-            0% { transform: scale(1) rotate(0deg); }
-            25% { transform: scale(1.2) rotate(-15deg); }
-            50% { transform: scale(1.2) rotate(15deg); }
-            75% { transform: scale(1.2) rotate(-15deg); }
-            100% { transform: scale(1) rotate(0deg); }
+            0% {
+                transform: scale(1) rotate(0deg);
+            }
+
+            25% {
+                transform: scale(1.2) rotate(-15deg);
+            }
+
+            50% {
+                transform: scale(1.2) rotate(15deg);
+            }
+
+            75% {
+                transform: scale(1.2) rotate(-15deg);
+            }
+
+            100% {
+                transform: scale(1) rotate(0deg);
+            }
         }
 
         .game-item-text {
@@ -206,7 +233,7 @@
             padding: 8px 15px;
             color: #fff;
             border-radius: 50px;
-            box-shadow: 0 8px 0 rgba(0,0,0,0.2), 0 15px 20px rgba(0,0,0,0.2);
+            box-shadow: 0 8px 0 rgba(0, 0, 0, 0.2), 0 15px 20px rgba(0, 0, 0, 0.2);
             cursor: grab;
             transition: transform 0.1s;
             z-index: 50;
@@ -215,10 +242,11 @@
             white-space: nowrap;
         }
 
-        .game-item-text:active, .game-item-text.dragging {
+        .game-item-text:active,
+        .game-item-text.dragging {
             cursor: grabbing;
             transform: scale(1.15) translateY(-10px) rotate(-3deg);
-            box-shadow: 0 0 0 rgba(0,0,0,0.2), 0 20px 25px rgba(0,0,0,0.3);
+            box-shadow: 0 0 0 rgba(0, 0, 0, 0.2), 0 20px 25px rgba(0, 0, 0, 0.3);
             z-index: 1000 !important;
         }
 
@@ -231,8 +259,15 @@
         }
 
         @keyframes pop {
-            0% { transform: scale(0.5) translate(0, 0); opacity: 1; }
-            100% { transform: scale(1.5) translate(var(--tx), var(--ty)); opacity: 0; }
+            0% {
+                transform: scale(0.5) translate(0, 0);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(1.5) translate(var(--tx), var(--ty));
+                opacity: 0;
+            }
         }
 
         .confetti {
@@ -246,9 +281,11 @@
         }
 
         @keyframes fall {
-            to { transform: translateY(110vh) rotate(720deg); }
+            to {
+                transform: translateY(110vh) rotate(720deg);
+            }
         }
-        
+
         .cloud {
             position: absolute;
             background: white;
@@ -258,36 +295,59 @@
             z-index: 10;
             pointer-events: none;
         }
-        
+
         @keyframes floatCloud {
-            from { transform: translateX(-200px); }
-            to { transform: translateX(100vw); }
+            from {
+                transform: translateX(-200px);
+            }
+
+            to {
+                transform: translateX(100vw);
+            }
         }
 
         /* Mobile Adjustments */
         @media (max-width: 768px) {
-            body { flex-direction: column; }
-            .sidebar { 
-                width: 100%; 
-                height: auto; 
-                padding: 10px 0; 
-                flex-direction: row; 
-                flex-wrap: wrap; 
-                justify-content: center; 
+            body {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                padding: 10px 0;
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: center;
                 border-right: none;
                 border-bottom: 2px solid rgba(255, 255, 255, 0.6);
             }
-            .sidebar h2 { display: none; }
-            .topic-btn { 
-                width: auto; 
-                margin: 5px; 
-                padding: 10px 15px; 
-                font-size: 1.2rem; 
+
+            .sidebar h2 {
+                display: none;
+            }
+
+            .topic-btn {
+                width: auto;
+                margin: 5px;
+                padding: 10px 15px;
+                font-size: 1.2rem;
                 gap: 5px;
             }
-            .title { font-size: 2rem; top: 10px; }
-            .game-item-image { font-size: 3.5rem; }
-            .game-item-text { font-size: 1.5rem; padding: 10px 25px; }
+
+            .title {
+                font-size: 2rem;
+                top: 10px;
+            }
+
+            .game-item-image {
+                font-size: 3.5rem;
+            }
+
+            .game-item-text {
+                font-size: 1.5rem;
+                padding: 10px 25px;
+            }
         }
 
         /* Start Overlay */
@@ -305,6 +365,7 @@
             align-items: center;
             transition: opacity 0.5s ease;
         }
+
         .play-btn {
             background: #ff6b6b;
             color: white;
@@ -315,26 +376,31 @@
             border: 8px solid white;
             border-radius: 50px;
             cursor: pointer;
-            box-shadow: 0 10px 0 #ee5253, 0 20px 30px rgba(0,0,0,0.2);
+            box-shadow: 0 10px 0 #ee5253, 0 20px 30px rgba(0, 0, 0, 0.2);
             transition: transform 0.2s, box-shadow 0.2s;
             text-transform: uppercase;
             letter-spacing: 3px;
         }
+
         .play-btn:hover {
             transform: translateY(-5px);
-            box-shadow: 0 15px 0 #ee5253, 0 25px 35px rgba(0,0,0,0.3);
+            box-shadow: 0 15px 0 #ee5253, 0 25px 35px rgba(0, 0, 0, 0.3);
         }
+
         .play-btn:active {
             transform: translateY(5px);
-            box-shadow: 0 0 0 #ee5253, 0 5px 10px rgba(0,0,0,0.2);
+            box-shadow: 0 0 0 #ee5253, 0 5px 10px rgba(0, 0, 0, 0.2);
         }
     </style>
 </head>
+
 <body>
 
     <!-- Start Overlay -->
     <div id="startOverlay">
-        <div style="font-size: 4rem; color: white; text-shadow: 3px 3px 0 #ff6b6b; margin-bottom: 40px; text-align: center;">Ready to Play?</div>
+        <div
+            style="font-size: 4rem; color: white; text-shadow: 3px 3px 0 #ff6b6b; margin-bottom: 40px; text-align: center;">
+            Ready to Play?</div>
         <button class="play-btn" id="startBtn">▶ PLAY</button>
     </div>
 
@@ -346,18 +412,31 @@
     <!-- Game Area -->
     <div class="game-area" id="gameArea">
         <!-- Loading Overlay -->
-        <div id="loadingOverlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(161, 196, 253, 0.9); z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(5px); transition: opacity 0.5s;">
-            <div style="width: 60px; height: 60px; border: 6px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-            <div style="color: white; font-size: 1.8rem; margin-top: 20px; font-weight: bold; letter-spacing: 3px; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">LOADING...</div>
-            <style>@keyframes spin { 100% { transform: rotate(360deg); } }</style>
+        <div id="loadingOverlay"
+            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(161, 196, 253, 0.9); z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; backdrop-filter: blur(5px); transition: opacity 0.5s;">
+            <div
+                style="width: 60px; height: 60px; border: 6px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 1s linear infinite;">
+            </div>
+            <div
+                style="color: white; font-size: 1.8rem; margin-top: 20px; font-weight: bold; letter-spacing: 3px; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">
+                LOADING...</div>
+            <style>
+                @keyframes spin {
+                    100% {
+                        transform: rotate(360deg);
+                    }
+                }
+            </style>
         </div>
 
         <div class="title" id="titleText">Match the Words! 🌟</div>
 
         <!-- Background clouds -->
         <div class="cloud" style="width: 150px; height: 50px; top: 10%; animation-duration: 40s;"></div>
-        <div class="cloud" style="width: 100px; height: 35px; top: 30%; animation-duration: 25s; animation-delay: 5s;"></div>
-        <div class="cloud" style="width: 200px; height: 70px; top: 70%; animation-duration: 50s; animation-delay: 10s;"></div>
+        <div class="cloud" style="width: 100px; height: 35px; top: 30%; animation-duration: 25s; animation-delay: 5s;">
+        </div>
+        <div class="cloud" style="width: 200px; height: 70px; top: 70%; animation-duration: 50s; animation-delay: 10s;">
+        </div>
     </div>
 
     <audio id="bgMusic" loop>
@@ -368,10 +447,10 @@
         document.addEventListener('DOMContentLoaded', () => {
             const bgMusic = document.getElementById('bgMusic');
             bgMusic.volume = 0.2;
-            
+
             const startOverlay = document.getElementById('startOverlay');
             const startBtn = document.getElementById('startBtn');
-            
+
             startBtn.addEventListener('click', () => {
                 bgMusic.play().catch(e => console.log("Audio play failed:", e));
                 startOverlay.style.opacity = '0';
@@ -385,7 +464,7 @@
         function playSuccessSound() {
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                
+
                 // First note (C5)
                 const osc1 = ctx.createOscillator();
                 const gain1 = ctx.createGain();
@@ -508,7 +587,7 @@
         const ageGroup = urlParams.get('age') || '2-5';
         const gameId = urlParams.get('gameId');
 
-                // Data from API
+        // Data from API
         let topicsData = {};
         let defaultTopic = '';
         let currentTopic = '';
@@ -522,7 +601,7 @@
         function renderSidebar() {
             const sidebar = document.querySelector('.sidebar');
             sidebar.innerHTML = '<h2>📚 Topics</h2>';
-            
+
             Object.keys(topicsData).forEach((key) => {
                 const btn = document.createElement('button');
                 btn.className = 'topic-btn' + (key === currentTopic ? ' active' : '');
@@ -636,7 +715,7 @@
             if (sidebar.children.length <= 1) {
                 renderSidebar();
             }
-            
+
             // Clear old game elements (keep title and clouds)
             const dynamicElements = gameArea.querySelectorAll('.game-item-image, .game-item-text, .confetti, .particle');
             dynamicElements.forEach(el => el.remove());
@@ -644,9 +723,9 @@
             // Reset game state
             matchedCount = 0;
             elements = [];
-            
+
             const topic = topicsData[currentTopic];
-            
+
             // Update Title and animate it
             const titleEl = document.getElementById('titleText');
             titleEl.textContent = topic.title;
@@ -736,7 +815,7 @@
                 imgEl.style.borderColor = item.imgColor || item.color;
                 imgEl.style.backgroundColor = (item.imgColor || item.color) + '22'; // 13% opacity for a nice pastel background tint
                 gameArea.appendChild(imgEl);
-                
+
                 // 2. Create Draggable Text
                 const txtEl = document.createElement('div');
                 txtEl.classList.add('game-item-text');
@@ -748,32 +827,32 @@
                 const shuffledIndex = shuffledIndices[index];
 
                 // Initial state setup
-                const imgObj = { 
-                    id: item.id, 
-                    el: imgEl, 
-                    type: 'img', 
-                    matched: false, 
-                    index: index, 
+                const imgObj = {
+                    id: item.id,
+                    el: imgEl,
+                    type: 'img',
+                    matched: false,
+                    index: index,
                     shuffledIndex: shuffledIndex,
-                    x: 0, 
+                    x: 0,
                     y: 0,
                     vx: 0,
                     vy: 0,
                     radius: 65
                 };
-                const txtObj = { 
-                    id: item.id, 
-                    el: txtEl, 
-                    type: 'txt', 
-                    matched: false, 
-                    index: index, 
+                const txtObj = {
+                    id: item.id,
+                    el: txtEl,
+                    type: 'txt',
+                    matched: false,
+                    index: index,
                     shuffledIndex: shuffledIndex,
-                    x: 0, 
-                    y: 0, 
+                    x: 0,
+                    y: 0,
                     vx: 0,
                     vy: 0,
                     radius: 80,
-                    dragging: false 
+                    dragging: false
                 };
 
                 // Initialize random slow velocities
@@ -828,7 +907,7 @@
 
                 const elemWidth = obj.el.offsetWidth || (obj.type === 'img' ? 130 : 160);
                 const elemHeight = obj.el.offsetHeight || (obj.type === 'img' ? 130 : 70);
-                
+
                 // Add more padding for images (circles) so they stay further apart
                 const extraPadding = obj.type === 'img' ? 35 : 15;
                 obj.radius = Math.max(elemWidth, elemHeight) / 2 + extraPadding;
@@ -967,11 +1046,11 @@
 
             txtObj.el.addEventListener('pointerdown', (e) => {
                 if (txtObj.matched) return;
-                
+
                 txtObj.dragging = true;
                 txtObj.el.classList.add('dragging');
                 txtObj.el.style.transition = '';
-                
+
                 startX = e.clientX;
                 startY = e.clientY;
                 initialX = txtObj.x;
@@ -980,10 +1059,10 @@
 
             document.addEventListener('pointermove', (e) => {
                 if (!txtObj.dragging) return;
-                
+
                 const dx = e.clientX - startX;
                 const dy = e.clientY - startY;
-                
+
                 txtObj.x = initialX + dx;
                 txtObj.y = initialY + dy;
                 updatePosition(txtObj);
@@ -991,7 +1070,7 @@
 
             document.addEventListener('pointerup', (e) => {
                 if (!txtObj.dragging) return;
-                
+
                 txtObj.dragging = false;
                 txtObj.el.classList.remove('dragging');
 
@@ -1000,16 +1079,16 @@
                 const imgRect = imgEl.getBoundingClientRect();
 
                 const isOverlap = !(
-                    txtRect.right < imgRect.left || 
-                    txtRect.left > imgRect.right || 
-                    txtRect.bottom < imgRect.top || 
+                    txtRect.right < imgRect.left ||
+                    txtRect.left > imgRect.right ||
+                    txtRect.bottom < imgRect.top ||
                     txtRect.top > imgRect.bottom
                 );
 
                 if (isOverlap) {
                     // 🎉 Matched Successfully!
                     txtObj.matched = true;
-                    
+
                     const imgObj = elements.find(o => o.el === imgEl);
                     imgObj.matched = true;
 
@@ -1022,19 +1101,19 @@
                     const _imgH = imgEl.offsetHeight || 80;
                     const _txtH = txtObj.el.offsetHeight || 55;
                     txtObj.y = imgObj.y + (_imgH / 2) + (_txtH / 2) - 10; // snapped offset
-                    
+
                     txtObj.el.style.transition = 'left 0.2s ease-out, top 0.2s ease-out';
                     updatePosition(txtObj);
                     setTimeout(() => {
                         txtObj.el.style.transition = '';
                     }, 200);
-                    
+
                     imgEl.classList.add('matched');
                     playSuccessSound();
                     speakWord(wordText);
-                    
+
                     createParticles(e.clientX, e.clientY);
-                    
+
                     matchedCount++;
                     const totalItems = topicsData[currentTopic].items.length;
                     if (matchedCount === totalItems) {
@@ -1060,20 +1139,20 @@
         // Fun star explosion effect on correct match
         function createParticles(x, y) {
             const emojis = ['⭐', '✨', '💖', '🌟'];
-            for(let i = 0; i < 12; i++) {
+            for (let i = 0; i < 12; i++) {
                 const p = document.createElement('div');
                 p.classList.add('particle');
                 p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-                
+
                 const gameAreaRect = gameArea.getBoundingClientRect();
                 p.style.left = (x - gameAreaRect.left) + 'px';
                 p.style.top = (y - gameAreaRect.top) + 'px';
-                
+
                 const tx = (Math.random() - 0.5) * 250 + 'px';
                 const ty = (Math.random() - 0.5) * 250 + 'px';
                 p.style.setProperty('--tx', tx);
                 p.style.setProperty('--ty', ty);
-                
+
                 gameArea.appendChild(p);
                 setTimeout(() => p.remove(), 1000);
             }
@@ -1082,25 +1161,25 @@
         // Winning animation
         function winGame() {
             playWinSound();
-            
+
             const title = document.getElementById('titleText');
             title.textContent = 'YOU WIN! 🎉🎉🎉';
             title.style.transform = 'translate(-50%, 0) scale(1.3)';
             title.style.transition = 'transform 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55)';
             title.style.color = '#1dd1a1';
-            
+
             // Shower confetti
-            for(let i = 0; i < 120; i++) {
+            for (let i = 0; i < 120; i++) {
                 const c = document.createElement('div');
                 c.classList.add('confetti');
                 c.style.left = Math.random() * 100 + '%';
                 c.style.top = -20 + 'px';
                 const colors = ['#ff6b6b', '#0abde3', '#feca57', '#1dd1a1', '#ff9ff3'];
                 c.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-                
+
                 // Randomize shape (some circles, some rectangles)
                 if (Math.random() > 0.5) c.style.borderRadius = '50%';
-                
+
                 c.style.animationDuration = (Math.random() * 2 + 1.5) + 's';
                 c.style.animationDelay = (Math.random() * 2) + 's';
                 gameArea.appendChild(c);
@@ -1143,7 +1222,7 @@
         // Initialize game on load
         window.addEventListener('DOMContentLoaded', async () => {
             try {
-                const fetchUrl = gameId 
+                const fetchUrl = gameId
                     ? `/api/games/match-words?age=${ageGroup}&gameId=${gameId}`
                     : `/api/games/match-words?age=${ageGroup}`;
                 const res = await fetch(fetchUrl);
@@ -1189,11 +1268,12 @@
                 } else {
                     document.getElementById('titleText').textContent = 'No Topics Found';
                 }
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
             }
             init();
         });
     </script>
 </body>
+
 </html>

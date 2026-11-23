@@ -24,6 +24,7 @@ import { trackEvent } from "@/lib/analytics";
 import { toast } from "sonner";
 import { SelectionTranslator } from "@/components/common/SelectionTranslator";
 import { QuestionAudioPlayButton } from "@/components/common/QuestionAudioPlayButton";
+import { EnlargedEmojiText } from "@/components/common/EmojiRenderer";
 import { playCorrectSound, playIncorrectSound } from "@/utils/soundEffects";
 
 // Internal Modular Components & Helpers
@@ -601,6 +602,14 @@ export default function KidTeenQuizRunner({
       ? currentQuestionData?.options?.find((o: any) => o.isCorrect)?.text || ""
       : "");
 
+  const qImageUrl = (() => {
+    const raw = currentQuestion?.imageUrl || currentQuestionData?.imageUrl;
+    if (!raw || typeof raw !== "string") return undefined;
+    const clean = raw.trim();
+    return clean !== "null" && clean.length > 5 ? clean : undefined;
+  })();
+  const hasImage = Boolean(qImageUrl && qType !== "MATCHING");
+
   const matchingColors = ["#8B5CF6", "#10B981", "#F59E0B", "#EF4444", "#3B82F6", "#EC4899"];
 
   // 1. Start Screen
@@ -666,28 +675,6 @@ export default function KidTeenQuizRunner({
       >
         {/* Floating Top-Left Controls */}
         <div className="absolute top-4 left-4 sm:left-6 z-30 flex items-center gap-2 sm:gap-2.5">
-          {!isEmbeddedInCanvas && (
-            <button
-              onClick={() => router.push("/")}
-              className="flex items-center gap-2 bg-white/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/80 shadow-md hover:bg-white/80 transition-all active:scale-95 group cursor-pointer"
-              title="Về trang chủ"
-            >
-              <img
-                src="https://media.dolcake.com/images/logo.png"
-                alt="Dolcake"
-                className="w-7 h-7 object-contain group-hover:rotate-12 transition-transform duration-700 shrink-0"
-              />
-              <div className="flex flex-col text-left">
-                <span className="font-headline font-black text-base tracking-tighter text-primary leading-none">
-                  Dolcake
-                </span>
-                <span className="text-[7px] font-black text-primary/60 tracking-[0.3em] uppercase hidden sm:block">
-                  Student Portal
-                </span>
-              </div>
-            </button>
-          )}
-
           {!isEmbeddedInCanvas && (
             <button
               onClick={() => audioEngine.setIsMuted(!audioEngine.isMuted)}
@@ -838,151 +825,256 @@ export default function KidTeenQuizRunner({
                     : "px-[clamp(1rem,4vw,3rem)] pt-2 pb-[clamp(1rem,4dvh,2.5rem)] space-y-[clamp(1rem,2.5dvh,1.5rem)]"
                 }`}
               >
-                {/* Question text */}
-                {qType !== "MATCHING" && questionText && questionText !== "{}" && (
-                  <div className="text-center relative w-full flex items-center justify-center gap-3 flex-wrap">
-                    <h3
-                      className={`interactive-reading-content font-[800] text-[#2D366D] leading-tight transition-all duration-500 cursor-pointer select-text ${
-                        isChecked && quizMode !== "autoplay"
-                          ? "text-[clamp(1rem,2dvh,1.25rem)]"
-                          : "text-[clamp(1.25rem,3.5dvh,2rem)]"
-                      }`}
-                      style={{ fontFamily: "'Quicksand', 'Nunito', sans-serif" }}
-                      title="Tap a word to translate"
-                    >
-                      {questionText}
-                    </h3>
-                    {!isListeningQuestion &&
-                      (validAudioUrl || currentQuestion?.audioUrl) &&
-                      (!audioOnlyAfterCheck || isChecked) && (
-                        <QuestionAudioPlayButton
-                          src={validAudioUrl || currentQuestion?.audioUrl}
-                          playbackRate={audioOnlyAfterCheck ? 1.0 : audioEngine.getQuestionSpeed()}
-                        />
-                      )}
-                  </div>
-                )}
-
-                {/* Listening Question Main Audio Player */}
-                {isListeningQuestion && (
-                  <div className="flex flex-col items-center justify-center my-3 sm:my-4 gap-1.5 animate-in fade-in zoom-in-95 duration-300">
-                    <QuestionAudioPlayButton
-                      key={`listening-${currentQuestion?.id || currentIndex}`}
-                      src={validAudioUrl}
-                      text={targetAudioText}
-                      playbackRate={audioEngine.getQuestionSpeed()}
-                      autoPlay={!isChecked}
-                      label="Tap to Listen (Bấm để nghe)"
-                      className="px-6 py-3.5 sm:px-8 sm:py-4 rounded-full bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:from-purple-700 hover:to-indigo-700 text-white font-black text-sm sm:text-base shadow-lg shadow-purple-500/25 border-2 border-white/80 active:scale-95 transition-all cursor-pointer"
-                    />
-                    <span className="text-[11px] font-bold text-slate-400 animate-pulse">
-                      🎧 Tự động phát âm thanh • Bấm nút để nghe lại
-                    </span>
-                  </div>
-                )}
-
-                {/* Question illustration if available */}
-                {(currentQuestion?.imageUrl || currentQuestionData?.imageUrl) && (
-                  <div className="flex justify-center my-1.5 sm:my-2">
-                    <img
-                      src={currentQuestion?.imageUrl || currentQuestionData?.imageUrl}
-                      alt="Question illustration"
-                      className="max-h-36 sm:max-h-48 w-auto object-contain rounded-2xl shadow-sm border-2 border-purple-100 bg-white p-1"
-                    />
-                  </div>
-                )}
-
-                {/* Multiple Choice / Select */}
-                {(qType === "MULTIPLE_CHOICE" || qType === "MULTIPLE_SELECT") && (
-                  <MultipleChoiceBlock
-                    currentQuestion={currentQuestion}
-                    options={currentQuestionData.options || []}
-                    userAnswer={userAnswer}
-                    isChecked={isChecked}
-                    isMultiSelect={isMultiSelect}
-                    quizMode={quizMode}
-                    handleAnswerChange={handleAnswerChange}
-                  />
-                )}
-
-                {/* True / False */}
-                {qType === "TRUE_FALSE" && (
-                  <TrueFalseBlock
-                    currentQuestion={currentQuestion}
-                    currentQuestionData={currentQuestionData}
-                    userAnswer={userAnswer}
-                    isChecked={isChecked}
-                    quizMode={quizMode}
-                    attemptSeed={attemptSeed}
-                    handleAnswerChange={handleAnswerChange}
-                  />
-                )}
-
-                {/* Sentence Builder */}
-                {qType === "SENTENCE_BUILDER" && (
-                  <SentenceBuilderBlock
-                    currentQuestion={currentQuestion}
-                    currentQuestionData={currentQuestionData}
-                    userAnswer={userAnswer}
-                    isChecked={isChecked}
-                    attemptSeed={attemptSeed}
-                    handleAnswerChange={handleAnswerChange}
-                  />
-                )}
-
-                {/* Matching Question */}
-                {qType === "MATCHING" && (
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start w-full min-h-0">
-                    <div className="md:col-span-4 flex flex-col items-center md:items-start text-center md:text-left space-y-5 px-2">
+                {/* ── BỐ CỤC 2 CỘT KHI CÂU HỎI CÓ HÌNH ẢNH MINH HỌA ── */}
+                {hasImage ? (
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-5 sm:gap-7 items-center md:items-start w-full min-h-0 pt-1">
+                    {/* Cột Trái: Tiêu đề câu hỏi, Nút nghe & Hình ảnh minh họa (md:col-span-5) */}
+                    <div className="md:col-span-5 flex flex-col items-center text-center space-y-3 sm:space-y-4">
                       {questionText && questionText !== "{}" && (
-                        <div className="flex items-center gap-3 flex-wrap justify-center md:justify-start">
+                        <div className="text-center relative w-full flex items-center justify-center gap-2.5 flex-wrap">
                           <h3
-                            className="text-xl sm:text-2xl md:text-3xl font-[800] text-[#2D366D] leading-tight"
+                            className={`interactive-reading-content font-[800] text-[#2D366D] leading-tight transition-all duration-500 cursor-pointer select-text ${
+                              isChecked && quizMode !== "autoplay"
+                                ? "text-[clamp(1rem,2dvh,1.25rem)]"
+                                : "text-[clamp(1.15rem,3dvh,1.75rem)]"
+                            }`}
                             style={{ fontFamily: "'Quicksand', 'Nunito', sans-serif" }}
+                            title="Tap a word to translate"
                           >
-                            {questionText}
+                            <EnlargedEmojiText text={questionText} isQuestionTitle={true} />
                           </h3>
-                          {currentQuestion?.audioUrl && (
-                            <QuestionAudioPlayButton
-                              src={currentQuestion.audioUrl}
-                              playbackRate={audioEngine.getQuestionSpeed()}
-                            />
-                          )}
+                          {!isListeningQuestion &&
+                            (validAudioUrl || currentQuestion?.audioUrl) &&
+                            (!audioOnlyAfterCheck || isChecked) && (
+                              <QuestionAudioPlayButton
+                                src={validAudioUrl || currentQuestion?.audioUrl}
+                                playbackRate={audioOnlyAfterCheck ? 1.0 : audioEngine.getQuestionSpeed()}
+                              />
+                            )}
                         </div>
                       )}
-                      {currentQuestion?.imageUrl && (
-                        <div className="relative w-full max-w-[280px] aspect-[4/3] rounded-3xl overflow-hidden shadow-md border-4 border-white bg-white">
+
+                      {/* Listening Question Main Audio Player */}
+                      {isListeningQuestion && (
+                        <div className="flex flex-col items-center justify-center my-1.5 gap-1.5 animate-in fade-in zoom-in-95 duration-300">
+                          <QuestionAudioPlayButton
+                            key={`listening-${currentQuestion?.id || currentIndex}`}
+                            src={validAudioUrl}
+                            text={targetAudioText}
+                            playbackRate={audioEngine.getQuestionSpeed()}
+                            autoPlay={!isChecked}
+                            label="Tap to Listen (Bấm để nghe)"
+                            className="px-5 py-2.5 sm:px-7 sm:py-3 rounded-full bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:from-purple-700 hover:to-indigo-700 text-white font-black text-xs sm:text-sm shadow-md shadow-purple-500/25 border-2 border-white/80 active:scale-95 transition-all cursor-pointer"
+                          />
+                          <span className="text-[10px] font-bold text-slate-400 animate-pulse">
+                            🎧 Tự động phát âm thanh • Bấm nút để nghe lại
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Question illustration */}
+                      <div className="w-full flex justify-center">
+                        <div className="relative w-auto max-w-[260px] sm:max-w-[300px] md:max-w-[340px] rounded-3xl overflow-hidden shadow-md border-4 border-white/95 bg-white p-1 transition-transform hover:scale-[1.02]">
                           <img
-                            src={currentQuestion.imageUrl}
-                            alt="Question media"
-                            className="w-full h-full object-cover"
+                            src={qImageUrl}
+                            alt="Question illustration"
+                            className="max-h-36 sm:max-h-48 md:max-h-56 w-auto object-contain rounded-2xl mx-auto"
                           />
                         </div>
-                      )}
+                      </div>
                     </div>
 
-                    <div className="md:col-span-8 w-full min-h-0">
-                      <MatchingQuestionBlock
+                    {/* Cột Phải: Các lựa chọn đáp án tương tác (md:col-span-7) */}
+                    <div className="md:col-span-7 w-full min-h-0 flex flex-col justify-center">
+                      {/* Multiple Choice / Select */}
+                      {(qType === "MULTIPLE_CHOICE" || qType === "MULTIPLE_SELECT") && (
+                        <MultipleChoiceBlock
+                          currentQuestion={currentQuestion}
+                          options={currentQuestionData.options || []}
+                          userAnswer={userAnswer}
+                          isChecked={isChecked}
+                          isMultiSelect={isMultiSelect}
+                          quizMode={quizMode}
+                          handleAnswerChange={handleAnswerChange}
+                        />
+                      )}
+
+                      {/* True / False */}
+                      {qType === "TRUE_FALSE" && (
+                        <TrueFalseBlock
+                          currentQuestion={currentQuestion}
+                          currentQuestionData={currentQuestionData}
+                          userAnswer={userAnswer}
+                          isChecked={isChecked}
+                          quizMode={quizMode}
+                          attemptSeed={attemptSeed}
+                          handleAnswerChange={handleAnswerChange}
+                        />
+                      )}
+
+                      {/* Sentence Builder */}
+                      {qType === "SENTENCE_BUILDER" && (
+                        <SentenceBuilderBlock
+                          currentQuestion={currentQuestion}
+                          currentQuestionData={currentQuestionData}
+                          userAnswer={userAnswer}
+                          isChecked={isChecked}
+                          attemptSeed={attemptSeed}
+                          handleAnswerChange={handleAnswerChange}
+                        />
+                      )}
+
+                      {/* Cloze Test */}
+                      {qType === "CLOZE_TEST" && (
+                        <ClozeTestBlock
+                          q={currentQuestion}
+                          questionData={currentQuestionData}
+                          userAnswer={userAnswer}
+                          isChecked={isChecked}
+                          handleAnswerChange={handleAnswerChange}
+                        />
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  /* ── BỐ CỤC 1 CỘT CHUẨN KHI KHÔNG CÓ HÌNH ẢNH HOẶC LÀ BÀI MATCHING ── */
+                  <>
+                    {/* Question text */}
+                    {qType !== "MATCHING" && questionText && questionText !== "{}" && (
+                      <div className="text-center relative w-full flex items-center justify-center gap-3 flex-wrap">
+                        <h3
+                          className={`interactive-reading-content font-[800] text-[#2D366D] leading-tight transition-all duration-500 cursor-pointer select-text ${
+                            isChecked && quizMode !== "autoplay"
+                              ? "text-[clamp(1rem,2dvh,1.25rem)]"
+                              : "text-[clamp(1.25rem,3.5dvh,2rem)]"
+                          }`}
+                          style={{ fontFamily: "'Quicksand', 'Nunito', sans-serif" }}
+                          title="Tap a word to translate"
+                        >
+                          <EnlargedEmojiText text={questionText} isQuestionTitle={true} />
+                        </h3>
+                        {!isListeningQuestion &&
+                          (validAudioUrl || currentQuestion?.audioUrl) &&
+                          (!audioOnlyAfterCheck || isChecked) && (
+                            <QuestionAudioPlayButton
+                              src={validAudioUrl || currentQuestion?.audioUrl}
+                              playbackRate={audioOnlyAfterCheck ? 1.0 : audioEngine.getQuestionSpeed()}
+                            />
+                          )}
+                      </div>
+                    )}
+
+                    {/* Listening Question Main Audio Player */}
+                    {isListeningQuestion && (
+                      <div className="flex flex-col items-center justify-center my-3 sm:my-4 gap-1.5 animate-in fade-in zoom-in-95 duration-300">
+                        <QuestionAudioPlayButton
+                          key={`listening-${currentQuestion?.id || currentIndex}`}
+                          src={validAudioUrl}
+                          text={targetAudioText}
+                          playbackRate={audioEngine.getQuestionSpeed()}
+                          autoPlay={!isChecked}
+                          label="Tap to Listen (Bấm để nghe)"
+                          className="px-6 py-3.5 sm:px-8 sm:py-4 rounded-full bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:from-purple-700 hover:to-indigo-700 text-white font-black text-sm sm:text-base shadow-lg shadow-purple-500/25 border-2 border-white/80 active:scale-95 transition-all cursor-pointer"
+                        />
+                        <span className="text-[11px] font-bold text-slate-400 animate-pulse">
+                          🎧 Tự động phát âm thanh • Bấm nút để nghe lại
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Multiple Choice / Select */}
+                    {(qType === "MULTIPLE_CHOICE" || qType === "MULTIPLE_SELECT") && (
+                      <MultipleChoiceBlock
+                        currentQuestion={currentQuestion}
+                        options={currentQuestionData.options || []}
+                        userAnswer={userAnswer}
+                        isChecked={isChecked}
+                        isMultiSelect={isMultiSelect}
+                        quizMode={quizMode}
+                        handleAnswerChange={handleAnswerChange}
+                      />
+                    )}
+
+                    {/* True / False */}
+                    {qType === "TRUE_FALSE" && (
+                      <TrueFalseBlock
+                        currentQuestion={currentQuestion}
+                        currentQuestionData={currentQuestionData}
+                        userAnswer={userAnswer}
+                        isChecked={isChecked}
+                        quizMode={quizMode}
+                        attemptSeed={attemptSeed}
+                        handleAnswerChange={handleAnswerChange}
+                      />
+                    )}
+
+                    {/* Sentence Builder */}
+                    {qType === "SENTENCE_BUILDER" && (
+                      <SentenceBuilderBlock
+                        currentQuestion={currentQuestion}
+                        currentQuestionData={currentQuestionData}
+                        userAnswer={userAnswer}
+                        isChecked={isChecked}
+                        attemptSeed={attemptSeed}
+                        handleAnswerChange={handleAnswerChange}
+                      />
+                    )}
+
+                    {/* Matching Question */}
+                    {qType === "MATCHING" && (
+                      <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start w-full min-h-0">
+                        <div className="md:col-span-4 flex flex-col items-center md:items-start text-center md:text-left space-y-5 px-2">
+                          {questionText && questionText !== "{}" && (
+                            <div className="flex items-center gap-3 flex-wrap justify-center md:justify-start">
+                              <h3
+                                className="text-xl sm:text-2xl md:text-3xl font-[800] text-[#2D366D] leading-tight"
+                                style={{ fontFamily: "'Quicksand', 'Nunito', sans-serif" }}
+                              >
+                                {questionText}
+                              </h3>
+                              {currentQuestion?.audioUrl && (
+                                <QuestionAudioPlayButton
+                                  src={currentQuestion.audioUrl}
+                                  playbackRate={audioEngine.getQuestionSpeed()}
+                                />
+                              )}
+                            </div>
+                          )}
+                          {currentQuestion?.imageUrl && (
+                            <div className="relative w-full max-w-[280px] aspect-[4/3] rounded-3xl overflow-hidden shadow-md border-4 border-white bg-white">
+                              <img
+                                src={currentQuestion.imageUrl}
+                                alt="Question media"
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="md:col-span-8 w-full min-h-0">
+                          <MatchingQuestionBlock
+                            q={currentQuestion}
+                            questionData={currentQuestionData}
+                            userAnswer={userAnswer}
+                            isChecked={isChecked}
+                            handleAnswerChange={handleAnswerChange}
+                            matchingColors={matchingColors}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Cloze Test */}
+                    {qType === "CLOZE_TEST" && (
+                      <ClozeTestBlock
                         q={currentQuestion}
                         questionData={currentQuestionData}
                         userAnswer={userAnswer}
                         isChecked={isChecked}
                         handleAnswerChange={handleAnswerChange}
-                        matchingColors={matchingColors}
                       />
-                    </div>
-                  </div>
-                )}
-
-                {/* Cloze Test */}
-                {qType === "CLOZE_TEST" && (
-                  <ClozeTestBlock
-                    q={currentQuestion}
-                    questionData={currentQuestionData}
-                    userAnswer={userAnswer}
-                    isChecked={isChecked}
-                    handleAnswerChange={handleAnswerChange}
-                  />
+                    )}
+                  </>
                 )}
 
                 {/* Explanation block */}

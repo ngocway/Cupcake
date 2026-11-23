@@ -4,6 +4,7 @@ import { useContentStore } from "@/store/useContentStore";
 import { Info, Globe } from "lucide-react";
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
+import { EnlargedEmojiText } from "./EmojiRenderer";
 
 // Supported locales that have pre-translated content
 const SUPPORTED_LOCALES = ["vi", "th", "id"];
@@ -106,7 +107,7 @@ export function ExplanationBlock({
 
           {/* Explanation text */}
           <p className="text-slate-700 leading-relaxed text-base whitespace-pre-wrap">
-            {displayText}
+            <EnlargedEmojiText text={displayText} />
           </p>
         </div>
       </div>
@@ -151,7 +152,7 @@ export function ExplanationBlock({
 
           {/* Explanation text */}
           <p className="text-slate-700 leading-relaxed text-base whitespace-pre-wrap">
-            {displayText}
+            <EnlargedEmojiText text={displayText} />
           </p>
         </div>
       </div>

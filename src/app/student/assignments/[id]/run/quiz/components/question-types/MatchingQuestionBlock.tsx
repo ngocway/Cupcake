@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { CheckCircle2, XCircle } from "lucide-react";
+import { EnlargedEmojiText } from "@/components/common/EmojiRenderer";
 
 interface MatchingQuestionBlockProps {
   q: any;
@@ -231,7 +232,9 @@ export function MatchingQuestionBlock({
                           : 'border-slate-200 bg-white hover:border-slate-300'
                     }`}
                   >
-                    <span className="font-bold text-slate-700">{pair.leftText}</span>
+                    <span className="font-bold text-slate-700">
+                      <EnlargedEmojiText text={pair.leftText} />
+                    </span>
                     <div
                       id={`kid-dot-left-${q.id}-${pair.id}-wrapper`}
                       onPointerDown={(e) => {
@@ -367,7 +370,9 @@ export function MatchingQuestionBlock({
                         className={`w-6 h-6 rounded-full border-4 border-white shadow-md transition-transform hover:scale-150 ${pairedLeftId ? "bg-purple-500" : "bg-slate-300 hover:bg-purple-400"}`}
                       />
                     </div>
-                    <span className="font-bold text-slate-700">{rightText}</span>
+                    <span className="font-bold text-slate-700">
+                      <EnlargedEmojiText text={rightText} />
+                    </span>
                     {isChecked && pairedLeftId && (
                       <div className="ml-auto">{isPairCorrect ? <CheckCircle2 className="w-6 h-6 text-emerald-500" /> : <XCircle className="w-6 h-6 text-rose-500" />}</div>
                     )}

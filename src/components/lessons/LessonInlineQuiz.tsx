@@ -20,6 +20,7 @@ import {
 import { playCorrectSound, playIncorrectSound } from "@/utils/soundEffects";
 import { submitLessonInlineQuizAction } from "@/actions/lesson-inline-quiz-actions";
 import { QuestionAudioPlayButton } from "@/components/common/QuestionAudioPlayButton";
+import { EnlargedEmojiText } from "@/components/common/EmojiRenderer";
 import { extractClueSentence, parseBilingualExplanation } from "@/utils/readingHintExtractor";
 
 interface QuestionData {
@@ -154,7 +155,7 @@ function InlineFillBlankQuestion({
 
           return (
             <React.Fragment key={idx}>
-              <span>{part}</span>
+              <EnlargedEmojiText text={part} />
               {matchItem && (
                 <span className="inline-block relative mx-1.5 align-middle">
                   <input
@@ -557,7 +558,7 @@ export function LessonInlineQuiz({
                   </span>
                   <div className="flex-1 min-w-0">
                     <h4 className="font-headline text-xl sm:text-2xl font-black text-slate-800 leading-snug inline">
-                      {isFillInTheBlank ? "Fill in the blanks" : questionText}
+                      {isFillInTheBlank ? "Fill in the blanks" : <EnlargedEmojiText text={questionText} isQuestionTitle={true} />}
                     </h4>
                     {" "}
                     <QuestionAudioPlayButton
@@ -715,7 +716,7 @@ export function LessonInlineQuiz({
 
                             {/* Option Text */}
                             <span className="font-headline font-black text-xs sm:text-base md:text-lg leading-snug px-1 sm:px-2 break-words max-w-full">
-                              {opt.text || opt.label || opt.optionText}
+                              <EnlargedEmojiText text={opt.text || opt.label || opt.optionText} />
                             </span>
 
                             {/* Pre-check Selected Dot Indicator */}

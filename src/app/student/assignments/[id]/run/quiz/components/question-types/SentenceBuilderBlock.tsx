@@ -2,6 +2,7 @@
 
 import React, { useMemo } from "react";
 import { RotateCcw, CheckCircle2, XCircle } from "lucide-react";
+import { EnlargedEmojiText } from "@/components/common/EmojiRenderer";
 import { seedShuffle } from "../../utils/quizHelpers";
 
 interface WordToken {
@@ -43,12 +44,24 @@ export function SentenceBuilderBlock({
       : Array.isArray(currentQuestionData?.words)
       ? seedShuffle(currentQuestionData.words, `${attemptSeed}-${currentQuestion?.id}-sb`)
       : [];
-    return rawWords.map((text, idx) => ({ idx, text }));
+    // Defensive filter: drop any token that is purely an emoji or non-alphanumeric symbol
+    const cleanWords = rawWords.filter(
+      (w) => typeof w === "string" && /[A-Za-z0-9]/.test(w)
+    );
+    return cleanWords.map((text, idx) => ({ idx, text }));
   }, [currentQuestionData, attemptSeed, currentQuestion?.id]);
 
-  const targetSentence: string =
-    currentQuestionData?.targetSentence ||
-    (Array.isArray(currentQuestionData?.words) ? currentQuestionData.words.join(" ") : "");
+  const targetSentence: string = useMemo(() => {
+    const raw =
+      currentQuestionData?.targetSentence ||
+      (Array.isArray(currentQuestionData?.words)
+        ? currentQuestionData.words.filter((w: any) => typeof w === "string" && /[A-Za-z0-9]/.test(w)).join(" ")
+        : "");
+    return raw
+      .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F1E6}-\u{1F1FF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{1FA70}-\u{1FAFF}\u{200D}\u{FE0F}]/gu, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }, [currentQuestionData]);
 
   const builtSentence = selectedTokens.map((t) => t.text).join(" ").trim();
   const isCorrect = isChecked && builtSentence === targetSentence.trim();
@@ -115,7 +128,7 @@ export function SentenceBuilderBlock({
               }`}
               title={isChecked ? undefined : "Tap to remove"}
             >
-              {token.text}
+              <EnlargedEmojiText text={token.text} />
             </button>
           ))
         )}
@@ -167,7 +180,7 @@ export function SentenceBuilderBlock({
                   : `${colorCls} active:translate-y-0.5 shadow-sm cursor-pointer`
               }`}
             >
-              {token.text}
+              {token.text && <EnlargedEmojiText text={token.text} />}
             </button>
           );
         })}

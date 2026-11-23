@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,9 +8,12 @@
     <title>Flashcard Match! 🌟</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Nunito:wght@700;800;900&display=swap"
+        rel="stylesheet">
     <style>
-        html, body {
+        html,
+        body {
             margin: 0;
             padding: 0;
             width: 100%;
@@ -33,9 +37,9 @@
             position: relative;
             z-index: 200;
             height: 54px;
-            background: rgba(255,255,255,0.45);
+            background: rgba(255, 255, 255, 0.45);
             backdrop-filter: blur(14px);
-            border-bottom: 2px solid rgba(255,255,255,0.7);
+            border-bottom: 2px solid rgba(255, 255, 255, 0.7);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -56,11 +60,12 @@
             flex: 1;
             max-width: 360px;
             height: 14px;
-            background: rgba(255,255,255,0.6);
+            background: rgba(255, 255, 255, 0.6);
             border-radius: 20px;
-            border: 2px solid rgba(255,107,107,0.25);
+            border: 2px solid rgba(255, 107, 107, 0.25);
             overflow: hidden;
         }
+
         #progressBar {
             height: 100%;
             width: 0%;
@@ -89,10 +94,10 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            background: rgba(255,255,255,0.75);
+            background: rgba(255, 255, 255, 0.75);
             border: 5px dashed #ff9ff3;
             border-radius: 22px;
-            box-shadow: 0 10px 24px rgba(0,0,0,0.10);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.10);
             overflow: hidden;
             transition: border-color 0.25s, background 0.25s, box-shadow 0.25s;
             will-change: left, top;
@@ -129,7 +134,7 @@
             font-size: 2rem;
             line-height: 1;
             margin-bottom: 4px;
-            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.12));
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.12));
         }
 
         .card-image-fallback .fallback-text {
@@ -139,7 +144,7 @@
             line-height: 1.15;
             word-break: break-word;
             max-width: 100%;
-            text-shadow: 0 1px 0 rgba(255,255,255,0.85);
+            text-shadow: 0 1px 0 rgba(255, 255, 255, 0.85);
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
@@ -151,6 +156,7 @@
                 font-size: 1.4rem;
                 margin-bottom: 2px;
             }
+
             .card-image-fallback .fallback-text {
                 font-size: 0.78rem;
             }
@@ -158,21 +164,21 @@
 
         .game-item-image.drop-hover {
             border-color: #feca57 !important;
-            background: rgba(254,202,87,0.25) !important;
-            box-shadow: 0 0 0 6px rgba(254,202,87,0.45), 0 10px 24px rgba(0,0,0,0.15) !important;
+            background: rgba(254, 202, 87, 0.25) !important;
+            box-shadow: 0 0 0 6px rgba(254, 202, 87, 0.45), 0 10px 24px rgba(0, 0, 0, 0.15) !important;
         }
 
         .game-item-image.matched {
             border: 5px solid #1dd1a1 !important;
-            background: rgba(29,209,161,0.22) !important;
-            box-shadow: 0 0 0 4px rgba(29,209,161,0.35) !important;
+            background: rgba(29, 209, 161, 0.22) !important;
+            box-shadow: 0 0 0 4px rgba(29, 209, 161, 0.35) !important;
             cursor: default;
             animation: happyDance 0.5s ease;
         }
 
         .game-item-image.wrong-flash {
             border-color: #ff6b6b !important;
-            background: rgba(255,107,107,0.18) !important;
+            background: rgba(255, 107, 107, 0.18) !important;
             animation: wrongShake 0.35s ease;
         }
 
@@ -183,7 +189,7 @@
             padding: 8px 18px;
             color: #fff;
             border-radius: 50px;
-            box-shadow: 0 7px 0 rgba(0,0,0,0.18), 0 12px 18px rgba(0,0,0,0.18);
+            box-shadow: 0 7px 0 rgba(0, 0, 0, 0.18), 0 12px 18px rgba(0, 0, 0, 0.18);
             cursor: grab;
             transition: transform 0.12s, box-shadow 0.12s;
             z-index: 50;
@@ -196,13 +202,13 @@
 
         .game-item-text:hover:not(.matched) {
             transform: scale(1.08) translateY(-3px);
-            box-shadow: 0 11px 0 rgba(0,0,0,0.18), 0 18px 24px rgba(0,0,0,0.22);
+            box-shadow: 0 11px 0 rgba(0, 0, 0, 0.18), 0 18px 24px rgba(0, 0, 0, 0.22);
         }
 
         .game-item-text.dragging {
             cursor: grabbing;
             transform: scale(1.15) translateY(-10px) rotate(-3deg) !important;
-            box-shadow: 0 0 0 rgba(0,0,0,0), 0 20px 28px rgba(0,0,0,0.28) !important;
+            box-shadow: 0 0 0 rgba(0, 0, 0, 0), 0 20px 28px rgba(0, 0, 0, 0.28) !important;
             z-index: 1000 !important;
             transition: none !important;
         }
@@ -211,7 +217,7 @@
             opacity: 0.6;
             cursor: default;
             transform: none !important;
-            box-shadow: 0 3px 0 rgba(0,0,0,0.1) !important;
+            box-shadow: 0 3px 0 rgba(0, 0, 0, 0.1) !important;
             pointer-events: none;
         }
 
@@ -221,38 +227,92 @@
 
         /* ── Animations ── */
         @keyframes happyDance {
-            0%   { transform: scale(1) rotate(0deg); }
-            25%  { transform: scale(1.2) rotate(-12deg); }
-            50%  { transform: scale(1.2) rotate(12deg); }
-            75%  { transform: scale(1.15) rotate(-8deg); }
-            100% { transform: scale(1) rotate(0deg); }
+            0% {
+                transform: scale(1) rotate(0deg);
+            }
+
+            25% {
+                transform: scale(1.2) rotate(-12deg);
+            }
+
+            50% {
+                transform: scale(1.2) rotate(12deg);
+            }
+
+            75% {
+                transform: scale(1.15) rotate(-8deg);
+            }
+
+            100% {
+                transform: scale(1) rotate(0deg);
+            }
         }
 
         @keyframes wrongShake {
-            0%   { transform: translateX(0); }
-            20%  { transform: translateX(-9px) rotate(-3deg); }
-            40%  { transform: translateX(9px) rotate(3deg); }
-            60%  { transform: translateX(-6px) rotate(-2deg); }
-            80%  { transform: translateX(6px) rotate(2deg); }
-            100% { transform: translateX(0); }
+            0% {
+                transform: translateX(0);
+            }
+
+            20% {
+                transform: translateX(-9px) rotate(-3deg);
+            }
+
+            40% {
+                transform: translateX(9px) rotate(3deg);
+            }
+
+            60% {
+                transform: translateX(-6px) rotate(-2deg);
+            }
+
+            80% {
+                transform: translateX(6px) rotate(2deg);
+            }
+
+            100% {
+                transform: translateX(0);
+            }
         }
 
         @keyframes pop {
-            0%   { transform: scale(0.5) translate(0,0); opacity: 1; }
-            100% { transform: scale(1.5) translate(var(--tx), var(--ty)); opacity: 0; }
+            0% {
+                transform: scale(0.5) translate(0, 0);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(1.5) translate(var(--tx), var(--ty));
+                opacity: 0;
+            }
         }
 
         @keyframes fall {
-            to { transform: translateY(110vh) rotate(720deg); }
+            to {
+                transform: translateY(110vh) rotate(720deg);
+            }
         }
 
         @keyframes bounceIn {
-            0%   { transform: scale(0.5); opacity: 0; }
-            70%  { transform: scale(1.1); opacity: 1; }
-            100% { transform: scale(1); }
+            0% {
+                transform: scale(0.5);
+                opacity: 0;
+            }
+
+            70% {
+                transform: scale(1.1);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(1);
+            }
         }
 
-        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
 
         .particle {
             position: absolute;
@@ -283,8 +343,13 @@
         }
 
         @keyframes floatCloud {
-            from { transform: translateX(-250px); }
-            to   { transform: translateX(110vw); }
+            from {
+                transform: translateX(-250px);
+            }
+
+            to {
+                transform: translateX(110vw);
+            }
         }
 
         /* ── Round Complete Banner ── */
@@ -293,26 +358,43 @@
             position: absolute;
             inset: 0;
             z-index: 500;
-            background: rgba(0,0,0,0.36);
+            background: rgba(0, 0, 0, 0.36);
             backdrop-filter: blur(6px);
             justify-content: center;
             align-items: center;
             flex-direction: column;
         }
-        #roundBanner.show { display: flex; }
+
+        #roundBanner.show {
+            display: flex;
+        }
 
         #roundBannerCard {
             background: white;
             border-radius: 40px;
             padding: 44px 56px;
             text-align: center;
-            box-shadow: 0 30px 80px rgba(0,0,0,0.25);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.25);
             animation: bounceIn 0.5s ease;
         }
 
-        #roundBannerEmoji  { font-size: 4rem; margin-bottom: 8px; }
-        #roundBannerTitle  { font-size: 2.8rem; color: #1dd1a1; text-shadow: 2px 2px 0 rgba(0,0,0,0.07); margin-bottom: 6px; }
-        #roundBannerSub    { font-size: 1.3rem; color: #636e72; margin-bottom: 24px; }
+        #roundBannerEmoji {
+            font-size: 4rem;
+            margin-bottom: 8px;
+        }
+
+        #roundBannerTitle {
+            font-size: 2.8rem;
+            color: #1dd1a1;
+            text-shadow: 2px 2px 0 rgba(0, 0, 0, 0.07);
+            margin-bottom: 6px;
+        }
+
+        #roundBannerSub {
+            font-size: 1.3rem;
+            color: #636e72;
+            margin-bottom: 24px;
+        }
 
         #nextRoundBtn {
             background: #ff6b6b;
@@ -324,83 +406,154 @@
             border: 6px solid white;
             border-radius: 50px;
             cursor: pointer;
-            box-shadow: 0 8px 0 #ee5253, 0 16px 24px rgba(0,0,0,0.18);
+            box-shadow: 0 8px 0 #ee5253, 0 16px 24px rgba(0, 0, 0, 0.18);
             transition: transform 0.18s, box-shadow 0.18s;
             text-transform: uppercase;
             letter-spacing: 2px;
         }
-        #nextRoundBtn:hover  { transform: translateY(-4px); box-shadow: 0 12px 0 #ee5253, 0 22px 28px rgba(0,0,0,0.22); }
-        #nextRoundBtn:active { transform: translateY(4px);  box-shadow: 0 0 0 #ee5253, 0 4px 8px rgba(0,0,0,0.15); }
+
+        #nextRoundBtn:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 0 #ee5253, 0 22px 28px rgba(0, 0, 0, 0.22);
+        }
+
+        #nextRoundBtn:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #ee5253, 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
 
         /* ── Loading Overlay ── */
         #loadingOverlay {
-            position: absolute; inset: 0;
-            background: rgba(161,196,253,0.92);
-            z-index: 3000;  /* MUST be above start overlay (2000) to block early PLAY clicks */
-            display: flex; flex-direction: column;
-            justify-content: center; align-items: center;
+            position: absolute;
+            inset: 0;
+            background: rgba(161, 196, 253, 0.92);
+            z-index: 3000;
+            /* MUST be above start overlay (2000) to block early PLAY clicks */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
             backdrop-filter: blur(5px);
             transition: opacity 0.5s;
         }
+
         #loadingOverlay .spinner {
-            width: 60px; height: 60px;
-            border: 6px solid rgba(255,255,255,0.3);
+            width: 60px;
+            height: 60px;
+            border: 6px solid rgba(255, 255, 255, 0.3);
             border-top-color: white;
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
-        #loadingOverlay .loadText { color: white; font-size: 1.7rem; margin-top: 18px; letter-spacing: 3px; }
+
+        #loadingOverlay .loadText {
+            color: white;
+            font-size: 1.7rem;
+            margin-top: 18px;
+            letter-spacing: 3px;
+        }
 
         /* ── Start Overlay ── */
         #startOverlay {
-            position: absolute; inset: 0;
+            position: absolute;
+            inset: 0;
             background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
             z-index: 2000;
-            display: flex; flex-direction: column;
-            justify-content: center; align-items: center; gap: 14px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 14px;
             transition: opacity 0.5s ease;
         }
+
         #startOverlay .startTitle {
-            font-size: 3.5rem; color: white;
+            font-size: 3.5rem;
+            color: white;
             text-shadow: 3px 3px 0 #ff6b6b;
-            text-align: center; margin-bottom: 8px;
+            text-align: center;
+            margin-bottom: 8px;
         }
+
         .instruction {
-            display: flex; align-items: center; gap: 10px;
-            background: rgba(255,255,255,0.28);
-            border: 2px solid rgba(255,255,255,0.55);
-            border-radius: 20px; padding: 10px 22px;
-            color: white; font-size: 1.15rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.28);
+            border: 2px solid rgba(255, 255, 255, 0.55);
+            border-radius: 20px;
+            padding: 10px 22px;
+            color: white;
+            font-size: 1.15rem;
         }
+
         .play-btn {
-            background: #ff6b6b; color: white;
+            background: #ff6b6b;
+            color: white;
             font-family: 'Baloo 2', 'Nunito', sans-serif;
             font-weight: 800;
-            font-size: 2.5rem; padding: 18px 54px;
-            border: 8px solid white; border-radius: 50px; cursor: pointer;
-            box-shadow: 0 10px 0 #ee5253, 0 20px 30px rgba(0,0,0,0.2);
+            font-size: 2.5rem;
+            padding: 18px 54px;
+            border: 8px solid white;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 10px 0 #ee5253, 0 20px 30px rgba(0, 0, 0, 0.2);
             transition: transform 0.2s, box-shadow 0.2s;
-            text-transform: uppercase; letter-spacing: 3px; margin-top: 10px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-top: 10px;
         }
-        .play-btn:hover  { transform: translateY(-5px); box-shadow: 0 15px 0 #ee5253, 0 25px 35px rgba(0,0,0,0.25); }
-        .play-btn:active { transform: translateY(5px);  box-shadow: 0 0 0 #ee5253, 0 5px 10px rgba(0,0,0,0.15); }
+
+        .play-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 0 #ee5253, 0 25px 35px rgba(0, 0, 0, 0.25);
+        }
+
+        .play-btn:active {
+            transform: translateY(5px);
+            box-shadow: 0 0 0 #ee5253, 0 5px 10px rgba(0, 0, 0, 0.15);
+        }
 
         @media (max-width: 600px) {
-            #hud { height: 46px; gap: 10px; }
-            #roundLabel, #pairCount { font-size: 1rem; }
-            .game-item-text { font-size: 0.9rem; padding: 6px 12px; }
-            #roundBannerTitle { font-size: 2rem; }
-            #roundBannerCard { padding: 28px 28px; }
-            #nextRoundBtn { font-size: 1.4rem; padding: 12px 30px; }
+            #hud {
+                height: 46px;
+                gap: 10px;
+            }
+
+            #roundLabel,
+            #pairCount {
+                font-size: 1rem;
+            }
+
+            .game-item-text {
+                font-size: 0.9rem;
+                padding: 6px 12px;
+            }
+
+            #roundBannerTitle {
+                font-size: 2rem;
+            }
+
+            #roundBannerCard {
+                padding: 28px 28px;
+            }
+
+            #nextRoundBtn {
+                font-size: 1.4rem;
+                padding: 12px 30px;
+            }
         }
     </style>
 </head>
+
 <body>
 
     <!-- HUD -->
     <div id="hud">
         <span id="roundLabel">Round 1</span>
-        <div id="progressWrap"><div id="progressBar"></div></div>
+        <div id="progressWrap">
+            <div id="progressBar"></div>
+        </div>
         <span id="pairCount">0 / 7</span>
     </div>
 
@@ -438,779 +591,780 @@
     </audio>
 
     <script>
-    // ──────────────────────────────────────────────
-    //  Config
-    // ──────────────────────────────────────────────
-    function getPairsPerRound() {
-        if (isTeacherGame && roundCards.length > 0) {
-            return roundCards.length;
+        // ──────────────────────────────────────────────
+        //  Config
+        // ──────────────────────────────────────────────
+        function getPairsPerRound() {
+            if (isTeacherGame && roundCards.length > 0) {
+                return roundCards.length;
+            }
+            return Math.min(allCards.length || 7, 7);
         }
-        return Math.min(allCards.length || 7, 7);
-    }
 
-    const WORD_COLORS = [
-        { bg: '#ff6b6b', border: '#ee5253' },
-        { bg: '#feca57', border: '#f9ca24' },
-        { bg: '#1dd1a1', border: '#10ac84' },
-        { bg: '#54a0ff', border: '#2e86de' },
-        { bg: '#ff9ff3', border: '#f368e0' },
-        { bg: '#ff9f43', border: '#e67e22' },
-        { bg: '#5f27cd', border: '#341f97' },
-    ];
+        const WORD_COLORS = [
+            { bg: '#ff6b6b', border: '#ee5253' },
+            { bg: '#feca57', border: '#f9ca24' },
+            { bg: '#1dd1a1', border: '#10ac84' },
+            { bg: '#54a0ff', border: '#2e86de' },
+            { bg: '#ff9ff3', border: '#f368e0' },
+            { bg: '#ff9f43', border: '#e67e22' },
+            { bg: '#5f27cd', border: '#341f97' },
+        ];
 
-    const BORDER_COLORS = [
-        '#ff9ff3','#54a0ff','#feca57','#1dd1a1','#ff6b6b','#ff9f43','#a29bfe'
-    ];
+        const BORDER_COLORS = [
+            '#ff9ff3', '#54a0ff', '#feca57', '#1dd1a1', '#ff6b6b', '#ff9f43', '#a29bfe'
+        ];
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const topicId   = urlParams.get('topicId');
+        const urlParams = new URLSearchParams(window.location.search);
+        const topicId = urlParams.get('topicId');
 
-    // ──────────────────────────────────────────────
-    //  State
-    // ──────────────────────────────────────────────
-    let allCards     = [];
-    let usedIds      = new Set();
-    let roundCards   = [];
-    let roundNumber  = 1;
-    let matchedCount = 0;
-    let elements     = [];   // physics objects
-    let animationId  = null;
-    let isTeacherGame = false;
-    let isGameFullyCompleted = false;
+        // ──────────────────────────────────────────────
+        //  State
+        // ──────────────────────────────────────────────
+        let allCards = [];
+        let usedIds = new Set();
+        let roundCards = [];
+        let roundNumber = 1;
+        let matchedCount = 0;
+        let elements = [];   // physics objects
+        let animationId = null;
+        let isTeacherGame = false;
+        let isGameFullyCompleted = false;
 
-    const gameArea    = document.getElementById('gameArea');
-    const roundLabel  = document.getElementById('roundLabel');
-    const progressBar = document.getElementById('progressBar');
-    const pairCountEl = document.getElementById('pairCount');
-    const roundBanner = document.getElementById('roundBanner');
-    const bgMusic     = document.getElementById('bgMusic');
+        const gameArea = document.getElementById('gameArea');
+        const roundLabel = document.getElementById('roundLabel');
+        const progressBar = document.getElementById('progressBar');
+        const pairCountEl = document.getElementById('pairCount');
+        const roundBanner = document.getElementById('roundBanner');
+        const bgMusic = document.getElementById('bgMusic');
 
-    // ──────────────────────────────────────────────
-    //  Audio
-    // ──────────────────────────────────────────────
-    function playSuccessSound() {
-        try {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            [[523.25,0],[659.25,0.08],[783.99,0.16]].forEach(([freq,delay]) => {
-                const o=ctx.createOscillator(), g=ctx.createGain();
-                o.type='sine'; o.frequency.setValueAtTime(freq, ctx.currentTime+delay);
-                g.gain.setValueAtTime(0.9,ctx.currentTime+delay);
-                g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+delay+0.3);
-                o.connect(g); g.connect(ctx.destination);
-                o.start(ctx.currentTime+delay); o.stop(ctx.currentTime+delay+0.3);
-            });
-        } catch(e){}
-    }
-
-    function playErrorSound() {
-        try {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            const o=ctx.createOscillator(), g=ctx.createGain();
-            o.type='triangle';
-            o.frequency.setValueAtTime(220,ctx.currentTime);
-            o.frequency.exponentialRampToValueAtTime(80,ctx.currentTime+0.22);
-            g.gain.setValueAtTime(0.8,ctx.currentTime);
-            g.gain.linearRampToValueAtTime(0.001,ctx.currentTime+0.22);
-            o.connect(g); g.connect(ctx.destination);
-            o.start(); o.stop(ctx.currentTime+0.22);
-        } catch(e){}
-    }
-
-    function playWinSound() {
-        try {
-            const ctx = new (window.AudioContext || window.webkitAudioContext)();
-            [523.25,659.25,783.99,1046.5].forEach((freq,i) => {
-                const o=ctx.createOscillator(), g=ctx.createGain();
-                o.type='sine'; o.frequency.setValueAtTime(freq,ctx.currentTime+i*0.09);
-                g.gain.setValueAtTime(0.8,ctx.currentTime+i*0.09);
-                g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+i*0.09+0.35);
-                o.connect(g); g.connect(ctx.destination);
-                o.start(ctx.currentTime+i*0.09); o.stop(ctx.currentTime+i*0.09+0.35);
-            });
-        } catch(e){}
-    }
-
-    async function speakWord(card) {
-        const url = card.audioWordUrl || card.audioUrl;
-        if (bgMusic) bgMusic.volume = 0.05;
-        const restoreVolume = () => {
-            if (bgMusic) bgMusic.volume = 0.2;
-        };
-
-        if (url) {
+        // ──────────────────────────────────────────────
+        //  Audio
+        // ──────────────────────────────────────────────
+        function playSuccessSound() {
             try {
-                // Priority 1: Web Audio API with GainNode for Cloudflare audio
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const res      = await fetch(url);
-                if (res.ok) {
-                    const buf      = await res.arrayBuffer();
-                    const decoded  = await audioCtx.decodeAudioData(buf);
-                    const source   = audioCtx.createBufferSource();
-                    const gain     = audioCtx.createGain();
-                    gain.gain.value = 2.0;  // boost 2x
-                    source.buffer  = decoded;
-                    source.connect(gain);
-                    gain.connect(audioCtx.destination);
-                    source.onended = restoreVolume;
-                    source.start(0);
-                    return;
-                }
-            } catch(e) {
-                // Secondary check: plain Audio element
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                [[523.25, 0], [659.25, 0.08], [783.99, 0.16]].forEach(([freq, delay]) => {
+                    const o = ctx.createOscillator(), g = ctx.createGain();
+                    o.type = 'sine'; o.frequency.setValueAtTime(freq, ctx.currentTime + delay);
+                    g.gain.setValueAtTime(0.9, ctx.currentTime + delay);
+                    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.3);
+                    o.connect(g); g.connect(ctx.destination);
+                    o.start(ctx.currentTime + delay); o.stop(ctx.currentTime + delay + 0.3);
+                });
+            } catch (e) { }
+        }
+
+        function playErrorSound() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const o = ctx.createOscillator(), g = ctx.createGain();
+                o.type = 'triangle';
+                o.frequency.setValueAtTime(220, ctx.currentTime);
+                o.frequency.exponentialRampToValueAtTime(80, ctx.currentTime + 0.22);
+                g.gain.setValueAtTime(0.8, ctx.currentTime);
+                g.gain.linearRampToValueAtTime(0.001, ctx.currentTime + 0.22);
+                o.connect(g); g.connect(ctx.destination);
+                o.start(); o.stop(ctx.currentTime + 0.22);
+            } catch (e) { }
+        }
+
+        function playWinSound() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+                    const o = ctx.createOscillator(), g = ctx.createGain();
+                    o.type = 'sine'; o.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.09);
+                    g.gain.setValueAtTime(0.8, ctx.currentTime + i * 0.09);
+                    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.09 + 0.35);
+                    o.connect(g); g.connect(ctx.destination);
+                    o.start(ctx.currentTime + i * 0.09); o.stop(ctx.currentTime + i * 0.09 + 0.35);
+                });
+            } catch (e) { }
+        }
+
+        async function speakWord(card) {
+            const url = card.audioWordUrl || card.audioUrl;
+            if (bgMusic) bgMusic.volume = 0.05;
+            const restoreVolume = () => {
+                if (bgMusic) bgMusic.volume = 0.2;
+            };
+
+            if (url) {
                 try {
-                    const a = new Audio(url);
-                    a.volume = 1;
-                    a.addEventListener('ended', restoreVolume);
-                    a.addEventListener('error', () => {
-                        fallbackToEdgeTTS(card, restoreVolume);
-                    });
-                    await a.play();
-                    return;
-                } catch(e2){
-                    // Fall through to Edge TTS below
-                }
-            }
-        }
-
-        // Priority 2: Fallback on-the-fly Edge TTS (for cards without Cloudflare audio)
-        fallbackToEdgeTTS(card, restoreVolume);
-    }
-
-    function fallbackToEdgeTTS(card, restoreVolume) {
-        const textToSpeak = (card.word || '').trim();
-        if (textToSpeak) {
-            try {
-                const edgeAudio = new Audio(`/api/tts/edge?text=${encodeURIComponent(textToSpeak)}`);
-                edgeAudio.volume = 1;
-                edgeAudio.addEventListener('ended', restoreVolume);
-                edgeAudio.addEventListener('error', () => {
-                    tryBrowserSpeech(textToSpeak, restoreVolume);
-                });
-                edgeAudio.play().catch(() => {
-                    tryBrowserSpeech(textToSpeak, restoreVolume);
-                });
-                return;
-            } catch(edgeErr) {
-                tryBrowserSpeech(textToSpeak, restoreVolume);
-                return;
-            }
-        }
-        restoreVolume();
-    }
-
-    function tryBrowserSpeech(text, restoreVolume) {
-        try {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                const u=new SpeechSynthesisUtterance(text);
-                u.lang='en-US'; u.rate=0.85; u.pitch=1.1;
-                u.onend = restoreVolume;
-                u.onerror = restoreVolume;
-                window.speechSynthesis.speak(u);
-            } else {
-                restoreVolume();
-            }
-        } catch(e){
-            restoreVolume();
-        }
-    }
-
-    // ──────────────────────────────────────────────
-    //  Layout helpers
-    // ──────────────────────────────────────────────
-    function getCardSize() {
-        const W = gameArea.clientWidth;
-        if (W <= 480) return Math.max(80, Math.floor(W / 4.5));
-        if (W <= 768) return Math.max(95, Math.floor(W / 5));
-        return Math.min(170, Math.max(110, Math.floor(W / 7.5)));
-    }
-
-    function updatePosition(obj) {
-        const w = obj.el.offsetWidth  || (obj.type==='img' ? 130 : 120);
-        const h = obj.el.offsetHeight || (obj.type==='img' ? 130 : 50);
-        obj.el.style.left = (obj.x - w/2) + 'px';
-        obj.el.style.top  = (obj.y - h/2) + 'px';
-    }
-
-    // ──────────────────────────────────────────────
-    //  Round card selection
-    // ──────────────────────────────────────────────
-    function pickRoundCards() {
-        if (isTeacherGame) {
-            const roundsMap = {};
-            allCards.forEach(c => {
-                const r = (c.roundIndex !== undefined && c.roundIndex !== null) ? c.roundIndex : 0;
-                if (!roundsMap[r]) roundsMap[r] = [];
-                roundsMap[r].push(c);
-            });
-            const roundKeys = Object.keys(roundsMap).sort((a, b) => a - b);
-            const currentKey = roundKeys[(roundNumber - 1) % roundKeys.length];
-            roundCards = roundsMap[currentKey] || [];
-            roundCards.forEach(c => usedIds.add(c.id));
-            return;
-        }
-
-        const pairsCount = getPairsPerRound();
-        let pool = allCards.filter(c => !usedIds.has(c.id));
-        if (pool.length < pairsCount) {
-            usedIds.clear();
-            pool = [...allCards];
-        }
-        const shuffled = [...pool];
-        for (let i=shuffled.length-1;i>0;i--) {
-            const j=Math.floor(Math.random()*(i+1));
-            [shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];
-        }
-        roundCards = shuffled.slice(0, pairsCount);
-        roundCards.forEach(c => usedIds.add(c.id));
-    }
-
-    function renderCardImage(container, rawUrl, fallbackText, fallbackBg) {
-        let url = (rawUrl || '').trim();
-        if (url.startsWith('http://') && window.location.protocol === 'https:') {
-            url = url.replace('http://', 'https://');
-        }
-
-        const showFallback = () => {
-            if (container.querySelector('.card-image-fallback')) return;
-            container.innerHTML = '';
-            const fb = document.createElement('div');
-            fb.className = 'card-image-fallback';
-            if (fallbackBg) fb.style.background = fallbackBg;
-
-            const emoji = document.createElement('span');
-            emoji.className = 'fallback-emoji';
-            emoji.textContent = '🖼️';
-
-            const txt = document.createElement('span');
-            txt.className = 'fallback-text';
-            txt.textContent = fallbackText || '';
-
-            fb.appendChild(emoji);
-            fb.appendChild(txt);
-            container.appendChild(fb);
-        };
-
-        if (!url) {
-            showFallback();
-            return;
-        }
-
-        const img = document.createElement('img');
-        img.referrerPolicy = 'no-referrer';
-        img.alt = fallbackText || 'Card Image';
-        img.draggable = false;
-        img.onerror = () => {
-            showFallback();
-        };
-        img.src = url;
-        container.appendChild(img);
-
-        if (img.complete && img.naturalWidth === 0) {
-            showFallback();
-        }
-    }
-
-    // ──────────────────────────────────────────────
-    //  Init Round
-    // ──────────────────────────────────────────────
-    function initRound() {
-        gameArea.querySelectorAll('.game-item-image,.game-item-text,.particle,.confetti')
-                .forEach(el => el.remove());
-
-        elements = [];
-        matchedCount = 0;
-        updateHUD();
-        pickRoundCards();
-
-        const cardSize = getCardSize();
-        const W = gameArea.clientWidth;
-        const H = gameArea.clientHeight;
-
-        // Shuffle word column positions independently
-        const wordCols = roundCards.map((_,i) => i);
-        for (let i=wordCols.length-1;i>0;i--) {
-            const j=Math.floor(Math.random()*(i+1));
-            [wordCols[i],wordCols[j]]=[wordCols[j],wordCols[i]];
-        }
-
-        roundCards.forEach((card, index) => {
-            const wColor  = WORD_COLORS[index % WORD_COLORS.length];
-            const bColor  = BORDER_COLORS[index % BORDER_COLORS.length];
-
-            // ── Image A drop zone ──
-            const imgEl = document.createElement('div');
-            imgEl.className = 'game-item-image';
-            imgEl.style.width  = cardSize + 'px';
-            imgEl.style.height = cardSize + 'px';
-            imgEl.style.borderColor = bColor;
-            imgEl.style.backgroundColor = bColor + '22';
-
-            renderCardImage(imgEl, card.imageUrl, card.word, bColor + '18');
-            gameArea.appendChild(imgEl);
-
-            // ── Item B (Image B or Word chip) ──
-            const isImgB = Boolean(card.imageBUrl);
-            let itemBEl;
-            if (isImgB) {
-                itemBEl = document.createElement('div');
-                itemBEl.className = 'game-item-image game-item-b';
-                itemBEl.style.width  = cardSize + 'px';
-                itemBEl.style.height = cardSize + 'px';
-                itemBEl.style.borderColor = wColor.border;
-                itemBEl.style.backgroundColor = wColor.bg + '22';
-                itemBEl.style.cursor = 'grab';
-                itemBEl.style.zIndex = '50';
-
-                renderCardImage(itemBEl, card.imageBUrl, card.labelB || card.word, wColor.bg + '18');
-            } else {
-                itemBEl = document.createElement('div');
-                itemBEl.className = 'game-item-text';
-                itemBEl.textContent = card.word;
-                itemBEl.style.backgroundColor = wColor.bg;
-                itemBEl.style.border = `4px solid ${wColor.border}`;
-            }
-            gameArea.appendChild(itemBEl);
-
-            // ── Starting positions ──
-            const colW = W / roundCards.length;
-            const imgX = colW * index + (colW - cardSize) / 2 + cardSize / 2;
-            const imgY = 55 + Math.random() * (H * 0.45 - cardSize - 10) + cardSize / 2;
-
-            const wCol  = wordCols[index];
-            const wColW = W / roundCards.length;
-            const txtX  = wColW * wCol + (wColW - cardSize) / 2 + cardSize / 2;
-            const txtY  = H * 0.62 + Math.random() * (H * 0.30 - cardSize / 2);
-
-            const rndSpd = () => Math.random() * 0.38 + 0.28;
-            const rndAng = () => Math.random() * Math.PI * 2;
-
-            const imgObj = {
-                id: card.id, card, el: imgEl, type: 'img',
-                matched: false, index,
-                x: imgX, y: imgY,
-                vx: Math.cos(rndAng()) * rndSpd(),
-                vy: Math.sin(rndAng()) * rndSpd(),
-                radius: cardSize / 2 + 10
-            };
-            const txtObj = {
-                id: card.id, card, el: itemBEl, type: isImgB ? 'imgB' : 'txt',
-                matched: false, index,
-                x: txtX, y: txtY,
-                vx: Math.cos(rndAng()) * rndSpd(),
-                vy: Math.sin(rndAng()) * rndSpd(),
-                radius: isImgB ? cardSize / 2 + 10 : 80,
-                dragging: false
-            };
-
-            elements.push(imgObj, txtObj);
-
-            // Enable bi-directional dragging for BOTH cards!
-            setupDrag(imgObj, txtObj);
-            setupDrag(txtObj, imgObj);
-        });
-
-        if (animationId) cancelAnimationFrame(animationId);
-        animationId = requestAnimationFrame(animate);
-    }
-
-    // ──────────────────────────────────────────────
-    //  Drag-and-drop (Bi-directional Pointer Events)
-    // ──────────────────────────────────────────────
-    function setupDrag(sourceObj, targetObj) {
-        let startX, startY, initialX, initialY;
-
-        sourceObj.el.style.cursor = 'grab';
-
-        sourceObj.el.addEventListener('pointerdown', (e) => {
-            if (sourceObj.matched) return;
-            e.preventDefault();
-            sourceObj.dragging = true;
-            sourceObj.el.classList.add('dragging');
-            sourceObj.el.style.zIndex = 1000;
-            startX   = e.clientX;
-            startY   = e.clientY;
-            initialX = sourceObj.x;
-            initialY = sourceObj.y;
-            sourceObj.el.setPointerCapture(e.pointerId);
-        });
-
-        sourceObj.el.addEventListener('pointermove', (e) => {
-            if (!sourceObj.dragging) return;
-            e.preventDefault();
-            const dx = e.clientX - startX;
-            const dy = e.clientY - startY;
-            sourceObj.x = initialX + dx;
-            sourceObj.y = initialY + dy;
-            updatePosition(sourceObj);
-
-            // Highlight target item when dragging near it
-            const srcRect = sourceObj.el.getBoundingClientRect();
-            const targetRect = targetObj.el.getBoundingClientRect();
-            const overlapping = rectsOverlap(srcRect, targetRect);
-            if (!targetObj.matched) {
-                targetObj.el.classList.toggle('drop-hover', overlapping);
-            }
-        });
-
-        sourceObj.el.addEventListener('pointerup', (e) => {
-            if (!sourceObj.dragging) return;
-            sourceObj.dragging = false;
-            sourceObj.el.classList.remove('dragging');
-            sourceObj.el.style.zIndex = 50;
-            targetObj.el.classList.remove('drop-hover');
-
-            const srcRect = sourceObj.el.getBoundingClientRect();
-            const targetRect = targetObj.el.getBoundingClientRect();
-
-            if (rectsOverlap(srcRect, targetRect)) {
-                // ✅ Correct match!
-                doMatch(sourceObj, targetObj);
-            } else {
-                // Check if dropped on any WRONG image/card
-                const hitWrong = elements.some(obj => {
-                    if (obj.id === sourceObj.id || obj.matched) return false;
-                    const r = obj.el.getBoundingClientRect();
-                    return rectsOverlap(srcRect, r);
-                });
-                if (hitWrong) {
-                    playErrorSound();
-                    sourceObj.el.classList.add('wrong-flash');
-                    setTimeout(() => sourceObj.el.classList.remove('wrong-flash'), 380);
-                }
-                sourceObj.vx = (Math.random() - 0.5) * 1.2;
-                sourceObj.vy = (Math.random() - 0.5) * 1.2;
-            }
-        });
-
-        sourceObj.el.addEventListener('pointercancel', () => {
-            sourceObj.dragging = false;
-            sourceObj.el.classList.remove('dragging');
-            targetObj.el.classList.remove('drop-hover');
-            sourceObj.el.style.zIndex = 50;
-        });
-    }
-
-    function rectsOverlap(a, b) {
-        return !(a.right < b.left || a.left > b.right || a.bottom < b.top || a.top > b.bottom);
-    }
-
-    // ──────────────────────────────────────────────
-    //  Match confirmed
-    // ──────────────────────────────────────────────
-    function doMatch(txtObj, imgObj) {
-        txtObj.matched = true;
-        imgObj.matched = true;
-        txtObj.vx = txtObj.vy = imgObj.vx = imgObj.vy = 0;
-
-        txtObj.el.classList.add('matched');
-        imgObj.el.classList.add('matched');
-
-        const iH = imgObj.el.offsetHeight || 130;
-        const tH = txtObj.el.offsetHeight || 44;
-
-        const isImageImage = (txtObj.type === 'imgB' || imgObj.type === 'imgB');
-
-        if (isImageImage) {
-            const cardA = (txtObj.type === 'img' ? txtObj : imgObj);
-            const cardB = (txtObj.type === 'imgB' ? txtObj : imgObj);
-
-            const cardW = cardA.el.offsetWidth || 130;
-            const offset = cardW * 0.28;
-
-            cardB.x = cardA.x + offset;
-            cardB.y = cardA.y + offset;
-            cardB.el.style.opacity = '1';
-            cardB.el.style.zIndex = '60';
-            cardA.el.style.zIndex = '55';
-            cardB.el.style.transform = 'rotate(6deg)';
-            
-            cardB.el.style.transition = 'left 0.22s ease-out, top 0.22s ease-out, opacity 0.22s ease-out, transform 0.22s ease-out';
-            updatePosition(cardB);
-            updatePosition(cardA);
-            setTimeout(() => { cardB.el.style.transition = ''; }, 260);
-        } else {
-            txtObj.x = imgObj.x;
-            txtObj.y = imgObj.y + iH/2 + tH/2 + 4;
-            txtObj.el.style.transition = 'left 0.22s ease-out, top 0.22s ease-out, opacity 0.22s ease-out';
-            updatePosition(txtObj);
-            setTimeout(() => { txtObj.el.style.transition = ''; }, 260);
-        }
-
-        playSuccessSound();
-        if (!isImageImage) {
-            speakWord(txtObj.card);
-        }
-        createParticles(imgObj.x, imgObj.y - 20);
-
-        matchedCount++;
-        updateHUD();
-
-        if (matchedCount === getPairsPerRound()) {
-            setTimeout(showRoundComplete, 900);
-        }
-    }
-
-    // ──────────────────────────────────────────────
-    //  HUD
-    // ──────────────────────────────────────────────
-    function updateHUD() {
-        const total = getPairsPerRound();
-        roundLabel.textContent  = `Round ${roundNumber}`;
-        pairCountEl.textContent = `${matchedCount} / ${total}`;
-        progressBar.style.width = (total > 0 ? (matchedCount / total * 100) : 0) + '%';
-    }
-
-    // ──────────────────────────────────────────────
-    //  Round Complete
-    // ──────────────────────────────────────────────
-    function showRoundComplete() {
-        playWinSound();
-        for (let i=0;i<100;i++) {
-            const c=document.createElement('div');
-            c.className='confetti';
-            c.style.left=Math.random()*100+'%'; c.style.top='-20px';
-            const cols=['#ff6b6b','#feca57','#1dd1a1','#54a0ff','#ff9ff3'];
-            c.style.backgroundColor=cols[Math.floor(Math.random()*cols.length)];
-            if(Math.random()>0.5) c.style.borderRadius='50%';
-            c.style.animationDuration=(Math.random()*2+1.5)+'s';
-            c.style.animationDelay=(Math.random()*1.5)+'s';
-            gameArea.appendChild(c);
-        }
-        const total = getPairsPerRound();
-        const nextBtn = document.getElementById('nextRoundBtn');
-
-        if (isTeacherGame && usedIds.size >= allCards.length) {
-            isGameFullyCompleted = true;
-            document.getElementById('roundBannerEmoji').textContent = '🏆';
-            document.getElementById('roundBannerTitle').textContent = 'EXCELLENT!';
-            document.getElementById('roundBannerSub').textContent   = `You completed all ${allCards.length} pairs in this assignment!`;
-            nextBtn.textContent = '🔄 REPLAY FROM START';
-        } else {
-            isGameFullyCompleted = false;
-            const emojis=['🎉','🌟','🏆','🎊','⭐'];
-            const msgs  =['Amazing!','Awesome!','You Rock!','Superstar!','Brilliant!'];
-            const ri = (roundNumber-1) % emojis.length;
-            document.getElementById('roundBannerEmoji').textContent = emojis[ri];
-            document.getElementById('roundBannerTitle').textContent = msgs[ri];
-            document.getElementById('roundBannerSub').textContent   = `Round ${roundNumber} complete! You matched all ${total} pairs!`;
-            roundBanner.classList.add('show');
-        }
-
-        try {
-            if (window.parent && window.parent !== window) {
-                window.parent.postMessage({
-                    type: 'MATCH_GAME_PROGRESS',
-                    matchedCount: usedIds.size,
-                    totalCount: allCards.length,
-                    isCompleted: allCards.length > 0 && (usedIds.size >= allCards.length * 0.8)
-                }, '*');
-            }
-        } catch (e) {
-            console.error('Failed to postMessage:', e);
-        }
-    }
-
-    document.getElementById('nextRoundBtn').addEventListener('click', () => {
-        roundBanner.classList.remove('show');
-        gameArea.querySelectorAll('.confetti').forEach(el => el.remove());
-        if (isGameFullyCompleted) {
-            usedIds.clear();
-            roundNumber = 1;
-        } else {
-            roundNumber++;
-        }
-        initRound();
-    });
-
-    // ──────────────────────────────────────────────
-    //  Particles
-    // ──────────────────────────────────────────────
-    function createParticles(cx, cy) {
-        const emojis=['⭐','✨','💖','🌟','🎈'];
-        for(let i=0;i<10;i++) {
-            const p=document.createElement('div');
-            p.className='particle';
-            p.textContent=emojis[Math.floor(Math.random()*emojis.length)];
-            p.style.left=cx+'px'; p.style.top=cy+'px';
-            p.style.setProperty('--tx',(Math.random()-0.5)*220+'px');
-            p.style.setProperty('--ty',(Math.random()-0.5)*220+'px');
-            gameArea.appendChild(p);
-            setTimeout(()=>p.remove(),960);
-        }
-    }
-
-    // ──────────────────────────────────────────────
-    //  Physics loop
-    // ──────────────────────────────────────────────
-    function animate() {
-        const W  = gameArea.clientWidth;
-        const H  = gameArea.clientHeight;
-        const pad = 12, topPad = 12;
-
-        elements.forEach(obj => {
-            if (obj.matched || obj.dragging) return;
-
-            const ew = obj.el.offsetWidth  || (obj.type==='img' ? 130 : 120);
-            const eh = obj.el.offsetHeight || (obj.type==='img' ? 130 : 44);
-            const extra = obj.type==='img' ? 28 : 12;
-            obj.radius = Math.max(ew,eh)/2 + extra;
-
-            obj.x += obj.vx;
-            obj.y += obj.vy;
-
-            if (obj.x - obj.radius < pad)       { obj.x = pad + obj.radius;     obj.vx =  Math.abs(obj.vx); }
-            else if (obj.x + obj.radius > W-pad) { obj.x = W - pad - obj.radius; obj.vx = -Math.abs(obj.vx); }
-            if (obj.y - obj.radius < topPad)     { obj.y = topPad + obj.radius;  obj.vy =  Math.abs(obj.vy); }
-            else if (obj.y + obj.radius > H-pad) { obj.y = H - pad - obj.radius; obj.vy = -Math.abs(obj.vy); }
-        });
-
-        // Same-type collisions (img↔img, txt↔txt)
-        for (let i=0;i<elements.length;i++) {
-            const a = elements[i];
-            if (a.matched) continue;
-            for (let j=i+1;j<elements.length;j++) {
-                const b = elements[j];
-                if (b.matched || a.type !== b.type) continue;
-
-                const dx=b.x-a.x, dy=b.y-a.y;
-                const dist=Math.sqrt(dx*dx+dy*dy)||0.01;
-                const minD=a.radius+b.radius;
-                if (dist < minD) {
-                    const overlap=minD-dist, nx=dx/dist, ny=dy/dist;
-                    // If one is being dragged, push the other away
-                    if (a.dragging) {
-                        b.x += nx*overlap; b.y += ny*overlap;
-                    } else if (b.dragging) {
-                        a.x -= nx*overlap; a.y -= ny*overlap;
-                    } else {
-                        a.x -= nx*overlap*0.5; a.y -= ny*overlap*0.5;
-                        b.x += nx*overlap*0.5; b.y += ny*overlap*0.5;
-                        const kx=a.vx-b.vx, ky=a.vy-b.vy;
-                        const p=kx*nx+ky*ny;
-                        if (p>0) { a.vx-=p*nx; a.vy-=p*ny; b.vx+=p*nx; b.vy+=p*ny; }
+                    // Priority 1: Web Audio API with GainNode for Cloudflare audio
+                    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    const res = await fetch(url);
+                    if (res.ok) {
+                        const buf = await res.arrayBuffer();
+                        const decoded = await audioCtx.decodeAudioData(buf);
+                        const source = audioCtx.createBufferSource();
+                        const gain = audioCtx.createGain();
+                        gain.gain.value = 2.0;  // boost 2x
+                        source.buffer = decoded;
+                        source.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        source.onended = restoreVolume;
+                        source.start(0);
+                        return;
+                    }
+                } catch (e) {
+                    // Secondary check: plain Audio element
+                    try {
+                        const a = new Audio(url);
+                        a.volume = 1;
+                        a.addEventListener('ended', restoreVolume);
+                        a.addEventListener('error', () => {
+                            fallbackToEdgeTTS(card, restoreVolume);
+                        });
+                        await a.play();
+                        return;
+                    } catch (e2) {
+                        // Fall through to Edge TTS below
                     }
                 }
             }
+
+            // Priority 2: Fallback on-the-fly Edge TTS (for cards without Cloudflare audio)
+            fallbackToEdgeTTS(card, restoreVolume);
         }
 
-        // Push matched images away from unmatched floating items
-        for (let i=0;i<elements.length;i++) {
-            const a=elements[i];
-            if (!a.matched) continue;
-            for (let j=0;j<elements.length;j++) {
-                const b=elements[j];
-                if (b.matched || b.dragging) continue;
-                const dx=b.x-a.x, dy=b.y-a.y;
-                const dist=Math.sqrt(dx*dx+dy*dy)||0.01;
-                const minD=a.radius+b.radius;
-                if (dist<minD) {
-                    const nx=dx/dist, ny=dy/dist;
-                    b.x += nx*(minD-dist);
-                    b.y += ny*(minD-dist);
-                    b.vx = nx*Math.abs(b.vx||0.3);
-                    b.vy = ny*Math.abs(b.vy||0.3);
+        function fallbackToEdgeTTS(card, restoreVolume) {
+            const textToSpeak = (card.word || '').trim();
+            if (textToSpeak) {
+                try {
+                    const edgeAudio = new Audio(`/api/tts/edge?text=${encodeURIComponent(textToSpeak)}`);
+                    edgeAudio.volume = 1;
+                    edgeAudio.addEventListener('ended', restoreVolume);
+                    edgeAudio.addEventListener('error', () => {
+                        tryBrowserSpeech(textToSpeak, restoreVolume);
+                    });
+                    edgeAudio.play().catch(() => {
+                        tryBrowserSpeech(textToSpeak, restoreVolume);
+                    });
+                    return;
+                } catch (edgeErr) {
+                    tryBrowserSpeech(textToSpeak, restoreVolume);
+                    return;
                 }
+            }
+            restoreVolume();
+        }
+
+        function tryBrowserSpeech(text, restoreVolume) {
+            try {
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                    const u = new SpeechSynthesisUtterance(text);
+                    u.lang = 'en-US'; u.rate = 0.85; u.pitch = 1.1;
+                    u.onend = restoreVolume;
+                    u.onerror = restoreVolume;
+                    window.speechSynthesis.speak(u);
+                } else {
+                    restoreVolume();
+                }
+            } catch (e) {
+                restoreVolume();
             }
         }
 
-        elements.forEach(obj => { if (!obj.dragging) updatePosition(obj); });
-        animationId = requestAnimationFrame(animate);
-    }
+        // ──────────────────────────────────────────────
+        //  Layout helpers
+        // ──────────────────────────────────────────────
+        function getCardSize() {
+            const W = gameArea.clientWidth;
+            if (W <= 480) return Math.max(80, Math.floor(W / 4.5));
+            if (W <= 768) return Math.max(95, Math.floor(W / 5));
+            return Math.min(170, Math.max(110, Math.floor(W / 7.5)));
+        }
 
-    // ──────────────────────────────────────────────
-    //  Start button
-    // ──────────────────────────────────────────────
-    document.getElementById('startBtn').addEventListener('click', () => {
-        bgMusic.volume = 0.2;
-        bgMusic.play().catch(()=>{});
-        const overlay = document.getElementById('startOverlay');
-        overlay.style.opacity = '0';
-        setTimeout(() => { overlay.style.display = 'none'; }, 500);
-        initRound();
-    });
+        function updatePosition(obj) {
+            const w = obj.el.offsetWidth || (obj.type === 'img' ? 130 : 120);
+            const h = obj.el.offsetHeight || (obj.type === 'img' ? 130 : 50);
+            obj.el.style.left = (obj.x - w / 2) + 'px';
+            obj.el.style.top = (obj.y - h / 2) + 'px';
+        }
 
-    // ──────────────────────────────────────────────
-    //  Boot: fetch cards from API
-    // ──────────────────────────────────────────────
-    async function boot() {
-        const loadingEl = document.getElementById('loadingOverlay');
-        try {
-            const res  = await fetch(`/api/games/flashcard-match/${topicId}`);
-            const data = await res.json();
-
-            if (data.success && data.cards && data.cards.length > 0) {
-                allCards = data.cards;
-                isTeacherGame = Boolean(data.isTeacherGame);
-
-                // Priority preload Round 1 images before allowing play (max 5s timeout)
-                const minRoundIdx = Math.min(...allCards.map(c => (c.roundIndex !== undefined && c.roundIndex !== null) ? c.roundIndex : 0));
-                const round1Cards = allCards.filter(c => ((c.roundIndex !== undefined && c.roundIndex !== null) ? c.roundIndex : 0) === minRoundIdx).slice(0, 8);
-                const round1Urls = [];
-                round1Cards.forEach(c => {
-                    if (c.imageUrl) round1Urls.push(c.imageUrl);
-                    if (c.imageBUrl) round1Urls.push(c.imageBUrl);
+        // ──────────────────────────────────────────────
+        //  Round card selection
+        // ──────────────────────────────────────────────
+        function pickRoundCards() {
+            if (isTeacherGame) {
+                const roundsMap = {};
+                allCards.forEach(c => {
+                    const r = (c.roundIndex !== undefined && c.roundIndex !== null) ? c.roundIndex : 0;
+                    if (!roundsMap[r]) roundsMap[r] = [];
+                    roundsMap[r].push(c);
                 });
-
-                if (round1Urls.length > 0) {
-                    let loaded = 0;
-                    const total = round1Urls.length;
-                    const loadTextEl = loadingEl ? loadingEl.querySelector('.loadText') : null;
-                    if (loadTextEl) loadTextEl.textContent = `ĐANG TẢI HÌNH ẢNH (0/${total})...`;
-                    await Promise.all(round1Urls.map(url => new Promise((resolve) => {
-                        const img = new Image();
-                        let done = false;
-                        const finish = () => {
-                            if (!done) {
-                                done = true;
-                                loaded++;
-                                if (loadTextEl) loadTextEl.textContent = `ĐANG TẢI HÌNH ẢNH (${loaded}/${total})...`;
-                                resolve();
-                            }
-                        };
-                        img.onload = finish;
-                        img.onerror = finish;
-                        img.src = url;
-                        setTimeout(finish, 5000);
-                    })));
-                }
-
-                // Background Preload remaining card images
-                setTimeout(() => {
-                    allCards.forEach(c => {
-                        if (c.imageUrl) {
-                            const preImg = new Image();
-                            preImg.src = c.imageUrl;
-                        }
-                        if (c.imageBUrl) {
-                            const preImgB = new Image();
-                            preImgB.src = c.imageBUrl;
-                        }
-                    });
-                }, 100);
-            } else {
-                loadingEl.querySelector('.loadText').textContent = 'No cards found 😢';
+                const roundKeys = Object.keys(roundsMap).sort((a, b) => a - b);
+                const currentKey = roundKeys[(roundNumber - 1) % roundKeys.length];
+                roundCards = roundsMap[currentKey] || [];
+                roundCards.forEach(c => usedIds.add(c.id));
                 return;
             }
-        } catch(e) {
-            loadingEl.querySelector('.loadText').textContent = 'Error loading cards';
-            console.error(e);
-            return;
+
+            const pairsCount = getPairsPerRound();
+            let pool = allCards.filter(c => !usedIds.has(c.id));
+            if (pool.length < pairsCount) {
+                usedIds.clear();
+                pool = [...allCards];
+            }
+            const shuffled = [...pool];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            roundCards = shuffled.slice(0, pairsCount);
+            roundCards.forEach(c => usedIds.add(c.id));
         }
 
-        loadingEl.style.opacity = '0';
-        setTimeout(() => { loadingEl.style.display = 'none'; }, 500);
+        function renderCardImage(container, rawUrl, fallbackText, fallbackBg) {
+            let url = (rawUrl || '').trim();
+            if (url.startsWith('http://') && window.location.protocol === 'https:') {
+                url = url.replace('http://', 'https://');
+            }
 
-        try {
-            window.parent.postMessage({ type: 'GAME_READY', game: 'flashcard-match' }, '*');
-        } catch(e) {}
-    }
+            const showFallback = () => {
+                if (container.querySelector('.card-image-fallback')) return;
+                container.innerHTML = '';
+                const fb = document.createElement('div');
+                fb.className = 'card-image-fallback';
+                if (fallbackBg) fb.style.background = fallbackBg;
 
-    if (document.readyState === 'loading') {
-        window.addEventListener('DOMContentLoaded', boot);
-    } else {
-        boot();
-    }
+                const emoji = document.createElement('span');
+                emoji.className = 'fallback-emoji';
+                emoji.textContent = '🖼️';
+
+                const txt = document.createElement('span');
+                txt.className = 'fallback-text';
+                txt.textContent = fallbackText || '';
+
+                fb.appendChild(emoji);
+                fb.appendChild(txt);
+                container.appendChild(fb);
+            };
+
+            if (!url) {
+                showFallback();
+                return;
+            }
+
+            const img = document.createElement('img');
+            img.referrerPolicy = 'no-referrer';
+            img.alt = fallbackText || 'Card Image';
+            img.draggable = false;
+            img.onerror = () => {
+                showFallback();
+            };
+            img.src = url;
+            container.appendChild(img);
+
+            if (img.complete && img.naturalWidth === 0) {
+                showFallback();
+            }
+        }
+
+        // ──────────────────────────────────────────────
+        //  Init Round
+        // ──────────────────────────────────────────────
+        function initRound() {
+            gameArea.querySelectorAll('.game-item-image,.game-item-text,.particle,.confetti')
+                .forEach(el => el.remove());
+
+            elements = [];
+            matchedCount = 0;
+            updateHUD();
+            pickRoundCards();
+
+            const cardSize = getCardSize();
+            const W = gameArea.clientWidth;
+            const H = gameArea.clientHeight;
+
+            // Shuffle word column positions independently
+            const wordCols = roundCards.map((_, i) => i);
+            for (let i = wordCols.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [wordCols[i], wordCols[j]] = [wordCols[j], wordCols[i]];
+            }
+
+            roundCards.forEach((card, index) => {
+                const wColor = WORD_COLORS[index % WORD_COLORS.length];
+                const bColor = BORDER_COLORS[index % BORDER_COLORS.length];
+
+                // ── Image A drop zone ──
+                const imgEl = document.createElement('div');
+                imgEl.className = 'game-item-image';
+                imgEl.style.width = cardSize + 'px';
+                imgEl.style.height = cardSize + 'px';
+                imgEl.style.borderColor = bColor;
+                imgEl.style.backgroundColor = bColor + '22';
+
+                renderCardImage(imgEl, card.imageUrl, card.word, bColor + '18');
+                gameArea.appendChild(imgEl);
+
+                // ── Item B (Image B or Word chip) ──
+                const isImgB = Boolean(card.imageBUrl);
+                let itemBEl;
+                if (isImgB) {
+                    itemBEl = document.createElement('div');
+                    itemBEl.className = 'game-item-image game-item-b';
+                    itemBEl.style.width = cardSize + 'px';
+                    itemBEl.style.height = cardSize + 'px';
+                    itemBEl.style.borderColor = wColor.border;
+                    itemBEl.style.backgroundColor = wColor.bg + '22';
+                    itemBEl.style.cursor = 'grab';
+                    itemBEl.style.zIndex = '50';
+
+                    renderCardImage(itemBEl, card.imageBUrl, card.labelB || card.word, wColor.bg + '18');
+                } else {
+                    itemBEl = document.createElement('div');
+                    itemBEl.className = 'game-item-text';
+                    itemBEl.textContent = card.word;
+                    itemBEl.style.backgroundColor = wColor.bg;
+                    itemBEl.style.border = `4px solid ${wColor.border}`;
+                }
+                gameArea.appendChild(itemBEl);
+
+                // ── Starting positions ──
+                const colW = W / roundCards.length;
+                const imgX = colW * index + (colW - cardSize) / 2 + cardSize / 2;
+                const imgY = 55 + Math.random() * (H * 0.45 - cardSize - 10) + cardSize / 2;
+
+                const wCol = wordCols[index];
+                const wColW = W / roundCards.length;
+                const txtX = wColW * wCol + (wColW - cardSize) / 2 + cardSize / 2;
+                const txtY = H * 0.62 + Math.random() * (H * 0.30 - cardSize / 2);
+
+                const rndSpd = () => Math.random() * 0.38 + 0.28;
+                const rndAng = () => Math.random() * Math.PI * 2;
+
+                const imgObj = {
+                    id: card.id, card, el: imgEl, type: 'img',
+                    matched: false, index,
+                    x: imgX, y: imgY,
+                    vx: Math.cos(rndAng()) * rndSpd(),
+                    vy: Math.sin(rndAng()) * rndSpd(),
+                    radius: cardSize / 2 + 10
+                };
+                const txtObj = {
+                    id: card.id, card, el: itemBEl, type: isImgB ? 'imgB' : 'txt',
+                    matched: false, index,
+                    x: txtX, y: txtY,
+                    vx: Math.cos(rndAng()) * rndSpd(),
+                    vy: Math.sin(rndAng()) * rndSpd(),
+                    radius: isImgB ? cardSize / 2 + 10 : 80,
+                    dragging: false
+                };
+
+                elements.push(imgObj, txtObj);
+
+                // Enable bi-directional dragging for BOTH cards!
+                setupDrag(imgObj, txtObj);
+                setupDrag(txtObj, imgObj);
+            });
+
+            if (animationId) cancelAnimationFrame(animationId);
+            animationId = requestAnimationFrame(animate);
+        }
+
+        // ──────────────────────────────────────────────
+        //  Drag-and-drop (Bi-directional Pointer Events)
+        // ──────────────────────────────────────────────
+        function setupDrag(sourceObj, targetObj) {
+            let startX, startY, initialX, initialY;
+
+            sourceObj.el.style.cursor = 'grab';
+
+            sourceObj.el.addEventListener('pointerdown', (e) => {
+                if (sourceObj.matched) return;
+                e.preventDefault();
+                sourceObj.dragging = true;
+                sourceObj.el.classList.add('dragging');
+                sourceObj.el.style.zIndex = 1000;
+                startX = e.clientX;
+                startY = e.clientY;
+                initialX = sourceObj.x;
+                initialY = sourceObj.y;
+                sourceObj.el.setPointerCapture(e.pointerId);
+            });
+
+            sourceObj.el.addEventListener('pointermove', (e) => {
+                if (!sourceObj.dragging) return;
+                e.preventDefault();
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                sourceObj.x = initialX + dx;
+                sourceObj.y = initialY + dy;
+                updatePosition(sourceObj);
+
+                // Highlight target item when dragging near it
+                const srcRect = sourceObj.el.getBoundingClientRect();
+                const targetRect = targetObj.el.getBoundingClientRect();
+                const overlapping = rectsOverlap(srcRect, targetRect);
+                if (!targetObj.matched) {
+                    targetObj.el.classList.toggle('drop-hover', overlapping);
+                }
+            });
+
+            sourceObj.el.addEventListener('pointerup', (e) => {
+                if (!sourceObj.dragging) return;
+                sourceObj.dragging = false;
+                sourceObj.el.classList.remove('dragging');
+                sourceObj.el.style.zIndex = 50;
+                targetObj.el.classList.remove('drop-hover');
+
+                const srcRect = sourceObj.el.getBoundingClientRect();
+                const targetRect = targetObj.el.getBoundingClientRect();
+
+                if (rectsOverlap(srcRect, targetRect)) {
+                    // ✅ Correct match!
+                    doMatch(sourceObj, targetObj);
+                } else {
+                    // Check if dropped on any WRONG image/card
+                    const hitWrong = elements.some(obj => {
+                        if (obj.id === sourceObj.id || obj.matched) return false;
+                        const r = obj.el.getBoundingClientRect();
+                        return rectsOverlap(srcRect, r);
+                    });
+                    if (hitWrong) {
+                        playErrorSound();
+                        sourceObj.el.classList.add('wrong-flash');
+                        setTimeout(() => sourceObj.el.classList.remove('wrong-flash'), 380);
+                    }
+                    sourceObj.vx = (Math.random() - 0.5) * 1.2;
+                    sourceObj.vy = (Math.random() - 0.5) * 1.2;
+                }
+            });
+
+            sourceObj.el.addEventListener('pointercancel', () => {
+                sourceObj.dragging = false;
+                sourceObj.el.classList.remove('dragging');
+                targetObj.el.classList.remove('drop-hover');
+                sourceObj.el.style.zIndex = 50;
+            });
+        }
+
+        function rectsOverlap(a, b) {
+            return !(a.right < b.left || a.left > b.right || a.bottom < b.top || a.top > b.bottom);
+        }
+
+        // ──────────────────────────────────────────────
+        //  Match confirmed
+        // ──────────────────────────────────────────────
+        function doMatch(txtObj, imgObj) {
+            txtObj.matched = true;
+            imgObj.matched = true;
+            txtObj.vx = txtObj.vy = imgObj.vx = imgObj.vy = 0;
+
+            txtObj.el.classList.add('matched');
+            imgObj.el.classList.add('matched');
+
+            const iH = imgObj.el.offsetHeight || 130;
+            const tH = txtObj.el.offsetHeight || 44;
+
+            const isImageImage = (txtObj.type === 'imgB' || imgObj.type === 'imgB');
+
+            if (isImageImage) {
+                const cardA = (txtObj.type === 'img' ? txtObj : imgObj);
+                const cardB = (txtObj.type === 'imgB' ? txtObj : imgObj);
+
+                const cardW = cardA.el.offsetWidth || 130;
+                const offset = cardW * 0.28;
+
+                cardB.x = cardA.x + offset;
+                cardB.y = cardA.y + offset;
+                cardB.el.style.opacity = '1';
+                cardB.el.style.zIndex = '60';
+                cardA.el.style.zIndex = '55';
+                cardB.el.style.transform = 'rotate(6deg)';
+
+                cardB.el.style.transition = 'left 0.22s ease-out, top 0.22s ease-out, opacity 0.22s ease-out, transform 0.22s ease-out';
+                updatePosition(cardB);
+                updatePosition(cardA);
+                setTimeout(() => { cardB.el.style.transition = ''; }, 260);
+            } else {
+                txtObj.x = imgObj.x;
+                txtObj.y = imgObj.y + iH / 2 + tH / 2 + 4;
+                txtObj.el.style.transition = 'left 0.22s ease-out, top 0.22s ease-out, opacity 0.22s ease-out';
+                updatePosition(txtObj);
+                setTimeout(() => { txtObj.el.style.transition = ''; }, 260);
+            }
+
+            playSuccessSound();
+            if (!isImageImage) {
+                speakWord(txtObj.card);
+            }
+            createParticles(imgObj.x, imgObj.y - 20);
+
+            matchedCount++;
+            updateHUD();
+
+            if (matchedCount === getPairsPerRound()) {
+                setTimeout(showRoundComplete, 900);
+            }
+        }
+
+        // ──────────────────────────────────────────────
+        //  HUD
+        // ──────────────────────────────────────────────
+        function updateHUD() {
+            const total = getPairsPerRound();
+            roundLabel.textContent = `Round ${roundNumber}`;
+            pairCountEl.textContent = `${matchedCount} / ${total}`;
+            progressBar.style.width = (total > 0 ? (matchedCount / total * 100) : 0) + '%';
+        }
+
+        // ──────────────────────────────────────────────
+        //  Round Complete
+        // ──────────────────────────────────────────────
+        function showRoundComplete() {
+            playWinSound();
+            for (let i = 0; i < 100; i++) {
+                const c = document.createElement('div');
+                c.className = 'confetti';
+                c.style.left = Math.random() * 100 + '%'; c.style.top = '-20px';
+                const cols = ['#ff6b6b', '#feca57', '#1dd1a1', '#54a0ff', '#ff9ff3'];
+                c.style.backgroundColor = cols[Math.floor(Math.random() * cols.length)];
+                if (Math.random() > 0.5) c.style.borderRadius = '50%';
+                c.style.animationDuration = (Math.random() * 2 + 1.5) + 's';
+                c.style.animationDelay = (Math.random() * 1.5) + 's';
+                gameArea.appendChild(c);
+            }
+            const total = getPairsPerRound();
+            const nextBtn = document.getElementById('nextRoundBtn');
+
+            if (isTeacherGame && usedIds.size >= allCards.length) {
+                isGameFullyCompleted = true;
+                document.getElementById('roundBannerEmoji').textContent = '🏆';
+                document.getElementById('roundBannerTitle').textContent = 'EXCELLENT!';
+                document.getElementById('roundBannerSub').textContent = `You completed all ${allCards.length} pairs in this assignment!`;
+                nextBtn.textContent = '🔄 REPLAY FROM START';
+            } else {
+                isGameFullyCompleted = false;
+                const emojis = ['🎉', '🌟', '🏆', '🎊', '⭐'];
+                const msgs = ['Amazing!', 'Awesome!', 'You Rock!', 'Superstar!', 'Brilliant!'];
+                const ri = (roundNumber - 1) % emojis.length;
+                document.getElementById('roundBannerEmoji').textContent = emojis[ri];
+                document.getElementById('roundBannerTitle').textContent = msgs[ri];
+                document.getElementById('roundBannerSub').textContent = `Round ${roundNumber} complete! You matched all ${total} pairs!`;
+                roundBanner.classList.add('show');
+            }
+
+            try {
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage({
+                        type: 'MATCH_GAME_PROGRESS',
+                        matchedCount: usedIds.size,
+                        totalCount: allCards.length,
+                        isCompleted: allCards.length > 0 && (usedIds.size >= allCards.length * 0.8)
+                    }, '*');
+                }
+            } catch (e) {
+                console.error('Failed to postMessage:', e);
+            }
+        }
+
+        document.getElementById('nextRoundBtn').addEventListener('click', () => {
+            roundBanner.classList.remove('show');
+            gameArea.querySelectorAll('.confetti').forEach(el => el.remove());
+            if (isGameFullyCompleted) {
+                usedIds.clear();
+                roundNumber = 1;
+            } else {
+                roundNumber++;
+            }
+            initRound();
+        });
+
+        // ──────────────────────────────────────────────
+        //  Particles
+        // ──────────────────────────────────────────────
+        function createParticles(cx, cy) {
+            const emojis = ['⭐', '✨', '💖', '🌟', '🎈'];
+            for (let i = 0; i < 10; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+                p.style.left = cx + 'px'; p.style.top = cy + 'px';
+                p.style.setProperty('--tx', (Math.random() - 0.5) * 220 + 'px');
+                p.style.setProperty('--ty', (Math.random() - 0.5) * 220 + 'px');
+                gameArea.appendChild(p);
+                setTimeout(() => p.remove(), 960);
+            }
+        }
+
+        // ──────────────────────────────────────────────
+        //  Physics loop
+        // ──────────────────────────────────────────────
+        function animate() {
+            const W = gameArea.clientWidth;
+            const H = gameArea.clientHeight;
+            const pad = 12, topPad = 12;
+
+            elements.forEach(obj => {
+                if (obj.matched || obj.dragging) return;
+
+                const ew = obj.el.offsetWidth || (obj.type === 'img' ? 130 : 120);
+                const eh = obj.el.offsetHeight || (obj.type === 'img' ? 130 : 44);
+                const extra = obj.type === 'img' ? 28 : 12;
+                obj.radius = Math.max(ew, eh) / 2 + extra;
+
+                obj.x += obj.vx;
+                obj.y += obj.vy;
+
+                if (obj.x - obj.radius < pad) { obj.x = pad + obj.radius; obj.vx = Math.abs(obj.vx); }
+                else if (obj.x + obj.radius > W - pad) { obj.x = W - pad - obj.radius; obj.vx = -Math.abs(obj.vx); }
+                if (obj.y - obj.radius < topPad) { obj.y = topPad + obj.radius; obj.vy = Math.abs(obj.vy); }
+                else if (obj.y + obj.radius > H - pad) { obj.y = H - pad - obj.radius; obj.vy = -Math.abs(obj.vy); }
+            });
+
+            // Same-type collisions (img↔img, txt↔txt)
+            for (let i = 0; i < elements.length; i++) {
+                const a = elements[i];
+                if (a.matched) continue;
+                for (let j = i + 1; j < elements.length; j++) {
+                    const b = elements[j];
+                    if (b.matched || a.type !== b.type) continue;
+
+                    const dx = b.x - a.x, dy = b.y - a.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy) || 0.01;
+                    const minD = a.radius + b.radius;
+                    if (dist < minD) {
+                        const overlap = minD - dist, nx = dx / dist, ny = dy / dist;
+                        // If one is being dragged, push the other away
+                        if (a.dragging) {
+                            b.x += nx * overlap; b.y += ny * overlap;
+                        } else if (b.dragging) {
+                            a.x -= nx * overlap; a.y -= ny * overlap;
+                        } else {
+                            a.x -= nx * overlap * 0.5; a.y -= ny * overlap * 0.5;
+                            b.x += nx * overlap * 0.5; b.y += ny * overlap * 0.5;
+                            const kx = a.vx - b.vx, ky = a.vy - b.vy;
+                            const p = kx * nx + ky * ny;
+                            if (p > 0) { a.vx -= p * nx; a.vy -= p * ny; b.vx += p * nx; b.vy += p * ny; }
+                        }
+                    }
+                }
+            }
+
+            // Push matched images away from unmatched floating items
+            for (let i = 0; i < elements.length; i++) {
+                const a = elements[i];
+                if (!a.matched) continue;
+                for (let j = 0; j < elements.length; j++) {
+                    const b = elements[j];
+                    if (b.matched || b.dragging) continue;
+                    const dx = b.x - a.x, dy = b.y - a.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy) || 0.01;
+                    const minD = a.radius + b.radius;
+                    if (dist < minD) {
+                        const nx = dx / dist, ny = dy / dist;
+                        b.x += nx * (minD - dist);
+                        b.y += ny * (minD - dist);
+                        b.vx = nx * Math.abs(b.vx || 0.3);
+                        b.vy = ny * Math.abs(b.vy || 0.3);
+                    }
+                }
+            }
+
+            elements.forEach(obj => { if (!obj.dragging) updatePosition(obj); });
+            animationId = requestAnimationFrame(animate);
+        }
+
+        // ──────────────────────────────────────────────
+        //  Start button
+        // ──────────────────────────────────────────────
+        document.getElementById('startBtn').addEventListener('click', () => {
+            bgMusic.volume = 0.2;
+            bgMusic.play().catch(() => { });
+            const overlay = document.getElementById('startOverlay');
+            overlay.style.opacity = '0';
+            setTimeout(() => { overlay.style.display = 'none'; }, 500);
+            initRound();
+        });
+
+        // ──────────────────────────────────────────────
+        //  Boot: fetch cards from API
+        // ──────────────────────────────────────────────
+        async function boot() {
+            const loadingEl = document.getElementById('loadingOverlay');
+            try {
+                const res = await fetch(`/api/games/flashcard-match/${topicId}`);
+                const data = await res.json();
+
+                if (data.success && data.cards && data.cards.length > 0) {
+                    allCards = data.cards;
+                    isTeacherGame = Boolean(data.isTeacherGame);
+
+                    // Priority preload Round 1 images before allowing play (max 5s timeout)
+                    const minRoundIdx = Math.min(...allCards.map(c => (c.roundIndex !== undefined && c.roundIndex !== null) ? c.roundIndex : 0));
+                    const round1Cards = allCards.filter(c => ((c.roundIndex !== undefined && c.roundIndex !== null) ? c.roundIndex : 0) === minRoundIdx).slice(0, 8);
+                    const round1Urls = [];
+                    round1Cards.forEach(c => {
+                        if (c.imageUrl) round1Urls.push(c.imageUrl);
+                        if (c.imageBUrl) round1Urls.push(c.imageBUrl);
+                    });
+
+                    if (round1Urls.length > 0) {
+                        let loaded = 0;
+                        const total = round1Urls.length;
+                        const loadTextEl = loadingEl ? loadingEl.querySelector('.loadText') : null;
+                        if (loadTextEl) loadTextEl.textContent = `ĐANG TẢI HÌNH ẢNH (0/${total})...`;
+                        await Promise.all(round1Urls.map(url => new Promise((resolve) => {
+                            const img = new Image();
+                            let done = false;
+                            const finish = () => {
+                                if (!done) {
+                                    done = true;
+                                    loaded++;
+                                    if (loadTextEl) loadTextEl.textContent = `ĐANG TẢI HÌNH ẢNH (${loaded}/${total})...`;
+                                    resolve();
+                                }
+                            };
+                            img.onload = finish;
+                            img.onerror = finish;
+                            img.src = url;
+                            setTimeout(finish, 5000);
+                        })));
+                    }
+
+                    // Background Preload remaining card images
+                    setTimeout(() => {
+                        allCards.forEach(c => {
+                            if (c.imageUrl) {
+                                const preImg = new Image();
+                                preImg.src = c.imageUrl;
+                            }
+                            if (c.imageBUrl) {
+                                const preImgB = new Image();
+                                preImgB.src = c.imageBUrl;
+                            }
+                        });
+                    }, 100);
+                } else {
+                    loadingEl.querySelector('.loadText').textContent = 'No cards found 😢';
+                    return;
+                }
+            } catch (e) {
+                loadingEl.querySelector('.loadText').textContent = 'Error loading cards';
+                console.error(e);
+                return;
+            }
+
+            loadingEl.style.opacity = '0';
+            setTimeout(() => { loadingEl.style.display = 'none'; }, 500);
+
+            try {
+                window.parent.postMessage({ type: 'GAME_READY', game: 'flashcard-match' }, '*');
+            } catch (e) { }
+        }
+
+        if (document.readyState === 'loading') {
+            window.addEventListener('DOMContentLoaded', boot);
+        } else {
+            boot();
+        }
     </script>
 </body>
+
 </html>

@@ -2,6 +2,7 @@
 
 import React, { useMemo } from "react";
 import { Check, CheckCircle2, XCircle } from "lucide-react";
+import { EnlargedEmojiText } from "@/components/common/EmojiRenderer";
 
 interface MultipleChoiceBlockProps {
   currentQuestion: any;
@@ -122,7 +123,7 @@ export function MultipleChoiceBlock({
                   className="w-14 h-14 sm:w-16 sm:h-16 object-contain rounded-xl p-0.5 bg-white/90 shadow-2xs border border-white/60 shrink-0"
                 />
               )}
-              {option.text && <span>{option.text}</span>}
+              {option.text && <EnlargedEmojiText text={option.text} />}
               {isChecked && isCorrectOpt && <CheckCircle2 className="w-[1.2em] h-[1.2em] text-emerald-600 shrink-0 ml-1" />}
               {isChecked && isSelected && !isCorrectOpt && <XCircle className="w-[1.2em] h-[1.2em] text-rose-600 shrink-0 ml-1" />}
             </span>
