@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
   ArrowRight,
-  Sparkles,
   CheckCircle2,
   BookOpen,
   Gamepad2,
@@ -216,24 +215,11 @@ export function GlobalSuccessPrimaryLandingClient({ isLoggedIn, currentGrade }: 
       </header>
 
       {/* Main Content — 5 Grade Cards */}
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 pt-8 sm:pt-10 space-y-8">
-        <div className="text-center space-y-2.5 max-w-2xl mx-auto">
-          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-indigo-50 border border-indigo-200/80 text-indigo-700 text-xs font-black">
-            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-            <span>
-              {isVi
-                ? 'Chọn đúng khối lớp để vào bản đồ Đảo 3D ngay lập tức'
-                : 'Pick your grade to jump straight into the 3D Island Map'}
-            </span>
-          </div>
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 pt-6 sm:pt-8 space-y-6 sm:space-y-8">
+        <div className="text-center max-w-2xl mx-auto">
           <h2 className="font-headline font-black text-2xl sm:text-4xl text-slate-900 leading-tight">
             {isVi ? 'Chọn Lớp Global Success Của Bé 🎒' : 'Choose Your Global Success Grade 🎒'}
           </h2>
-          <p className="text-xs sm:text-sm font-semibold text-slate-500">
-            {isVi
-              ? 'Mở tự do toàn bộ Unit Học kỳ 1 & 2 • Mỗi Unit gồm 5 trạm: Từ vựng, Hội thoại, Ngữ pháp có loa chuẩn, Game vui & Kiểm tra tổng hợp.'
-              : 'All Semester 1 & 2 Units unlocked freely • 5 stations per Unit: Vocab, Conversations, Audio Grammar, Fun Games & Unit Review.'}
-          </p>
         </div>
 
         {/* 5-Card Grid (3 top + 2 bottom centered on desktop) */}
@@ -343,7 +329,7 @@ export function GlobalSuccessPrimaryLandingClient({ isLoggedIn, currentGrade }: 
                     </>
                   ) : (
                     <>
-                      <span>Join Class</span>
+                      <span>{isVi ? 'Vào học ngay' : 'Join Class'}</span>
                       <ArrowRight className="w-4 h-4" />
                     </>
                   )}
