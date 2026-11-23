@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useRef, useEffect } from "react";
-import { Check, X } from "lucide-react";
+import React, { useRef, useEffect, useState, useCallback } from "react";
+import { Check, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { getQuestionStatus } from "../utils/quizHelpers";
 
 interface QuizQuestionNumbersProps {
@@ -22,6 +22,28 @@ export function QuizQuestionNumbers({
   navigateTo,
 }: QuizQuestionNumbersProps) {
   const activeBtnRef = useRef<HTMLButtonElement | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkScroll = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 4);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+  }, []);
+
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    checkScroll();
+    el.addEventListener("scroll", checkScroll, { passive: true });
+    window.addEventListener("resize", checkScroll);
+    return () => {
+      el.removeEventListener("scroll", checkScroll);
+      window.removeEventListener("resize", checkScroll);
+    };
+  }, [checkScroll, questions.length]);
 
   useEffect(() => {
     if (activeBtnRef.current) {
@@ -31,7 +53,9 @@ export function QuizQuestionNumbers({
         inline: "center",
       });
     }
-  }, [currentIndex]);
+    const timer = setTimeout(checkScroll, 350);
+    return () => clearTimeout(timer);
+  }, [currentIndex, checkScroll]);
 
   if (!questions || questions.length === 0) return null;
 
@@ -39,6 +63,30 @@ export function QuizQuestionNumbers({
   const half = splitTwoRows ? Math.ceil(questions.length / 2) : questions.length;
   const row1 = questions.slice(0, half);
   const row2 = splitTwoRows ? questions.slice(half) : [];
+
+  // When a row has > 15 items, use compact sizing so it fits neatly without clipping on desktop
+  const isCompact = half > 15;
+  const btnSizeClass = isCompact
+    ? "w-7 h-7 sm:w-8 sm:h-8"
+    : "w-8 h-8 sm:w-9 sm:h-9";
+  const textSizeClass = isCompact
+    ? "text-[11px] sm:text-xs"
+    : "text-xs sm:text-sm";
+  const rowGapClass = isCompact
+    ? "gap-1 sm:gap-1.5"
+    : "gap-1 sm:gap-2.5";
+
+  const handleScrollLeft = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollBy({ left: -220, behavior: "smooth" });
+    }
+  };
+
+  const handleScrollRight = () => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollBy({ left: 220, behavior: "smooth" });
+    }
+  };
 
   const renderQuestionButton = (q: any, i: number) => {
     const active = i === currentIndex;
@@ -96,10 +144,10 @@ export function QuizQuestionNumbers({
         ref={active ? activeBtnRef : null}
         onClick={() => navigateTo(i)}
         disabled={isAutoRevealing}
-        className={`relative w-8 h-8 sm:w-9 sm:h-9 rounded-full transition-all duration-200 shrink-0 flex items-center justify-center cursor-pointer select-none ${btnClass}`}
+        className={`relative ${btnSizeClass} rounded-full transition-all duration-200 shrink-0 flex items-center justify-center cursor-pointer select-none ${btnClass}`}
         title={`Câu ${i + 1}`}
       >
-        <span className="font-black text-xs sm:text-sm leading-none">
+        <span className={`font-black ${textSizeClass} leading-none`}>
           {i + 1}
         </span>
         {isGraded && !active && status === "correct" && (
@@ -117,22 +165,54 @@ export function QuizQuestionNumbers({
   };
 
   return (
-    <div className="w-full mt-2.5 sm:mt-4 z-20 flex justify-center px-2 animate-in fade-in-50 duration-300">
-      <div className="bg-white/85 dark:bg-slate-900/85 backdrop-blur-md border-2 border-white/90 dark:border-slate-700/80 shadow-xl shadow-slate-900/10 rounded-[2rem] px-3 sm:px-5 py-2 sm:py-2.5 max-w-full overflow-x-auto no-scrollbar scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-        <div className="w-max min-w-full flex flex-col gap-1.5 sm:gap-2 items-center">
+    <div className="w-full mt-2.5 sm:mt-4 z-20 flex items-center justify-center gap-1 sm:gap-2 px-1 sm:px-2 animate-in fade-in-50 duration-300">
+      {/* Nút lùi về trước (chỉ hiện khi có thể cuộn sang trái) */}
+      {canScrollLeft && (
+        <button
+          type="button"
+          onClick={handleScrollLeft}
+          className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/95 dark:bg-slate-800/95 border-2 border-slate-200 dark:border-slate-700 shadow-md text-slate-700 dark:text-slate-200 flex items-center justify-center hover:bg-purple-50 hover:text-purple-600 hover:border-purple-300 active:scale-95 transition-all shrink-0 cursor-pointer"
+          aria-label="Cuộn sang trái"
+          title="Xem các câu hỏi trước"
+        >
+          <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
+        </button>
+      )}
+
+      {/* Khung chứa các nút số câu hỏi */}
+      <div
+        ref={scrollContainerRef}
+        className={`bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-2 border-white/90 dark:border-slate-700/80 shadow-xl shadow-slate-900/10 rounded-[2rem] ${
+          isCompact ? "px-2.5 sm:px-4 py-1.5 sm:py-2" : "px-3 sm:px-5 py-2 sm:py-2.5"
+        } max-w-full overflow-x-auto no-scrollbar scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden`}
+      >
+        <div className="w-max min-w-full flex flex-col gap-1 sm:gap-1.5 items-center">
           {/* Hàng 1: Từ trái qua phải */}
-          <div className="flex items-center gap-1 sm:gap-2.5 flex-nowrap justify-start sm:justify-center min-w-full px-1">
+          <div className={`flex items-center ${rowGapClass} flex-nowrap justify-start sm:justify-center min-w-full px-1`}>
             {row1.map((q, idx) => renderQuestionButton(q, idx))}
           </div>
 
           {/* Hàng 2: Từ trái qua phải */}
           {row2.length > 0 && (
-            <div className="flex items-center gap-1 sm:gap-2.5 flex-nowrap justify-start sm:justify-center min-w-full px-1">
+            <div className={`flex items-center ${rowGapClass} flex-nowrap justify-start sm:justify-center min-w-full px-1`}>
               {row2.map((q, idx) => renderQuestionButton(q, half + idx))}
             </div>
           )}
         </div>
       </div>
+
+      {/* Nút tiến về sau (chỉ hiện khi có thể cuộn sang phải) */}
+      {canScrollRight && (
+        <button
+          type="button"
+          onClick={handleScrollRight}
+          className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/95 dark:bg-slate-800/95 border-2 border-slate-200 dark:border-slate-700 shadow-md text-slate-700 dark:text-slate-200 flex items-center justify-center hover:bg-purple-50 hover:text-purple-600 hover:border-purple-300 active:scale-95 transition-all shrink-0 cursor-pointer animate-pulse hover:animate-none"
+          aria-label="Cuộn sang phải"
+          title="Xem các câu hỏi tiếp theo"
+        >
+          <ChevronRight className="w-4 h-4 stroke-[2.5]" />
+        </button>
+      )}
     </div>
   );
 }

@@ -198,7 +198,7 @@ function buildStationsForUnit(unit: GlobalSuccessUnitData): StationDef[] {
     }
   }
 
-  // Station 5: Unit Comprehensive Review
+  // Station 5 (Now Station 4): Unit Comprehensive Review
   const reviewUrl = `/student/unit-review?grade=${unit.grade}&unit=${unit.unit}&embedded=true&fromClass=global-success-primary`;
 
   return [
@@ -241,28 +241,9 @@ function buildStationsForUnit(unit: GlobalSuccessUnitData): StationDef[] {
       },
     },
     {
-      key: "grammar",
-      order: 3,
-      badge: "Trạm 3: Trọng Tâm",
-      title: grammarTitle,
-      subtitle: "Công thức có loa + 15 câu",
-      gameLabel: grammarTitle,
-      xp: 20,
-      url: grammarUrl,
-      isHtml5Game: false,
-      icon: "grammar",
-      theme: {
-        border: "border-violet-300 hover:border-violet-400",
-        bg: "from-violet-50/90 via-white to-purple-50/60",
-        pillBg: "bg-violet-500 text-white",
-        iconBg: "from-violet-500 to-purple-600",
-        accentText: "text-violet-700",
-      },
-    },
-    {
       key: "game",
-      order: 4,
-      badge: "Trạm 4: Vui Học",
+      order: 3,
+      badge: "Trạm 3: Vui Học",
       title: "Game Luyện Tập Vui",
       subtitle: funGameLabel,
       gameLabel: funGameLabel,
@@ -280,8 +261,8 @@ function buildStationsForUnit(unit: GlobalSuccessUnitData): StationDef[] {
     },
     {
       key: "review",
-      order: 5,
-      badge: "Trạm 5: Đích Đến",
+      order: 4,
+      badge: "Trạm 4: Đích Đến",
       title: "Kiểm Tra Tổng Hợp",
       subtitle: "Ôn tập toàn diện Unit",
       gameLabel: "Kiểm Tra Tổng Hợp",
@@ -461,7 +442,7 @@ export function GlobalSuccessPrimaryMap({
 
   const getUnitCompletedCount = useCallback(
     (grade: number, unit: number) => {
-      const keys: StationKey[] = ["vocab", "conv", "grammar", "game", "review"];
+      const keys: StationKey[] = ["vocab", "conv", "game", "review"];
       return keys.filter((k) => Boolean(completedStations[`g${grade}-u${unit}-${k}`])).length;
     },
     [completedStations]
@@ -478,7 +459,7 @@ export function GlobalSuccessPrimaryMap({
     };
     let doneStations = 0;
     let totalXp = 0;
-    const keys: StationKey[] = ["vocab", "conv", "grammar", "game", "review"];
+    const keys: StationKey[] = ["vocab", "conv", "game", "review"];
     for (const u of currentGradeUnits) {
       for (const k of keys) {
         if (completedStations[`g${selectedGrade}-u${u.unit}-${k}`]) {
@@ -486,10 +467,13 @@ export function GlobalSuccessPrimaryMap({
           totalXp += xpMap[k];
         }
       }
+      if (completedStations[`g${selectedGrade}-u${u.unit}-grammar`]) {
+        totalXp += xpMap.grammar;
+      }
     }
     return {
       doneStations,
-      totalStations: currentGradeUnits.length * 5,
+      totalStations: currentGradeUnits.length * 4,
       totalXp,
     };
   }, [selectedGrade, currentGradeUnits, completedStations]);
@@ -727,7 +711,7 @@ export function GlobalSuccessPrimaryMap({
             const isCenter = offset === 0;
             const islandImg = getUnitIslandImage(unit.grade, unit.unit);
             const doneCount = getUnitCompletedCount(unit.grade, unit.unit);
-            const isAllDone = doneCount === 5;
+            const isAllDone = doneCount === 4;
 
             // 3D Coverflow placement
             const translateX =
@@ -815,13 +799,13 @@ export function GlobalSuccessPrimaryMap({
           {currentGradeUnits.map((u, idx) => {
             const isCurrent = idx === activeIndex;
             const doneCount = getUnitCompletedCount(u.grade, u.unit);
-            const isAllDone = doneCount === 5;
+            const isAllDone = doneCount === 4;
             return (
               <button
                 key={u.unit}
                 type="button"
                 onClick={() => setActiveIndex(idx)}
-                title={`Unit ${u.unit}: ${u.title} (${doneCount}/5)`}
+                title={`Unit ${u.unit}: ${u.title} (${doneCount}/4)`}
                 className={`w-8 h-8 sm:w-9 sm:h-9 rounded-full font-black text-xs flex items-center justify-center shrink-0 transition-all cursor-pointer ${
                   isCurrent
                     ? "bg-gradient-to-br from-orange-500 to-rose-500 text-white scale-110 shadow-md ring-2 ring-amber-300"
@@ -878,46 +862,73 @@ export function GlobalSuccessPrimaryMap({
                   <div className="flex-1 h-2.5 rounded-full bg-slate-200 overflow-hidden">
                     <div
                       className="h-full rounded-full bg-gradient-to-r from-amber-400 via-orange-500 to-emerald-500 transition-all duration-500"
-                      style={{ width: `${(openUnitDoneCount / 5) * 100}%` }}
+                      style={{ width: `${(openUnitDoneCount / 4) * 100}%` }}
                     />
                   </div>
                   <span className="text-xs font-black text-slate-700 shrink-0">
-                    {openUnitDoneCount}/5 hoàn thành
+                    {openUnitDoneCount}/4 hoàn thành
                   </span>
                 </div>
               </div>
             </div>
 
-            {/* Section Label */}
+            {/* Section Header with Grammar Review Button & Star Chest Badge */}
             <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-              <div className="text-xs font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
-                <span>🗺️ Hành trình 5 trạm của Unit {openUnit.unit}</span>
-              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const grammarTitle =
+                    openUnit.grade <= 2 ? "Mẫu Câu Trọng Tâm" : "Ôn Tập Ngữ Pháp";
+                  const grammarUrl = `/student/unit-grammar?grade=${openUnit.grade}&unit=${openUnit.unit}&embedded=true&fromClass=global-success-primary`;
+                  setIframeLoaded(false);
+                  setActiveActivity({
+                    unit: openUnit,
+                    station: {
+                      key: "grammar",
+                      order: 0,
+                      badge: "Lý Thuyết & Mẫu Câu",
+                      title: grammarTitle,
+                      subtitle: "Công thức có loa + 15 câu",
+                      gameLabel: grammarTitle,
+                      xp: 20,
+                      url: grammarUrl,
+                      isHtml5Game: false,
+                      icon: "grammar",
+                      theme: {
+                        border: "border-violet-300 hover:border-violet-400",
+                        bg: "from-violet-50/90 via-white to-purple-50/60",
+                        pillBg: "bg-violet-500 text-white",
+                        iconBg: "from-violet-500 to-purple-600",
+                        accentText: "text-violet-700",
+                      },
+                    },
+                    startedAt: Date.now(),
+                  });
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-gradient-to-r from-violet-600 via-indigo-600 to-purple-600 hover:from-violet-700 hover:to-indigo-700 text-white font-headline font-black text-xs sm:text-sm shadow-md hover:shadow-lg hover:scale-105 active:scale-95 transition-all cursor-pointer border-2 border-white/80"
+              >
+                <BookOpen className="w-4 h-4 text-amber-300" />
+                <span>{openUnit.grade <= 2 ? "Mẫu câu trọng tâm" : "Ôn tập ngữ pháp"}</span>
+                <ArrowRight className="w-3.5 h-3.5 opacity-80" />
+              </button>
+
               <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-[11px] font-black">
                 <Sparkles className="w-3 h-3 text-amber-500" />
                 <span>
-                  {openUnitDoneCount === 5
+                  {openUnitDoneCount === 4
                     ? "Đã mở Rương Sao Unit! 🏆"
-                    : "Hoàn thành đủ 5 trạm mở Rương Sao ⭐"}
+                    : "Hoàn thành đủ 4 trạm mở Rương Sao ⭐"}
                 </span>
               </div>
             </div>
 
-            {/* 5 Station Cards Grid (3 top + 2 bottom centered on desktop) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3.5">
-              {openUnitStations.map((st, idx) => {
+            {/* 4 Station Cards Grid (2x2 balanced layout) */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {openUnitStations.map((st) => {
                 const stationKey = `g${openUnit.grade}-u${openUnit.unit}-${st.key}`;
                 const doneRecord = completedStations[stationKey];
                 const isDone = Boolean(doneRecord);
                 const disabled = !st.url;
-
-                // Layout: 3 cards on row 1 (col-span-2 each), 2 cards centered on row 2
-                const colSpanClass =
-                  idx < 3
-                    ? "lg:col-span-2"
-                    : idx === 3
-                      ? "lg:col-span-2 lg:col-start-2"
-                      : "lg:col-span-2 lg:col-start-4";
 
                 return (
                   <button
@@ -934,7 +945,7 @@ export function GlobalSuccessPrimaryMap({
                         startedAt: Date.now(),
                       });
                     }}
-                    className={`${colSpanClass} group text-left rounded-3xl p-4 bg-gradient-to-br ${st.theme.bg} border-2 ${st.theme.border} shadow-sm hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] transition-all flex flex-col justify-between gap-4 ${
+                    className={`group text-left rounded-3xl p-4 sm:p-5 bg-gradient-to-br ${st.theme.bg} border-2 ${st.theme.border} shadow-sm hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] transition-all flex flex-col justify-between gap-4 ${
                       disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
                     }`}
                   >
