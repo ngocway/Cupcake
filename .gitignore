@@ -53,5 +53,8 @@ backups/
 # Exclude local source images migrated to Cloudflare R2
 public/Global Success/
 public/images/class/Global/
+public/images/phonic/
 public/game-previews/
 public/game-videos/
+public/audio/phonics/alice/
+public/audio/phonics/deepgram/

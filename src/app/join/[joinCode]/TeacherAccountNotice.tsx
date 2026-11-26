@@ -16,6 +16,7 @@ export function TeacherAccountNotice({ email, joinCode }: TeacherAccountNoticePr
   const handleSwitchAccount = async () => {
     try {
       setIsSigningOut(true);
+      document.cookie = "login_role_intent=STUDENT; path=/; max-age=300";
       await signOut({ callbackUrl: `/join/${joinCode}` });
     } catch (err) {
       console.error('Sign out error:', err);

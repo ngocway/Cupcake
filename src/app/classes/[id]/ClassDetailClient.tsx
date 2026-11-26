@@ -81,6 +81,14 @@ export function ClassDetailClient({ classData }: Props) {
     (classData as unknown as ClassLangContent);
   const labels = CLASS_DETAIL_UI_LABELS[lang] || CLASS_DETAIL_UI_LABELS.en;
 
+  const isDirectOpenClass =
+    classData.id === 'phonics-45-days' ||
+    classData.id === 'global-success-primary' ||
+    classData.id === 'tiny-vocab-wonders';
+  const enrollUrl = isDirectOpenClass
+    ? `/student/classes/${classData.id}`
+    : `/join/${classData.joinCode || classData.id}`;
+
   // Accordion state: default open unit-1
   const [openUnits, setOpenUnits] = useState<Record<string, boolean>>({
     'unit-1': true,
@@ -302,7 +310,7 @@ export function ClassDetailClient({ classData }: Props) {
                   </button>
                 ) : (
                   <Link
-                    href={`/join/${classData.joinCode || classData.id}`}
+                    href={enrollUrl}
                     className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-[#06b6d4] to-[#0ea5e9] hover:from-[#0891b2] hover:to-[#0284c7] text-white font-black shadow-md shadow-cyan-500/25 active:scale-95 transition-all text-center flex items-center justify-center gap-2 cursor-pointer text-sm"
                   >
                     <span>{labels.enrollBtn}</span>
@@ -676,7 +684,7 @@ export function ClassDetailClient({ classData }: Props) {
                   </button>
                 ) : (
                   <Link
-                    href={`/join/${classData.joinCode || classData.id}`}
+                    href={enrollUrl}
                     className={`w-full rounded-xl bg-gradient-to-r from-[#06b6d4] to-[#0ea5e9] hover:from-[#0891b2] hover:to-[#0284c7] text-white font-black shadow-md shadow-cyan-500/25 active:scale-95 transition-all text-center flex items-center justify-center gap-2 cursor-pointer ${
                       viewportHeight < 720 ? 'py-2.5 px-3 text-xs sm:text-sm' : 'py-3 px-4 text-sm'
                     }`}

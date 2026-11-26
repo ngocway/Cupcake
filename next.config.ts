@@ -104,6 +104,11 @@ const nextConfig: NextConfig = {
         permanent: false,
       },
       {
+        source: '/images/phonic/:path*',
+        destination: '/phonic/:path*',
+        permanent: false,
+      },
+      {
         source: '/images/:path*',
         destination: 'https://media.dolcake.com/images/:path*',
         permanent: false,

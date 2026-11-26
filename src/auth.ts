@@ -109,32 +109,18 @@ const nextAuth = NextAuth({
     async jwt({ token, user, trigger, session }) {
       if (user) {
         token.role = (user as any).role || token.role || "STUDENT"
-        try {
-          const cookieStore = await cookies()
-          const intentRole = cookieStore.get("login_role_intent")?.value
-          if (intentRole === "TEACHER" && token.role !== "ADMIN") {
-            token.role = "TEACHER"
-          }
-        } catch (e) {}
       }
       if (trigger === "update" && session?.role) {
         token.role = session.role
       }
       if (token.email && (!token.role || token.role === "STUDENT")) {
         try {
-          const cookieStore = await cookies()
-          const intentRole = cookieStore.get("login_role_intent")?.value
-
-          if (intentRole === "TEACHER") {
-            token.role = "TEACHER"
-          } else {
-            const teacherUser = await teacherPrisma.user.findUnique({
-              where: { email: token.email },
-              select: { role: true }
-            })
-            if (teacherUser && (teacherUser.role === "TEACHER" || teacherUser.role === "ADMIN")) {
-              token.role = teacherUser.role
-            }
+          const teacherUser = await teacherPrisma.user.findUnique({
+            where: { email: token.email },
+            select: { role: true }
+          })
+          if (teacherUser && (teacherUser.role === "TEACHER" || teacherUser.role === "ADMIN")) {
+            token.role = teacherUser.role
           }
         } catch (e) {}
       }

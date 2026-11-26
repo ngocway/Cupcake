@@ -1,5 +1,6 @@
 import { GRAMMAR_45_DAYS_UNITS_VI, GRAMMAR_45_DAYS_UNITS_EN } from './grammar-45-days-units';
 import { TINY_VOCAB_45_UNITS_VI, TINY_VOCAB_45_UNITS_EN } from './tiny-vocab-45-units';
+import { PHONICS_45_UNITS_VI, PHONICS_45_UNITS_EN } from './phonics-45-days-units';
 
 export type CourseLesson = {
   id: string;
@@ -99,12 +100,14 @@ export const CLASS_SLUG_MAP: Record<string, string> = {
   'master-english-grammar-45-days': 'cmuvbigbg0001vta43ikcsjbk',
   'tiny-vocab-45-days': 'tiny-vocab-wonders',
   'global-success-primary': 'global-success-primary',
+  'phonics-45-days': 'phonics-45-days',
 };
 
 export const CLASS_REVERSE_SLUG_MAP: Record<string, string> = {
   'cmuvbigbg0001vta43ikcsjbk': 'master-english-grammar-45-days',
   'tiny-vocab-wonders': 'tiny-vocab-45-days',
   'global-success-primary': 'global-success-primary',
+  'phonics-45-days': 'phonics-45-days',
 };
 
 export function resolveClassId(slugOrId: string): string {
@@ -1904,6 +1907,168 @@ export const PUBLIC_CLASSES_DATA: Record<string, PublicClassDetail> = {
       ],
     },
 
+    get title() { return this.en.title; },
+    get shortDescription() { return this.en.shortDescription; },
+    get heroDescription() { return this.en.heroDescription; },
+    get subjectBadge() { return this.en.subjectBadge; },
+    get audienceBadge() { return this.en.audienceBadge; },
+    get typeBadge() { return this.en.typeBadge; },
+    get studentsCount() { return this.en.studentsCount; },
+    get lessonsCount() { return this.en.lessonsCount; },
+    get duration() { return this.en.duration; },
+    get language() { return this.en.language; },
+    get whatYouLearn() { return this.en.whatYouLearn; },
+    get units() { return this.en.units; },
+    get teacher() { return this.en.teacher; },
+    get reviews() { return this.en.reviews; },
+  },
+
+  'phonics-45-days': {
+    id: 'phonics-45-days',
+    thumbnail: 'https://media.dolcake.com/assests/Classes/thumbnails/class-thumb-vocab-45-days.png',
+    subjectBadgeClass: 'bg-[#ffedd5] text-[#7c2d12] border-[#fdba74]',
+    audienceBadgeClass: 'bg-[#fef3c7] text-[#92400e] border-[#fde68a]',
+    typeBadgeClass: 'bg-[#fee2e2] text-[#991b1b] border-[#fca5a5]',
+    rating: 5.0,
+    reviewsCount: 46,
+    btnGradient: 'from-[#ec4899] via-[#f43f5e] to-[#fb923c] hover:from-[#db2777] hover:to-[#ea580c] shadow-rose-500/25',
+    joinCode: 'PHONICS45',
+
+    // ENGLISH VERSION
+    en: {
+      title: '45-Day Phonics Master: CVC Word Families & Blending Lab',
+      shortDescription: 'Master 45 essential CVC word families through interactive blending animations, cartoon flashcards, reflex games, and decodable stories.',
+      heroDescription: 'An enchanting 45-day English phonics adventure crafted specifically for preschoolers and early primary kids (ages 4–8). Featuring 4 joyful daily stations: Interactive Blending Lab, Cartoon Word Flashcards, Reflex Pop Games, and Decodable Reader Stories. Help children unlock confident independent reading with zero pressure and pure fun!',
+      subjectBadge: 'Phonics',
+      audienceBadge: 'Preschool & Grade 1',
+      typeBadge: '🔥 Free',
+      studentsCount: '85+ students',
+      lessonsCount: 45,
+      duration: '45 days (8-10 mins/day)',
+      language: 'English with Phonics Audio & Story Illustrations',
+      whatYouLearn: [
+        {
+          iconType: 'sparkles',
+          title: '45 Core CVC Word Families',
+          description: 'Master short vowels A, E, I, O, U through clear phonemic blending and memorable word families.',
+          colorScheme: 'rose',
+        },
+        {
+          iconType: 'game',
+          title: 'Interactive Blending Lab',
+          description: 'Beginning letters slide into rimes with immediate audio pronunciation and delightful cartoon reveals.',
+          colorScheme: 'amber',
+        },
+        {
+          iconType: 'book',
+          title: '45 Decodable Mini-Stories',
+          description: 'Engaging stories like "The Fat Cat on the Mat" with karaoke read-aloud cultivate natural reading rhythm.',
+          colorScheme: 'sky',
+        },
+        {
+          iconType: 'trophy',
+          title: 'Daily Stars & Phonics Champion',
+          description: 'Collect daily stars on the 45-day treasure map and earn the official Phonics Champion graduation certificate.',
+          colorScheme: 'yellow',
+        },
+      ],
+      units: PHONICS_45_UNITS_EN,
+      teacher: {
+        name: 'Ms. Anna Pham',
+        role: 'Early Literacy & Phonics Specialist',
+        avatar: 'https://media.dolcake.com/assests/Classes/avatars/teacher-avatar-ms-anna.png',
+        degree: 'Master of Education & Jolly Phonics Certified Trainer',
+        experience: 'Over 8 years guiding young learners to read fluently through multi-sensory phonics methods',
+        quote: '“Reading is the gateway to all wonder. When kids hear the music in letters and sounds, they learn to read with pure joy!”',
+      },
+      reviews: [
+        {
+          id: 'ph-r1',
+          author: 'Huong Giang (Mother of 5yo)',
+          avatar: 'https://media.dolcake.com/images/avatars/grade_3.png',
+          stars: 5,
+          timeAgo: '2 days ago',
+          content: '“The Blending Lab is pure magic! My son loves tapping the letters to see them slide and hear the sounds snap together into words.”',
+        },
+        {
+          id: 'ph-r2',
+          author: 'Quoc Bao (Father of Grade 1 student)',
+          avatar: 'https://media.dolcake.com/images/avatars/adult.png',
+          stars: 5,
+          timeAgo: '4 days ago',
+          content: '“The decodable stories are perfect for young readers. Reading full sentences after just 10 minutes of practice gives my daughter huge confidence!”',
+        },
+      ],
+    },
+
+    // VIETNAMESE VERSION
+    vi: {
+      title: 'Bé Giỏi Phonics 45 Ngày: Làm Chủ Đánh Vần Tiếng Anh (45-Day Phonics Master)',
+      shortDescription: 'Hành trình 45 ngày làm chủ 45 họ vần CVC cốt lõi tiếng Anh qua 4 trạm: Máy ghép vần tương tác, Thẻ từ hoạt hình, Game phản xạ và Truyện ngắn Decodable.',
+      heroDescription: 'Khóa học Đánh vần Phonics 45 ngày đặc biệt dành cho bé Mầm non và Lớp 1 (4–8 tuổi). Mô hình 4 trạm mỗi ngày: Máy ghép vần tương tác sinh động, Thẻ từ vựng hoạt hình, Trò chơi phản xạ vui nhộn và Truyện đọc Decodable có loa bản xứ. Giúp bé tự tin ghép vần, đọc từ tự nhiên không cần học vẹt!',
+      subjectBadge: 'Đánh vần Phonics',
+      audienceBadge: 'Mầm non & Lớp 1 (4–8 tuổi)',
+      typeBadge: '🔥 Miễn phí',
+      studentsCount: '85+ học sinh',
+      lessonsCount: 45,
+      duration: '45 ngày (8-10 phút/ngày)',
+      language: 'Tiếng Anh với Loa phát âm Phonics & Tranh truyện sinh động',
+      whatYouLearn: [
+        {
+          iconType: 'sparkles',
+          title: 'Trọn bộ 45 họ vần CVC cốt lõi',
+          description: 'Nắm vững 5 nguyên âm ngắn A, E, I, O, U giúp bé đánh vần trôi chảy hàng trăm từ tiếng Anh quen thuộc.',
+          colorScheme: 'rose',
+        },
+        {
+          iconType: 'game',
+          title: 'Máy Ghép Vần Tương Tác Sinh Động',
+          description: 'Âm đầu lướt về phía vần, phát âm từng âm đơn lẻ rồi hòa âm thành từ hoàn chỉnh kèm tranh vẽ ngộ nghĩnh.',
+          colorScheme: 'amber',
+        },
+        {
+          iconType: 'book',
+          title: '45 Truyện Đọc Ghép Vần Decodable',
+          description: 'Truyện ngắn 4 câu (như "The Fat Cat on the Mat") có karaoke nổi chữ, giúp bé vận dụng vần vào đọc câu ngay.',
+          colorScheme: 'sky',
+        },
+        {
+          iconType: 'trophy',
+          title: 'Rương Sao & Huy Hiệu Phonics Champion',
+          description: 'Tích lũy sao mỗi ngày, hoàn thành 5 chặng đảo và nhận giấy chứng nhận tốt nghiệp Phonics danh dự.',
+          colorScheme: 'yellow',
+        },
+      ],
+      units: PHONICS_45_UNITS_VI,
+      teacher: {
+        name: 'Cô Anna Phạm',
+        role: 'Chuyên gia Phonics & Đọc sớm',
+        avatar: 'https://media.dolcake.com/assests/Classes/avatars/teacher-avatar-ms-anna.png',
+        degree: 'Thạc sĩ Ngôn ngữ & Chứng chỉ Giảng dạy Jolly Phonics Quốc tế',
+        experience: 'Hơn 8 năm đồng hành cùng trẻ mầm non và tiểu học xây dựng kỹ năng đọc sớm tự nhiên',
+        quote: '“Mỗi âm thanh là một viên gạch nhỏ. Khi con hiểu cách ghép các âm lại với nhau, con sẽ tự tin mở cánh cửa đến thế giới sách tiếng Anh diệu kỳ!”',
+      },
+      reviews: [
+        {
+          id: 'ph-r1',
+          author: 'Mẹ Hương Giang (Bé 5 tuổi)',
+          avatar: 'https://media.dolcake.com/images/avatars/grade_3.png',
+          stars: 5,
+          timeAgo: '2 ngày trước',
+          content: '“Trạm Ghép vần trực quan đỉnh thật sự! Bé bấm chữ cái nó chạy lại ghép thành từ, có loa đọc từng âm rõ mồn một. Bé tự giác học mê mải.”',
+        },
+        {
+          id: 'ph-r2',
+          author: 'Bố Quốc Bảo (Bé Lớp 1)',
+          avatar: 'https://media.dolcake.com/images/avatars/adult.png',
+          stars: 5,
+          timeAgo: '4 ngày trước',
+          content: '“Truyện ngắn cuối ngày rất hay. Vừa học vần -at xong là đọc được cả bài The Fat Cat on the Mat. Bé tự hào khoe cả nhà!”',
+        },
+      ],
+    },
+
+    // Backward compatibility direct getters mapped to English
     get title() { return this.en.title; },
     get shortDescription() { return this.en.shortDescription; },
     get heroDescription() { return this.en.heroDescription; },

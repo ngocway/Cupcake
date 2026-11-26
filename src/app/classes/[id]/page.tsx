@@ -77,6 +77,55 @@ export async function generateMetadata({
     };
   }
 
+  if (resolvedId === 'phonics-45-days') {
+    const title = 'Bé Giỏi Phonics 45 Ngày: Làm Chủ Đánh Vần Tiếng Anh (45-Day Phonics Master) | Dolcake';
+    const description = 'Hành trình 45 ngày làm chủ 45 họ vần CVC cốt lõi tiếng Anh cho bé Mầm non & Lớp 1. Máy ghép vần tương tác, thẻ từ hoạt hình, game phản xạ và truyện đọc decodable.';
+    const url = 'https://dolcake.com/classes/phonics-45-days';
+    const imageUrl = 'https://dolcake.com/assests/Classes/thumbnails/class-thumb-vocab-45-days.png';
+
+    return {
+      title: {
+        absolute: title,
+      },
+      description,
+      keywords: [
+        'học phonics cho bé',
+        'đánh vần tiếng anh',
+        'tiếng anh mầm non',
+        'cvc word families',
+        'phonics 45 ngày',
+        'bé giỏi phonics',
+        'dolcake',
+        'học đánh vần tiếng anh lớp 1',
+        'blending phonics',
+      ],
+      alternates: {
+        canonical: url,
+      },
+      openGraph: {
+        title: 'Bé Giỏi Phonics 45 Ngày: Làm Chủ Đánh Vần Tiếng Anh',
+        description,
+        url,
+        siteName: 'Dolcake',
+        images: [
+          {
+            url: imageUrl,
+            width: 1200,
+            height: 630,
+            alt: 'Bé Giỏi Phonics 45 Ngày - 45-Day Phonics Master',
+          },
+        ],
+        type: 'website',
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title,
+        description,
+        images: [imageUrl],
+      },
+    };
+  }
+
   if (resolvedId === 'tiny-vocab-wonders') {
     const title = '45 Ngày Khám Phá Từ Vựng Tiếng Anh Đầu Đời Cho Bé (Tiny Vocab) | Dolcake';
     const description = 'Hành trình 45 ngày xây dựng 180+ từ vựng tiếng Anh đầu đời cho bé Mầm non & Lớp 1. Flashcard âm thanh chuẩn bản xứ, hình ảnh minh họa sinh động và trò chơi tương tác ghi nhớ sâu.';
@@ -460,6 +509,30 @@ export default async function ClassDetailPage({
       {
         q: 'Mỗi ngày cần dành bao nhiêu thời gian để hoàn thành bài học?',
         a: 'Chỉ cần 15 đến 20 phút mỗi ngày để đọc hiểu tóm tắt lý thuyết và hoàn thành bộ câu hỏi thực hành trắc nghiệm, kéo thả và sắp xếp câu sinh động.'
+      }
+    );
+  } else if (resolvedId === 'phonics-45-days') {
+    seoHeading = 'Bé Giỏi Phonics 45 Ngày: Làm Chủ Đánh Vần Tiếng Anh (45-Day Phonics Master)';
+    seoDescription = 'Hành trình 45 ngày làm chủ 45 họ vần CVC cốt lõi tiếng Anh cho bé Mầm non & Lớp 1. Máy ghép vần tương tác, thẻ từ hoạt hình, game phản xạ và truyện đọc decodable.';
+    educationalLevel = 'Preschool & Primary (Mầm non - Lớp 1)';
+    workload = 'PT45D (8-10 phút/ngày)';
+
+    faqList.push(
+      {
+        q: 'Khóa học Bé Giỏi Phonics 45 Ngày phù hợp cho độ tuổi nào?',
+        a: 'Khóa học được thiết kế tối ưu cho trẻ Mầm non (4-5 tuổi) và học sinh Lớp 1-2 cần xây dựng nền tảng đánh vần và đọc tiếng Anh lưu loát.'
+      },
+      {
+        q: 'Mô hình 4 trạm học mỗi ngày gồm những gì?',
+        a: 'Mỗi ngày bé sẽ trải qua 4 trạm: Trạm 1 Máy Ghép Vần Phonics (Blending Lab), Trạm 2 Thẻ Từ Vựng Hoạt Hình, Trạm 3 Trò Chơi Phản Xạ Nhanh và Trạm 4 Đọc Truyện Ghép Vần Decodable có loa bản xứ.'
+      },
+      {
+        q: 'Khóa học có yêu cầu bé phải biết đọc trước không?',
+        a: 'Không cần. Khóa học được thiết kế đa giác quan với âm thanh từng âm phoneme rõ ràng, tranh hoạt hình trực quan giúp bé vừa chơi vừa tự khám phá cách ghép vần tự nhiên.'
+      },
+      {
+        q: 'Khóa học này có mất phí không?',
+        a: 'Khóa học Bé Giỏi Phonics 45 Ngày hoàn toàn miễn phí trên nền tảng Dolcake.'
       }
     );
   } else if (resolvedId === 'tiny-vocab-wonders') {

@@ -174,7 +174,29 @@ export default async function JoinClassPage({ params, searchParams }: JoinClassP
   const session = await auth();
   const user = session?.user;
   const isAuthenticated = Boolean(user?.id);
-  const isTeacher = user?.role === 'TEACHER' || user?.role === 'ADMIN';
+
+  // Check actual role from DB to avoid cookie-polluted session role
+  let dbUserRole = user?.role;
+  if (user?.id) {
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { role: true },
+    });
+    if (dbUser) {
+      dbUserRole = dbUser.role;
+    }
+  }
+
+  // Free open classes (Phonics, Global Success, Tiny Vocab) can be joined directly by anyone
+  const isOpenFreeClass =
+    classObj.id === 'phonics-45-days' ||
+    classObj.id === 'global-success-primary' ||
+    classObj.id === 'tiny-vocab-wonders' ||
+    classObj.joinCode === 'PHONICS45' ||
+    classObj.joinCode === 'GLOBAL15' ||
+    classObj.joinCode === 'VOCAB45';
+
+  const isTeacher = !isOpenFreeClass && (dbUserRole === 'TEACHER' || dbUserRole === 'ADMIN');
 
   // 4. Check Enrollment Status for authenticated student
   if (isAuthenticated && !isTeacher && user?.id) {
@@ -266,7 +288,19 @@ export default async function JoinClassPage({ params, searchParams }: JoinClassP
     if (!currentSession?.user?.id) {
       return { success: false, error: 'Unauthorized' };
     }
-    if (currentSession.user.role === 'TEACHER' || currentSession.user.role === 'ADMIN') {
+    let effectiveRole = currentSession.user.role;
+    const dbUser = await prisma.user.findUnique({
+      where: { id: currentSession.user.id },
+      select: { role: true },
+    });
+    if (dbUser) effectiveRole = dbUser.role;
+
+    const isOpenFree =
+      targetClassId === 'phonics-45-days' ||
+      targetClassId === 'global-success-primary' ||
+      targetClassId === 'tiny-vocab-wonders';
+
+    if (!isOpenFree && (effectiveRole === 'TEACHER' || effectiveRole === 'ADMIN')) {
       return { success: false, error: 'Vui lòng dùng tài khoản Học sinh để tham gia lớp.' };
     }
 

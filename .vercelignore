@@ -9,3 +9,10 @@ scratch
 tmp
 *.log
 *.tsbuildinfo
+public/Global Success
+public/images/class/Global
+public/images/phonic
+public/game-previews
+public/game-videos
+public/audio/phonics/alice
+public/audio/phonics/deepgram

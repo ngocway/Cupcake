@@ -74,6 +74,27 @@ const PUBLIC_CLASSES: PublicClassItem[] = [
     btnGradient: 'from-[#f59e0b] via-[#f97316] to-[#ec4899] hover:from-[#d97706] hover:to-[#db2777] shadow-amber-500/20',
   },
   {
+    id: 'phonics-45-days',
+    title: '45-Day Phonics Master: CVC Word Families (45 Days)',
+    description: 'Master 45 essential CVC word families through Blending Lab, cartoon flashcards, reflex games, and decodable stories.',
+    subjectBadge: 'Phonics',
+    subjectBadgeClass: 'bg-[#ffedd5]/95 text-[#7c2d12] border-[#fdba74]/70',
+    audienceBadge: 'Preschool & Grade 1',
+    audienceBadgeClass: 'bg-[#fef3c7]/95 text-[#92400e] border-[#fde68a]/70',
+    typeBadge: '🔥 Free',
+    typeBadgeClass: 'bg-[#fee2e2]/95 text-[#991b1b] border-[#fca5a5]/70',
+    thumbnail: 'https://media.dolcake.com/assests/Classes/thumbnails/class-thumb-vocab-45-days.png',
+    joinCode: 'PHONICS45',
+    teacher: {
+      name: 'Ms. Anna Pham',
+      avatar: 'https://media.dolcake.com/assests/Classes/avatars/teacher-avatar-ms-anna.png',
+      role: 'Teacher',
+    },
+    lessonsCount: 45,
+    studentsCount: '85+ students',
+    btnGradient: 'from-[#ec4899] via-[#f43f5e] to-[#fb923c] hover:from-[#db2777] hover:to-[#ea580c] shadow-rose-500/20',
+  },
+  {
     id: 'global-success-primary',
     title: 'Global Success Primary: English Island Journey (Grades 1–5)',
     description: 'Free 3D sky-island class aligned 100% with Global Success Grades 1–5 (92 Units): Vocab, Conversations, Audio Grammar, Games & Unit Review.',
@@ -190,6 +211,15 @@ function localizePublicClass(cls: PublicClassItem, isVi: boolean): PublicClassIt
         description: 'Hành trình 45 ngày xây dựng vốn từ vựng đầu đời cho bé Mầm non & Lớp 1 qua Flashcard phát âm chuẩn, truyện tranh mini và trò chơi.',
         subjectBadge: 'Từ vựng',
         audienceBadge: 'Mẫu giáo - Tiểu học',
+        typeBadge: '🔥 Miễn phí',
+      };
+    case 'phonics-45-days':
+      return {
+        ...cls,
+        title: 'Bé Giỏi Phonics 45 Ngày (45-Day Phonics Master)',
+        description: 'Làm chủ 45 họ vần CVC cốt lõi qua 4 trạm: Máy ghép vần tương tác, Flashcard hoạt hình, Game phản xạ và Truyện ngắn Decodable.',
+        subjectBadge: 'Đánh vần Phonics',
+        audienceBadge: 'Mầm non & Lớp 1 (4–8 tuổi)',
         typeBadge: '🔥 Miễn phí',
       };
     case 'global-success-primary':

@@ -7,6 +7,8 @@ import Link from 'next/link';
 import { Lock } from 'lucide-react';
 import { StudentAssignmentsView, StudentAssignmentGroup } from './_components/StudentAssignmentsView';
 import { GlobalSuccessPrimaryMap } from './_components/GlobalSuccessPrimaryMap';
+import { Phonics45DaysMap } from './_components/Phonics45DaysMap';
+import { getUserPhonicsProgress } from '@/lib/phonics-progress';
 import {
   GLOBAL_SUCCESS_PRIMARY_CLASS_ID,
   GLOBAL_SUCCESS_GRADE_COOKIE,
@@ -818,6 +820,32 @@ export default async function StudentClassDetailPage({
         initialGrade={effectiveGrade}
         initialCompletedStations={progress.completedStations}
       />
+    );
+  }
+
+  if (id === 'phonics-45-days') {
+    const progress = await getUserPhonicsProgress(session.user.id);
+
+    // Auto-enroll student in the free Phonics 45 Days class so it appears in /student/classes
+    prisma.classEnrollment
+      .upsert({
+        where: {
+          studentId_classId: {
+            studentId: session.user.id,
+            classId: 'phonics-45-days',
+          },
+        },
+        update: { status: 'ACTIVE' },
+        create: {
+          classId: 'phonics-45-days',
+          studentId: session.user.id,
+          status: 'ACTIVE',
+        },
+      })
+      .catch(() => {});
+
+    return (
+      <Phonics45DaysMap initialCompletedStations={progress.completedStations} />
     );
   }
 
