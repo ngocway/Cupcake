@@ -31,23 +31,10 @@ import {
 } from './PhonicsAudioEffects';
 import { PhonicsWordIllustration } from './PhonicsWordIllustrations';
 import { Dock, DockWaveItem } from '@/components/ui/dock';
-import { CoolMode, type CoolParticleOptions } from '@/components/ui/cool-mode';
 import { Particles } from '@/components/ui/particles';
 import { Ripple } from '@/components/ui/ripple';
 import { AnimatedBeam } from '@/components/ui/animated-beam';
 import { TextureCardStyled } from '@/components/ui/texture-card';
-
-const BUBBLE_COOL_OPTIONS: CoolParticleOptions = {
-  particles: ['🫧', '💧', '✨', '⭐'],
-  particleCount: 8,
-  size: 20,
-};
-
-const KEYCAP_COOL_OPTIONS: CoolParticleOptions = {
-  particles: ['🫧', '⭐', '✨', '🌟'],
-  particleCount: 7,
-  size: 19,
-};
 
 function fireSkyConfetti(particleCount = 55) {
   try {
@@ -77,6 +64,18 @@ const VOWEL_IPA_MAP: Record<string, string> = {
   o: '/ɑː/',
   u: '/ʌ/',
 };
+
+/**
+ * Keeps only the primary Vietnamese meaning before "/" and strips parenthetical notes
+ * so the label stays short and matches the illustration cleanly.
+ */
+function formatShortMeaningVi(raw?: string): string {
+  if (!raw) return '';
+  return raw
+    .split('/')[0]
+    .replace(/\s*\([^)]*\)/g, '')
+    .trim();
+}
 
 function splitWordForBubbles(wordItem: PhonicsWordItem, fallbackVowel: string) {
   const onset = (wordItem.onset || '').toLowerCase().trim();
@@ -189,33 +188,32 @@ const WaterBubbleLetter = React.memo(function WaterBubbleLetter({
 
   return (
     <div className="relative flex flex-col items-center select-none font-fredoka z-10">
-      <CoolMode options={BUBBLE_COOL_OPTIONS} className="inline-flex">
-        <motion.button
-          type="button"
+      <motion.button
+        type="button"
           onClick={onClick}
           disabled={disabled}
           animate={
             isFusing
               ? { y: 0, scale: 0.9 }
               : isActiveStep
-              ? { y: -14, scale: 1.12 }
-              : isIdleFloating
-              ? { y: [0, -5, 0], scale: 1 }
-              : { y: 0, scale: 1 }
+                ? { y: -14, scale: 1.12 }
+                : isIdleFloating
+                  ? { y: [0, -5, 0], scale: 1 }
+                  : { y: 0, scale: 1 }
           }
           transition={
             isFusing
               ? { duration: 0.28, ease: [0.22, 1, 0.36, 1] }
               : isActiveStep
-              ? { type: 'spring', stiffness: 360, damping: 18 }
-              : isIdleFloating
-              ? {
-                  duration: 3.1 + floatDelay,
-                  delay: floatDelay,
-                  repeat: Infinity,
-                  ease: 'easeInOut',
-                }
-              : { duration: 0.24, ease: 'easeOut' }
+                ? { type: 'spring', stiffness: 360, damping: 18 }
+                : isIdleFloating
+                  ? {
+                    duration: 3.1 + floatDelay,
+                    delay: floatDelay,
+                    repeat: Infinity,
+                    ease: 'easeInOut',
+                  }
+                  : { duration: 0.24, ease: 'easeOut' }
           }
           whileHover={isFusing ? undefined : { scale: 1.07 }}
           whileTap={isFusing ? undefined : { scale: 0.93 }}
@@ -243,9 +241,8 @@ const WaterBubbleLetter = React.memo(function WaterBubbleLetter({
               borderColor: palette.border,
               boxShadow: palette.glow,
             }}
-            className={`relative w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full border-[3px] flex items-center justify-center transition-[border-color] duration-200 ${
-              isActiveStep ? 'ring-4 ring-white/90' : ''
-            } ${isFusing ? 'border-white/60' : ''}`}
+            className={`relative w-20 h-20 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full border-[3px] flex items-center justify-center transition-[border-color] duration-200 ${isActiveStep ? 'ring-4 ring-white/90' : ''
+              } ${isFusing ? 'border-white/60' : ''}`}
           >
             {/* 2D Flat Water Highlight Arc & Dot */}
             <svg
@@ -271,7 +268,13 @@ const WaterBubbleLetter = React.memo(function WaterBubbleLetter({
 
             {/* Bold Crisp Letter (never distorted by Gooey blur) */}
             <span
-              className={`relative z-10 text-5xl sm:text-6xl font-black leading-none tracking-tight ${palette.letterColor}`}
+              className={`relative z-10 font-black leading-none tracking-tight ${
+                letter.length >= 3
+                  ? 'text-3xl sm:text-5xl'
+                  : letter.length === 2
+                    ? 'text-4xl sm:text-5xl'
+                    : 'text-4xl sm:text-6xl'
+              } ${palette.letterColor}`}
               style={{
                 textShadow: '0 2px 0 rgba(255, 255, 255, 0.92)',
               }}
@@ -280,7 +283,6 @@ const WaterBubbleLetter = React.memo(function WaterBubbleLetter({
             </span>
           </div>
         </motion.button>
-      </CoolMode>
 
       {/* Phoneme Pill Below Bubble (fades out gently as bubbles approach & fuse) */}
       <motion.button
@@ -292,11 +294,10 @@ const WaterBubbleLetter = React.memo(function WaterBubbleLetter({
           scale: isFusing ? 0.8 : isActiveStep ? 1.1 : 1,
         }}
         transition={{ duration: 0.22 }}
-        className={`mt-2.5 px-3.5 py-0.5 sm:px-4 sm:py-1 rounded-full text-xs sm:text-sm font-black cursor-pointer border-2 shadow-sm ${
-          isActiveStep
-            ? palette.pillActive
-            : 'bg-white/90 text-slate-700 border-white hover:bg-white hover:scale-105'
-        }`}
+        className={`mt-2.5 px-3.5 py-0.5 sm:px-4 sm:py-1 rounded-full text-xs sm:text-sm font-black cursor-pointer border-2 shadow-sm ${isActiveStep
+          ? palette.pillActive
+          : 'bg-white/90 text-slate-700 border-white hover:bg-white hover:scale-105'
+          }`}
         title={`Listen: ${phonemeLabel}`}
       >
         {phonemeLabel}
@@ -457,20 +458,19 @@ const BottomWordDock = React.memo(function BottomWordDock({
   onSelectWord,
 }: BottomWordDockProps) {
   return (
-    <footer className="relative z-30 w-full h-[88px] sm:h-[104px] flex-shrink-0 overflow-visible bg-white/90 rounded-t-[32px] border-t-2 border-white shadow-[0_-8px_24px_rgba(2,132,199,0.12)] px-3 sm:px-8 flex items-center justify-center">
+    <footer className="relative z-30 w-full min-h-[84px] sm:h-[104px] flex-shrink-0 overflow-visible bg-white/90 rounded-t-[26px] sm:rounded-t-[32px] border-t-2 border-white shadow-[0_-8px_24px_rgba(2,132,199,0.12)] px-2 sm:px-8 py-1.5 sm:py-0 flex items-center justify-center">
       <Dock
         iconDistance={150}
         direction="bottom"
         disableMagnification={isSequenceRunning}
-        className={`w-full max-w-4xl h-auto bg-white/85 border-2 border-white shadow-[inset_0_2px_6px_rgba(255,255,255,0.95),0_6px_20px_rgba(2,132,199,0.1)] rounded-[24px] sm:rounded-[28px] px-2.5 pt-2 pb-3 sm:px-4 sm:pt-2.5 sm:pb-3.5 grid ${
-          ({
-            3: 'grid-cols-3',
-            4: 'grid-cols-4',
-            5: 'grid-cols-5',
-            6: 'grid-cols-6',
-            7: 'grid-cols-7',
-          } as Record<number, string>)[words.length] || 'grid-cols-7'
-        } gap-2 sm:gap-3.5 items-center font-fredoka overflow-visible`}
+        className={`w-full max-w-4xl h-auto bg-white/85 border-2 border-white shadow-[inset_0_2px_6px_rgba(255,255,255,0.95),0_6px_20px_rgba(2,132,199,0.1)] rounded-[22px] sm:rounded-[28px] px-2.5 pt-3 pb-2.5 sm:px-4 sm:pt-2.5 sm:pb-3.5 flex sm:grid overflow-x-auto sm:overflow-visible no-scrollbar ${({
+          3: 'sm:grid-cols-3',
+          4: 'sm:grid-cols-4',
+          5: 'sm:grid-cols-5',
+          6: 'sm:grid-cols-6',
+          7: 'sm:grid-cols-7',
+        } as Record<number, string>)[words.length] || 'sm:grid-cols-7'
+          } gap-2 sm:gap-3.5 items-center font-fredoka`}
       >
         {words.map((item, idx) => {
           const isSelected = activeWordWord === item.word;
@@ -481,22 +481,21 @@ const BottomWordDock = React.memo(function BottomWordDock({
           const edgeColorClass = isSelected
             ? 'bg-gradient-to-r from-[#881337] via-[#be123c] to-[#881337]'
             : isLearned
-            ? 'bg-gradient-to-r from-[#047857] via-[#059669] to-[#047857]'
-            : 'bg-gradient-to-r from-[#0369a1] via-[#0284c7] to-[#0369a1]';
+              ? 'bg-gradient-to-r from-[#047857] via-[#059669] to-[#047857]'
+              : 'bg-gradient-to-r from-[#0369a1] via-[#0284c7] to-[#0369a1]';
 
           const frontSurfaceClass = isSelected
             ? 'bg-gradient-to-b from-[#ff6b8b] via-[#f43f5e] to-[#e11d48] border-2 border-[#ffe4e6] text-white -translate-y-[4px] group-hover:-translate-y-[5px] shadow-[inset_0_3px_2px_rgba(255,255,255,0.55),inset_0_-3px_4px_rgba(136,19,55,0.28),0_0_16px_rgba(244,63,94,0.4)]'
             : isLearned
-            ? 'bg-gradient-to-b from-[#f0fdf4] via-[#bbf7d0] to-[#6ee7b7] border-2 border-white text-[#064e3b] -translate-y-[1px] group-hover:-translate-y-[3px] shadow-[inset_0_3px_2px_rgba(255,255,255,0.95),inset_0_-3px_4px_rgba(5,150,105,0.18)]'
-            : `bg-gradient-to-b from-[#ffffff] via-[#f0f9ff] to-[#bae6fd] border-2 border-[#7dd3fc] text-[#0c4a6e] -translate-y-[1px] group-hover:-translate-y-[3px] shadow-[inset_0_3px_2px_rgba(255,255,255,0.95),inset_0_-3px_4px_rgba(2,132,199,0.18)] ${
-                isHintedNextKey ? 'ring-3 ring-amber-300 shadow-[0_0_18px_rgba(251,191,36,0.7)] animate-pulse' : ''
+              ? 'bg-gradient-to-b from-[#f0fdf4] via-[#bbf7d0] to-[#6ee7b7] border-2 border-white text-[#064e3b] -translate-y-[1px] group-hover:-translate-y-[3px] shadow-[inset_0_3px_2px_rgba(255,255,255,0.95),inset_0_-3px_4px_rgba(5,150,105,0.18)]'
+              : `bg-gradient-to-b from-[#ffffff] via-[#f0f9ff] to-[#bae6fd] border-2 border-[#7dd3fc] text-[#0c4a6e] -translate-y-[1px] group-hover:-translate-y-[3px] shadow-[inset_0_3px_2px_rgba(255,255,255,0.95),inset_0_-3px_4px_rgba(2,132,199,0.18)] ${isHintedNextKey ? 'ring-3 ring-amber-300 shadow-[0_0_18px_rgba(251,191,36,0.7)] animate-pulse' : ''
               }`;
 
           const formulaBadgeClass = isSelected
             ? 'bg-black/20 text-white border border-white/25'
             : isLearned
-            ? 'bg-[#065f46]/12 text-[#064e3b]'
-            : 'bg-[#0284c7]/12 text-[#0369a1]';
+              ? 'bg-[#065f46]/12 text-[#064e3b]'
+              : 'bg-[#0284c7]/12 text-[#0369a1]';
 
           return (
             <DockWaveItem
@@ -504,12 +503,11 @@ const BottomWordDock = React.memo(function BottomWordDock({
               maxScale={1.16}
               maxLift={10}
               disableMagnification={isSequenceRunning}
-              className="w-full hover:z-30"
+              className="flex-1 min-w-[68px] sm:min-w-0 sm:w-full hover:z-30"
             >
-              <CoolMode options={KEYCAP_COOL_OPTIONS} className="block w-full">
-                <button
-                  type="button"
-                  onClick={() => onSelectWord(item, idx)}
+              <button
+                type="button"
+                onClick={() => onSelectWord(item, idx)}
                   disabled={isSequenceRunning}
                   className="group relative w-full cursor-pointer select-none border-none bg-transparent p-0 outline-none disabled:cursor-not-allowed"
                 >
@@ -526,22 +524,20 @@ const BottomWordDock = React.memo(function BottomWordDock({
 
                     {(isSelected || isLearned) && (
                       <span
-                        className={`absolute -top-2 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shadow-md ring-2 ring-white z-20 ${
-                          isSelected
-                            ? 'bg-gradient-to-b from-amber-300 to-amber-500 text-amber-950'
-                            : 'bg-gradient-to-b from-emerald-400 to-emerald-600 text-white'
-                        }`}
+                        className={`absolute -top-2 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shadow-md ring-2 ring-white z-20 ${isSelected
+                          ? 'bg-gradient-to-b from-amber-300 to-amber-500 text-amber-950'
+                          : 'bg-gradient-to-b from-emerald-400 to-emerald-600 text-white'
+                          }`}
                       >
                         {isSelected ? '★' : '✓'}
                       </span>
                     )}
 
                     <span
-                      className={`relative z-10 text-2xl sm:text-3xl md:text-[34px] font-black leading-none mb-1 ${
-                        isSelected
-                          ? 'text-white drop-shadow-[0_2px_2px_rgba(136,19,55,0.55)]'
-                          : 'drop-shadow-[0_1px_0_rgba(255,255,255,0.9)]'
-                      }`}
+                      className={`relative z-10 text-2xl sm:text-3xl md:text-[34px] font-black leading-none mb-1 ${isSelected
+                        ? 'text-white drop-shadow-[0_2px_2px_rgba(136,19,55,0.55)]'
+                        : 'drop-shadow-[0_1px_0_rgba(255,255,255,0.9)]'
+                        }`}
                     >
                       {item.onset}
                     </span>
@@ -553,7 +549,6 @@ const BottomWordDock = React.memo(function BottomWordDock({
                     </span>
                   </span>
                 </button>
-              </CoolMode>
             </DockWaveItem>
           );
         })}
@@ -574,10 +569,12 @@ export function PhonicsBlendingLab({
   const [activeWordIndex, setActiveWordIndex] = useState<number>(0);
   const activeWord = words[activeWordIndex] ?? words[0];
   const activeBubbles = splitWordForBubbles(activeWord, dayData.vowel);
+  const shortMeaningVi = formatShortMeaningVi(activeWord?.meaningVi);
   const [blendedWords, setBlendedWords] = useState<Set<string>>(() => new Set());
   const blendedWordsRef = useRef<Set<string>>(new Set());
   const hasCompletedOnceRef = useRef<boolean>(Boolean(isAlreadyCompleted));
   const completionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mergeTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   // 5-second Game Ready Countdown (runs ONLY ONCE on initial station entry)
   const [entryCountdown, setEntryCountdown] = useState<number | null>(5);
@@ -587,20 +584,17 @@ export function PhonicsBlendingLab({
   // Smart Next-Key Hint (highlights next unexplored key after 2s idle)
   const [hintKeyIndex, setHintKeyIndex] = useState<number | null>(null);
 
-  // Bubble choreography states (4-stage SVG Gooey Liquid Merge!)
+  // Unified 2-phase merge state (1 continuous GPU timeline, zero mid-flight React re-renders)
   const [activeCardStep, setActiveCardStep] = useState<1 | 2 | 3 | 'blended' | null>(null);
-  const [mergePhase, setMergePhase] = useState<
-    'split' | 'approaching' | 'fusing' | 'merged'
-  >('split');
+  const [mergePhase, setMergePhase] = useState<'split' | 'merged'>('split');
   const [isCompactViewport, setIsCompactViewport] = useState(false);
-  const [enableGooey, setEnableGooey] = useState(true);
   const [isRevealed, setIsRevealed] = useState(false);
   const [isAnimalBouncing, setIsAnimalBouncing] = useState(false);
   const [isSequenceRunning, setIsSequenceRunning] = useState(false);
   const isSequenceRunningRef = useRef<boolean>(false);
   const runBlendingSequenceRef = useRef<
     (wordItem: PhonicsWordItem, wordIdx: number, preReadDelayMs?: number) => Promise<void>
-  >(async () => {});
+  >(async () => { });
 
   // Refs for Magic UI AnimatedBeam between the 3 water bubbles
   const bubblesStageRef = useRef<HTMLDivElement>(null);
@@ -640,25 +634,13 @@ export function PhonicsBlendingLab({
 
   const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  // Track compact viewport + hardware capability for adaptive SVG Gooey filter
+  // Track compact viewport
   useEffect(() => {
     const updateViewport = () => {
       setIsCompactViewport(window.innerWidth < 640);
     };
     updateViewport();
-    window.addEventListener('resize', updateViewport);
-
-    const prefersReducedMotion =
-      typeof window !== 'undefined' &&
-      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    const lowCores =
-      typeof navigator !== 'undefined' &&
-      typeof navigator.hardwareConcurrency === 'number' &&
-      navigator.hardwareConcurrency <= 4;
-    if (prefersReducedMotion || lowCores) {
-      setEnableGooey(false);
-    }
-
+    window.addEventListener('resize', updateViewport, { passive: true });
     return () => window.removeEventListener('resize', updateViewport);
   }, []);
 
@@ -681,7 +663,10 @@ export function PhonicsBlendingLab({
         })
       )
     );
-    preloadJollyPhonicsAudio(uniquePhonemes);
+    preloadJollyPhonicsAudio(
+      uniquePhonemes,
+      words.map((w) => w.word)
+    );
     countdownCancelledRef.current = false;
     setEntryCountdown(5);
 
@@ -713,6 +698,8 @@ export function PhonicsBlendingLab({
       if (completionTimerRef.current) {
         clearTimeout(completionTimerRef.current);
       }
+      mergeTimersRef.current.forEach((t) => clearTimeout(t));
+      mergeTimersRef.current = [];
     };
   }, [words]);
 
@@ -780,6 +767,8 @@ export function PhonicsBlendingLab({
         clearTimeout(completionTimerRef.current);
         completionTimerRef.current = null;
       }
+      mergeTimersRef.current.forEach((t) => clearTimeout(t));
+      mergeTimersRef.current = [];
 
       setIsSequenceRunning(true);
       setActiveWordIndex(wordIdx);
@@ -812,25 +801,24 @@ export function PhonicsBlendingLab({
       }
       await sleep(260);
 
-      // STEP 4 — NHỊP 1: 3 bubbles glide inward & kiss, stretching Gooey liquid necks!
+      // STEP 4 — CONTINUOUS 1-SHOT MERGE:
+      // 3 bubbles glide continuously into center (0->480ms) while Giant Bubble blooms from center (260->700ms)
       setActiveCardStep(null);
-      setMergePhase('approaching');
-      await sleep(430);
-
-      // STEP 5 — NHỊP 2: Liquid pools fuse together into center!
-      setMergePhase('fusing');
-      playMagneticSnapSound();
-      await sleep(310);
-
-      // STEP 6 — NHỊP 3: Giant Iridescent Water Bubble cross-fades & inflates + Animal Card pops!
       setMergePhase('merged');
-      setActiveCardStep('blended');
-      setIsRevealed(true);
-      setIsAnimalBouncing(true);
-      playCorrectSound();
 
-      // Stagger confetti & SVG rainbow stroke update after merge pop to avoid 1-frame spike
-      await sleep(140);
+      mergeTimersRef.current.push(
+        setTimeout(() => {
+          playMagneticSnapSound();
+        }, 250),
+        setTimeout(() => {
+          setActiveCardStep('blended');
+          setIsRevealed(true);
+          setIsAnimalBouncing(true);
+          playCorrectSound();
+        }, 310)
+      );
+
+      await sleep(580);
 
       fireSkyConfetti(32);
 
@@ -842,7 +830,7 @@ export function PhonicsBlendingLab({
 
       setTimeout(() => {
         setIsAnimalBouncing(false);
-      }, 800);
+      }, 650);
 
       isSequenceRunningRef.current = false;
       setIsSequenceRunning(false);
@@ -951,41 +939,11 @@ export function PhonicsBlendingLab({
   };
 
   const rainbowProgress = blendedWords.size / words.length;
-  const splitSpread = isCompactViewport ? 106 : 162;
-  const kissOffset = isCompactViewport ? 62 : 84;
-  const currentBubbleXOffset =
-    mergePhase === 'split'
-      ? splitSpread
-      : mergePhase === 'approaching'
-      ? kissOffset
-      : 0;
+  const splitSpread = isCompactViewport ? 94 : 162;
+  const isMerged = mergePhase === 'merged';
 
   return (
-    <div className="fixed inset-0 z-50 w-screen h-screen overflow-hidden flex flex-col justify-between select-none font-sans bg-gradient-to-b from-[#38bdf8] via-[#7dd3fc] to-[#e0f2fe]">
-      {/* Mounted SVG Gooey Liquid Filter (tight blur radius, enabled only during kiss/fuse) */}
-      <svg
-        aria-hidden="true"
-        className="pointer-events-none absolute w-0 h-0 overflow-hidden"
-      >
-        <defs>
-          <filter id="phonics-gooey-merge">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="7" result="blur" />
-            <feColorMatrix
-              in="blur"
-              mode="matrix"
-              values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -9"
-              result="goo"
-            />
-          </filter>
-        </defs>
-      </svg>
-      {/* Google Fredoka font */}
-      <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700;900&display=swap');
-        .font-fredoka {
-          font-family: 'Fredoka', 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        }
-      `}</style>
+    <div className="fixed inset-0 z-50 w-screen h-dvh overflow-hidden flex flex-col justify-between select-none font-sans bg-gradient-to-b from-[#38bdf8] via-[#7dd3fc] to-[#e0f2fe]">
 
       {/* ========================================================================= */}
       {/* 1. MODERN BLUE SKY TOP STAGE (Memoized Backdrop + Zero Backdrop-Blur Lag) */}
@@ -999,7 +957,7 @@ export function PhonicsBlendingLab({
         )}
 
         {/* TOP TRANSPARENT FLOATING HEADER */}
-        <header className="relative z-30 w-full px-3 py-2.5 sm:px-6 sm:py-3.5 flex items-center justify-between gap-2 bg-transparent pointer-events-none flex-shrink-0">
+        <header className="relative z-30 w-full px-3 py-2 sm:px-6 sm:py-3 flex items-center justify-between gap-2 bg-transparent pointer-events-none flex-shrink-0">
           {/* Left: 3D Back to Map */}
           <div className="pointer-events-auto">
             {onClose && (
@@ -1014,16 +972,6 @@ export function PhonicsBlendingLab({
               </button>
             )}
           </div>
-
-          {/* Center: Rainbow Progress Capsule */}
-          {mode === 'explore' && (
-            <div className="pointer-events-auto px-4 py-1.5 rounded-full bg-white/92 border-2 border-white shadow-[0_4px_14px_rgba(2,132,199,0.16)] flex items-center gap-2 font-fredoka">
-              <span className="text-base leading-none">🌈</span>
-              <span className="text-xs sm:text-sm font-black text-sky-800 tracking-wide whitespace-nowrap">
-                {blendedWords.size} / {words.length} words
-              </span>
-            </div>
-          )}
 
           {/* Right: Fullscreen Toggle */}
           <div className="pointer-events-auto">
@@ -1049,7 +997,7 @@ export function PhonicsBlendingLab({
         {/* MAIN SKY STAGE: 3D TILTED ANIMAL CARD + 2D WATER BUBBLE MERGE             */}
         {/* ========================================================================= */}
         {mode === 'explore' && (
-          <main className="relative z-10 flex-1 w-full max-w-4xl mx-auto flex flex-col items-center justify-evenly px-4 pb-2 min-h-0">
+          <main className="relative z-10 flex-1 w-full max-w-4xl mx-auto flex flex-col items-center justify-center gap-2.5 sm:gap-3.5 px-3 sm:px-4 pb-2 min-h-0 overflow-y-auto overflow-x-hidden">
             {/* 0. ENTRY COUNTDOWN INSIDE 2D CENTER WATER BUBBLE (5 -> 1) */}
             <AnimatePresence>
               {entryCountdown !== null && (
@@ -1117,8 +1065,8 @@ export function PhonicsBlendingLab({
               )}
             </AnimatePresence>
 
-            {/* UPPER ZONE: LIGHTWEIGHT GPU ANIMAL CARD (Cross-fade without mode="wait" or ShineBorder repaint) */}
-            <div className="relative h-44 sm:h-52 md:h-56 w-full flex items-center justify-center">
+            {/* UPPER ZONE: LIGHTWEIGHT GPU ANIMAL CARD (1.5x enlarged edge-to-edge card) */}
+            <div className="relative h-[min(240px,36vh)] sm:h-[min(288px,39vh)] md:h-[min(312px,42vh)] w-full flex items-center justify-center">
               {/* Subtle Waiting Sky Hint While Sounding Out */}
               <motion.div
                 initial={false}
@@ -1152,134 +1100,124 @@ export function PhonicsBlendingLab({
                   whileHover={{ y: -4, scale: 1.02 }}
                   whileTap={{ scale: 0.96 }}
                   onClick={() => void handleTapMergedWordOrAnimal()}
-                  className="relative w-40 h-40 sm:w-48 sm:h-48 md:w-52 md:h-52 rounded-[32px] bg-white/95 border-3 border-white ring-2 ring-sky-200/80 shadow-[0_16px_34px_rgba(2,132,199,0.2),0_6px_0_#bae6fd] flex items-center justify-center cursor-pointer overflow-visible"
+                  className="relative w-[min(240px,36vh)] h-[min(240px,36vh)] sm:w-[min(288px,39vh)] sm:h-[min(288px,39vh)] md:w-[min(312px,42vh)] md:h-[min(312px,42vh)] rounded-[36px] bg-white/95 border-3 border-white ring-2 ring-sky-200/80 shadow-[0_18px_38px_rgba(2,132,199,0.22),0_6px_0_#bae6fd] flex items-center justify-center cursor-pointer overflow-visible"
                   title={`Tap to hear "${activeWord.word}"`}
                 >
                   {/* Word Badge Top Corner */}
-                  <div className="absolute -top-3 -left-3 z-20 px-3 py-1 rounded-full bg-gradient-to-r from-amber-400 to-orange-400 text-amber-950 font-fredoka font-black text-xs sm:text-sm border-2 border-white shadow-md">
+                  <div className="absolute -top-3 -left-3 z-20 px-3.5 py-1 rounded-full bg-gradient-to-r from-amber-400 to-orange-400 text-amber-950 font-fredoka font-black text-xs sm:text-sm border-2 border-white shadow-md">
                     {activeWord.word.toUpperCase()} ✨
                   </div>
 
-                  {/* Animal Artwork */}
-                  <div className="w-32 h-32 sm:w-38 sm:h-38 md:w-42 md:h-42 flex items-center justify-center">
+                  {/* Animal Artwork (fills edge-to-edge inside outer frame) */}
+                  <div className="w-full h-full rounded-[33px] overflow-hidden flex items-center justify-center bg-white">
                     <PhonicsWordIllustration
                       word={activeWord.word}
-                      size={156}
+                      size={260}
+                      frameless
                     />
                   </div>
                 </motion.div>
 
-                {/* REPLAY 3D BUTTON TO THE RIGHT OF THE ANIMAL CARD */}
-                {isRevealed && !isSequenceRunning && (
+                {/* SHORT VIETNAMESE MEANING BESIDE THE CARD (no label prefix) */}
+                {isRevealed && !isSequenceRunning && shortMeaningVi && (
                   <motion.div
                     initial={{ opacity: 0, x: -8 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="absolute left-[calc(100%+16px)] sm:left-[calc(100%+24px)] top-1/2 -translate-y-1/2 z-30"
+                    className="pointer-events-none absolute -bottom-3.5 left-1/2 -translate-x-1/2 sm:bottom-auto sm:left-[calc(100%+24px)] sm:top-1/2 sm:translate-x-0 sm:-translate-y-1/2 z-30"
                   >
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        void runBlendingSequence(activeWord, activeWordIndex);
-                      }}
-                      className="group/rep relative inline-flex cursor-pointer border-none bg-transparent p-0 outline-none"
-                      title="Đọc lại từ này"
+                    <div
+                      className="px-3.5 py-1 sm:px-5 sm:py-2 rounded-full sm:rounded-2xl bg-white/95 border-2 border-white text-[#0c4a6e] font-fredoka font-bold text-xs sm:text-lg leading-snug shadow-[0_6px_16px_rgba(2,132,199,0.16),0_3px_0_#bae6fd] whitespace-nowrap sm:whitespace-normal sm:w-max sm:max-w-[230px] md:max-w-[260px]"
+                      title={activeWord.meaningVi}
                     >
-                      <span className="pointer-events-none absolute inset-0 translate-y-[4px] rounded-full bg-[#be123c]" />
-                      <span className="relative px-4 py-2 sm:px-5 sm:py-2.5 rounded-full bg-gradient-to-b from-[#ff5c82] via-[#f43f5e] to-[#e11d48] border-2 border-white text-white font-fredoka font-black text-xs sm:text-sm flex items-center gap-1.5 shadow-md transition-transform duration-100 -translate-y-[1px] group-hover/rep:-translate-y-[2.5px] group-active/rep:translate-y-[3px] whitespace-nowrap">
-                        <RotateCcw className="w-4 h-4" />
-                        <span>Đọc Lại</span>
-                      </span>
-                    </button>
+                      {shortMeaningVi}
+                    </div>
                   </motion.div>
                 )}
               </motion.div>
             </div>
 
-            {/* LOWER ZONE: HYBRID GPU + COMPACT GOOEY BUBBLE MERGE (Zero mode="wait" stutter) */}
+            {/* LOWER ZONE: SINGLE-TIMELINE 60FPS GPU BUBBLE MERGE (Zero mid-flight re-renders) */}
             <div
               ref={bubblesStageRef}
-              className="relative w-full h-[210px] sm:h-[240px] flex items-center justify-center"
+              className="relative w-full h-[176px] sm:h-[214px] flex items-center justify-center"
             >
-              {/* LAYER 1: COMPACT GOOEY LIQUID SILHOUETTE (Small 320x160 box, active ONLY during approaching/fusing) */}
-              <div
-                style={{
-                  filter:
-                    enableGooey &&
-                    (mergePhase === 'approaching' || mergePhase === 'fusing')
-                      ? 'url(#phonics-gooey-merge)'
-                      : 'none',
-                }}
-                className={`pointer-events-none absolute w-[320px] h-[160px] flex items-center justify-center transition-opacity duration-200 ${
-                  enableGooey &&
-                  (mergePhase === 'approaching' || mergePhase === 'fusing')
-                    ? 'opacity-95'
-                    : 'opacity-0'
-                }`}
-              >
-                <div className="relative w-full h-full flex items-center justify-center">
-                  {/* Liquid Pool 1 (Rose - Onset) */}
-                  <motion.div
-                    initial={false}
-                    animate={{
-                      x: -currentBubbleXOffset,
-                      y: mergePhase === 'split' ? -20 : -6,
-                      scale: mergePhase === 'fusing' ? 0.92 : 1,
-                    }}
-                    transition={{ type: 'spring', stiffness: 250, damping: 24 }}
-                    className="absolute w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-[#fb7185]/85 will-change-transform"
-                  />
+              {/* LAYER 1: 100% GPU LIQUID COLOR HALOS (Aligned on y=0, smooth convergence in 1 curve) */}
+              <div className="pointer-events-none absolute w-[360px] h-[160px] flex items-center justify-center">
+                {/* Glow Pool 1 (Rose - Onset) */}
+                <motion.div
+                  initial={false}
+                  animate={
+                    isMerged
+                      ? { x: 0, scale: [1, 1.12, 0.85], opacity: [0, 0.9, 0] }
+                      : { x: -splitSpread, scale: 0.9, opacity: 0 }
+                  }
+                  transition={
+                    isMerged
+                      ? { duration: 0.48, times: [0, 0.56, 1], ease: [0.42, 0, 0.2, 1] }
+                      : { duration: 0.2 }
+                  }
+                  style={{
+                    background:
+                      'radial-gradient(circle, rgba(251,113,133,0.7) 0%, rgba(251,113,133,0.22) 55%, transparent 78%)',
+                  }}
+                  className="absolute w-28 h-28 sm:w-32 sm:h-32 rounded-full will-change-transform"
+                />
 
-                  {/* Liquid Pool 2 (Amber - Vowel) */}
-                  <motion.div
-                    initial={false}
-                    animate={{
-                      x: 0,
-                      y: mergePhase === 'split' ? -20 : -6,
-                      scale:
-                        mergePhase === 'fusing'
-                          ? 1.2
-                          : mergePhase === 'approaching'
-                          ? 1.06
-                          : 1,
-                    }}
-                    transition={{ type: 'spring', stiffness: 250, damping: 24 }}
-                    className="absolute w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-[#fbbf24]/85 will-change-transform"
-                  />
+                {/* Glow Pool 2 (Amber - Vowel) */}
+                <motion.div
+                  initial={false}
+                  animate={
+                    isMerged
+                      ? { x: 0, scale: [1, 1.24, 0.9], opacity: [0, 0.9, 0] }
+                      : { x: 0, scale: 0.9, opacity: 0 }
+                  }
+                  transition={
+                    isMerged
+                      ? { duration: 0.48, times: [0, 0.56, 1], ease: [0.42, 0, 0.2, 1] }
+                      : { duration: 0.2 }
+                  }
+                  style={{
+                    background:
+                      'radial-gradient(circle, rgba(251,191,36,0.7) 0%, rgba(251,191,36,0.22) 55%, transparent 78%)',
+                  }}
+                  className="absolute w-28 h-28 sm:w-32 sm:h-32 rounded-full will-change-transform"
+                />
 
-                  {/* Liquid Pool 3 (Sky - Coda) */}
-                  <motion.div
-                    initial={false}
-                    animate={{
-                      x: currentBubbleXOffset,
-                      y: mergePhase === 'split' ? -20 : -6,
-                      scale: mergePhase === 'fusing' ? 0.92 : 1,
-                    }}
-                    transition={{ type: 'spring', stiffness: 250, damping: 24 }}
-                    className="absolute w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-[#38bdf8]/85 will-change-transform"
-                  />
-                </div>
+                {/* Glow Pool 3 (Sky - Coda) */}
+                <motion.div
+                  initial={false}
+                  animate={
+                    isMerged
+                      ? { x: 0, scale: [1, 1.12, 0.85], opacity: [0, 0.9, 0] }
+                      : { x: splitSpread, scale: 0.9, opacity: 0 }
+                  }
+                  transition={
+                    isMerged
+                      ? { duration: 0.48, times: [0, 0.56, 1], ease: [0.42, 0, 0.2, 1] }
+                      : { duration: 0.2 }
+                  }
+                  style={{
+                    background:
+                      'radial-gradient(circle, rgba(56,189,248,0.7) 0%, rgba(56,189,248,0.22) 55%, transparent 78%)',
+                  }}
+                  className="absolute w-28 h-28 sm:w-32 sm:h-32 rounded-full will-change-transform"
+                />
               </div>
 
-              {/* LAYER 1.5: PURE GPU TRI-COLOR BLEND GLOW AURA (Smooth visual bridge during fuse -> merged) */}
+              {/* LAYER 1.5: PURE GPU TRI-COLOR BLEND GLOW AURA (Blooms right as bubbles meet at center) */}
               <motion.div
                 initial={false}
-                animate={{
-                  opacity:
-                    mergePhase === 'fusing'
-                      ? 0.85
-                      : mergePhase === 'merged'
-                      ? 0.35
-                      : 0,
-                  scale:
-                    mergePhase === 'fusing'
-                      ? 0.88
-                      : mergePhase === 'merged'
-                      ? 1.22
-                      : 0.45,
-                }}
-                transition={{ duration: 0.28, ease: 'easeOut' }}
+                animate={
+                  isMerged
+                    ? { opacity: [0, 0.88, 0.34], scale: [0.45, 1.18, 1.04] }
+                    : { opacity: 0, scale: 0.45 }
+                }
+                transition={
+                  isMerged
+                    ? { delay: 0.22, duration: 0.46, times: [0, 0.45, 1], ease: 'easeOut' }
+                    : { duration: 0.16, ease: 'easeOut' }
+                }
                 style={{
                   background:
                     'radial-gradient(circle, rgba(255,255,255,0.92) 0%, rgba(253,164,175,0.65) 35%, rgba(253,224,71,0.55) 60%, rgba(56,189,248,0.45) 82%, transparent 100%)',
@@ -1287,21 +1225,15 @@ export function PhonicsBlendingLab({
                 className="pointer-events-none absolute w-48 h-48 sm:w-56 sm:h-56 rounded-full will-change-transform"
               />
 
-              {/* LAYER 2A: CRISP 3 WATER BUBBLES (Fixed DOM, cross-fades cleanly instead of remounting) */}
-              <motion.div
-                initial={false}
-                animate={{
-                  opacity: mergePhase === 'merged' ? 0 : 1,
-                  scale: mergePhase === 'merged' ? 0.74 : 1,
-                }}
-                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-                style={{ pointerEvents: mergePhase === 'merged' ? 'none' : 'auto' }}
-                className="relative w-full h-full flex items-center justify-center will-change-transform"
+              {/* LAYER 2A: CRISP 3 WATER BUBBLES (Continuous 1-curve convergence, zero scale/opacity reversal) */}
+              <div
+                style={{ pointerEvents: isMerged ? 'none' : 'auto' }}
+                className="relative w-full h-full flex items-center justify-center"
               >
-                {/* Animated Beams kept mounted and faded via opacity */}
+                {/* Animated Beams kept mounted and faded cleanly before slide */}
                 <div
-                  className={`pointer-events-none absolute inset-0 transition-opacity duration-200 ${
-                    mergePhase === 'split' ? 'opacity-100' : 'opacity-0'
+                  className={`pointer-events-none absolute inset-0 transition-opacity duration-150 ${
+                    !isMerged ? 'opacity-100' : 'opacity-0'
                   }`}
                 >
                   <AnimatedBeam
@@ -1331,14 +1263,19 @@ export function PhonicsBlendingLab({
                   />
                 </div>
 
-                {/* BUBBLE 1: ONSET (Slides smoothly from -splitSpread -> -kissOffset -> 0) */}
+                {/* BUBBLE 1: ONSET (Glides smoothly -splitSpread -> 0 in 1 curve) */}
                 <motion.div
                   initial={false}
-                  animate={{
-                    x: -currentBubbleXOffset,
-                    opacity: mergePhase === 'fusing' ? 0.55 : 1,
-                  }}
-                  transition={{ type: 'spring', stiffness: 250, damping: 24 }}
+                  animate={
+                    isMerged
+                      ? { x: 0, scale: [1, 0.96, 0.56], opacity: [1, 0.94, 0] }
+                      : { x: -splitSpread, scale: 1, opacity: 1 }
+                  }
+                  transition={
+                    isMerged
+                      ? { duration: 0.46, times: [0, 0.6, 1], ease: [0.42, 0, 0.2, 1] }
+                      : { duration: 0.28, ease: [0.22, 1, 0.36, 1] }
+                  }
                   className="absolute will-change-transform"
                 >
                   <WaterBubbleLetter
@@ -1346,8 +1283,8 @@ export function PhonicsBlendingLab({
                     phonemeLabel={activeBubbles.b1Label}
                     tint="rose"
                     isActiveStep={activeCardStep === 1}
-                    isFusing={mergePhase === 'approaching' || mergePhase === 'fusing'}
-                    isIdleFloating={!isSequenceRunning && mergePhase === 'split'}
+                    isFusing={isMerged}
+                    isIdleFloating={!isSequenceRunning && !isMerged}
                     floatDelay={0}
                     bubbleRef={bubble1Ref}
                     onClick={() => void handleTapBubble1()}
@@ -1355,15 +1292,19 @@ export function PhonicsBlendingLab({
                   />
                 </motion.div>
 
-                {/* BUBBLE 2: VOWEL (Center Anchor) */}
+                {/* BUBBLE 2: VOWEL (Center Anchor absorbs neighbors & dissolves into giant bubble) */}
                 <motion.div
                   initial={false}
-                  animate={{
-                    x: 0,
-                    scale: mergePhase === 'fusing' ? 1.08 : 1,
-                    opacity: mergePhase === 'fusing' ? 0.6 : 1,
-                  }}
-                  transition={{ type: 'spring', stiffness: 250, damping: 24 }}
+                  animate={
+                    isMerged
+                      ? { x: 0, scale: [1, 1.08, 0.62], opacity: [1, 0.94, 0] }
+                      : { x: 0, scale: 1, opacity: 1 }
+                  }
+                  transition={
+                    isMerged
+                      ? { duration: 0.46, times: [0, 0.56, 1], ease: [0.42, 0, 0.2, 1] }
+                      : { duration: 0.28, ease: [0.22, 1, 0.36, 1] }
+                  }
                   className="absolute z-10 will-change-transform"
                 >
                   <WaterBubbleLetter
@@ -1371,8 +1312,8 @@ export function PhonicsBlendingLab({
                     phonemeLabel={activeBubbles.b2Label}
                     tint="amber"
                     isActiveStep={activeCardStep === 2}
-                    isFusing={mergePhase === 'approaching' || mergePhase === 'fusing'}
-                    isIdleFloating={!isSequenceRunning && mergePhase === 'split'}
+                    isFusing={isMerged}
+                    isIdleFloating={!isSequenceRunning && !isMerged}
                     floatDelay={0.35}
                     bubbleRef={bubble2Ref}
                     onClick={() => void handleTapBubble2()}
@@ -1380,14 +1321,19 @@ export function PhonicsBlendingLab({
                   />
                 </motion.div>
 
-                {/* BUBBLE 3: CODA (Slides smoothly from +splitSpread -> +kissOffset -> 0) */}
+                {/* BUBBLE 3: CODA (Glides smoothly +splitSpread -> 0 in 1 curve) */}
                 <motion.div
                   initial={false}
-                  animate={{
-                    x: currentBubbleXOffset,
-                    opacity: mergePhase === 'fusing' ? 0.55 : 1,
-                  }}
-                  transition={{ type: 'spring', stiffness: 250, damping: 24 }}
+                  animate={
+                    isMerged
+                      ? { x: 0, scale: [1, 0.96, 0.56], opacity: [1, 0.94, 0] }
+                      : { x: splitSpread, scale: 1, opacity: 1 }
+                  }
+                  transition={
+                    isMerged
+                      ? { duration: 0.46, times: [0, 0.6, 1], ease: [0.42, 0, 0.2, 1] }
+                      : { duration: 0.28, ease: [0.22, 1, 0.36, 1] }
+                  }
                   className="absolute will-change-transform"
                 >
                   <WaterBubbleLetter
@@ -1395,41 +1341,54 @@ export function PhonicsBlendingLab({
                     phonemeLabel={activeBubbles.b3Label}
                     tint="sky"
                     isActiveStep={activeCardStep === 3}
-                    isFusing={mergePhase === 'approaching' || mergePhase === 'fusing'}
-                    isIdleFloating={!isSequenceRunning && mergePhase === 'split'}
+                    isFusing={isMerged}
+                    isIdleFloating={!isSequenceRunning && !isMerged}
                     floatDelay={0.7}
                     bubbleRef={bubble3Ref}
                     onClick={() => void handleTapBubble3()}
                     disabled={isSequenceRunning}
                   />
                 </motion.div>
-              </motion.div>
+              </div>
 
-              {/* LAYER 2B: MERGED GIANT IRIDESCENT 2D WATER BUBBLE (Overlaps seamlessly on merge!) */}
+              {/* LAYER 2B: MERGED GIANT IRIDESCENT 2D WATER BUBBLE (Overlaps & blooms seamlessly at center!) */}
               <motion.div
                 initial={false}
-                animate={{
-                  opacity: mergePhase === 'merged' ? 1 : 0,
-                  scale: mergePhase === 'merged' ? 1 : 0.62,
-                }}
-                transition={{ type: 'spring', stiffness: 300, damping: 22 }}
-                style={{ pointerEvents: mergePhase === 'merged' ? 'auto' : 'none' }}
+                animate={
+                  isMerged
+                    ? { opacity: 1, scale: [0.42, 1.08, 0.97, 1] }
+                    : { opacity: 0, scale: 0.52 }
+                }
+                transition={
+                  isMerged
+                    ? {
+                        delay: 0.26,
+                        duration: 0.44,
+                        times: [0, 0.58, 0.82, 1],
+                        ease: [0.22, 1, 0.36, 1],
+                      }
+                    : { duration: 0.16, ease: 'easeOut' }
+                }
+                style={{ pointerEvents: isMerged ? 'auto' : 'none' }}
                 className="absolute flex flex-col items-center justify-center font-fredoka will-change-transform"
               >
-                <CoolMode options={BUBBLE_COOL_OPTIONS} className="inline-flex">
-                  <motion.button
-                    type="button"
-                    onClick={() => void handleTapMergedWordOrAnimal()}
+                <motion.button
+                  type="button"
+                  onClick={() => void handleTapMergedWordOrAnimal()}
                     animate={
-                      mergePhase === 'merged' && !isSequenceRunning
+                      isMerged && !isSequenceRunning
                         ? { y: [0, -6, 0] }
                         : { y: 0 }
                     }
-                    transition={{
-                      duration: 3.2,
-                      repeat: Infinity,
-                      ease: 'easeInOut',
-                    }}
+                    transition={
+                      isMerged && !isSequenceRunning
+                        ? {
+                            duration: 3.2,
+                            repeat: Infinity,
+                            ease: 'easeInOut',
+                          }
+                        : { duration: 0.15 }
+                    }
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.94 }}
                     style={{
@@ -1441,19 +1400,21 @@ export function PhonicsBlendingLab({
                     className="relative w-40 h-40 sm:w-48 sm:h-48 md:w-52 md:h-52 rounded-full border-4 border-white flex flex-col items-center justify-center cursor-pointer outline-none will-change-transform"
                     title={`Tap bubble to listen: "${activeWord.word}"`}
                   >
-                    {/* Magic UI Ripple Celebration Halo (2 crisp rings, GPU transform only) */}
-                    {mergePhase === 'merged' && (
-                      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                        <Ripple
-                          mainCircleSize={170}
-                          circleGap={36}
-                          numCircles={2}
-                          mainCircleOpacity={0.36}
-                          className="mask-none overflow-visible"
-                          circleClassName="border-2 border-white/85 bg-white/12 shadow-none [--duration:2.2s] will-change-transform"
-                        />
-                      </div>
-                    )}
+                    {/* Magic UI Ripple Celebration Halo (Always mounted, toggled via opacity for zero DOM churn) */}
+                    <div
+                      className={`pointer-events-none absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${
+                        isMerged && !isSequenceRunning ? 'opacity-100' : 'opacity-0'
+                      }`}
+                    >
+                      <Ripple
+                        mainCircleSize={170}
+                        circleGap={36}
+                        numCircles={2}
+                        mainCircleOpacity={0.36}
+                        className="mask-none overflow-visible"
+                        circleClassName="border-2 border-white/85 bg-white/12 shadow-none [--duration:2.2s] will-change-transform"
+                      />
+                    </div>
 
                     {/* 2D Vector Flat Specular Bubble Highlights */}
                     <svg
@@ -1494,8 +1455,35 @@ export function PhonicsBlendingLab({
                       <span>{activeWord.ipa}</span>
                     </span>
                   </motion.button>
-                </CoolMode>
               </motion.div>
+            </div>
+
+            {/* REPLAY 3D BUTTON DIRECTLY BELOW THE MERGED BUBBLE */}
+            <div className="h-[38px] sm:h-[44px] flex items-center justify-center flex-shrink-0">
+              {isRevealed && !isSequenceRunning && (
+                <motion.div
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="z-30"
+                >
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void runBlendingSequence(activeWord, activeWordIndex);
+                    }}
+                    className="group/rep relative inline-flex flex-shrink-0 cursor-pointer border-none bg-transparent p-0 outline-none"
+                    title="Đọc lại từ này"
+                  >
+                    <span className="pointer-events-none absolute inset-0 translate-y-[4px] rounded-full bg-[#be123c]" />
+                    <span className="relative px-4 py-1.5 sm:px-5 sm:py-2 rounded-full bg-gradient-to-b from-[#ff5c82] via-[#f43f5e] to-[#e11d48] border-2 border-white text-white font-fredoka font-black text-xs sm:text-sm flex items-center gap-1.5 shadow-md transition-transform duration-100 -translate-y-[1px] group-hover/rep:-translate-y-[2.5px] group-active/rep:translate-y-[3px] whitespace-nowrap">
+                      <RotateCcw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      <span>Đọc Lại</span>
+                    </span>
+                  </button>
+                </motion.div>
+              )}
             </div>
           </main>
         )}
@@ -1504,9 +1492,9 @@ export function PhonicsBlendingLab({
         {/* MODE 2: CHALLENGE MODE (Using 2D Water Bubbles + Cult UI TextureCard!)    */}
         {/* ========================================================================= */}
         {mode === 'challenge' && (
-          <main className="relative z-10 flex-1 w-full flex flex-col items-center justify-center px-4 overflow-hidden">
+          <main className="relative z-10 flex-1 w-full flex flex-col items-center justify-center px-3 sm:px-4 py-2 overflow-y-auto overflow-x-hidden">
             <TextureCardStyled className="w-full max-w-xl shadow-2xl font-fredoka">
-              <div className="p-6 sm:p-8 flex flex-col items-center">
+              <div className="p-5 sm:p-8 flex flex-col items-center">
                 <div className="w-full flex items-center justify-between mb-4">
                   <span className="text-xs sm:text-sm font-black text-sky-800 bg-sky-100 px-3.5 py-1 rounded-full border border-sky-200">
                     Challenge {challengeIndex + 1} / {challengeItems.length}
@@ -1546,15 +1534,13 @@ export function PhonicsBlendingLab({
                           borderColor: palette.border,
                           boxShadow: palette.glow,
                         }}
-                        className={`w-20 h-20 rounded-full border-3 flex items-center justify-center font-black text-3xl cursor-pointer transition-transform ${
-                          palette.letterColor
-                        } ${
-                          isSelected
+                        className={`w-20 h-20 rounded-full border-3 flex items-center justify-center font-black text-3xl cursor-pointer transition-transform ${palette.letterColor
+                          } ${isSelected
                             ? isChallengeAnswerCorrect
                               ? 'scale-115 ring-4 ring-emerald-400'
                               : 'opacity-50'
                             : 'hover:scale-110 active:scale-95'
-                        }`}
+                          }`}
                       >
                         {opt}
                       </button>
@@ -1570,8 +1556,8 @@ export function PhonicsBlendingLab({
         {/* MODE 3: CELEBRATION SCREEN (+15 XP - Blue Sky & Magic Water Bubbles!)     */}
         {/* ========================================================================= */}
         {mode === 'completed' && (
-          <main className="relative z-20 flex-1 w-full flex flex-col items-center justify-center px-4">
-            <div className="relative w-full max-w-lg bg-white/96 rounded-[34px] border-3 border-sky-200 p-7 sm:p-8 shadow-[0_10px_0_#7dd3fc,0_24px_50px_rgba(2,132,199,0.22)] flex flex-col items-center text-center animate-in zoom-in-95 font-fredoka overflow-hidden">
+          <main className="relative z-20 flex-1 w-full flex flex-col items-center justify-center px-4 py-4 overflow-y-auto">
+            <div className="relative w-full max-w-lg bg-white/96 rounded-[34px] border-3 border-sky-200 p-6 sm:p-8 shadow-[0_10px_0_#7dd3fc,0_24px_50px_rgba(2,132,199,0.22)] flex flex-col items-center text-center animate-in zoom-in-95 font-fredoka overflow-hidden">
 
               <div className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-300 via-amber-400 to-orange-500 text-white flex items-center justify-center text-4xl shadow-lg mb-4 animate-bounce border-3 border-white">
                 🏆
@@ -1618,18 +1604,16 @@ export function PhonicsBlendingLab({
                 </button>
 
                 {onClose && (
-                  <CoolMode options={BUBBLE_COOL_OPTIONS} className="inline-flex">
-                    <button
-                      type="button"
-                      onClick={onClose}
-                      className="group/done relative inline-flex cursor-pointer border-none bg-transparent p-0 outline-none"
-                    >
-                      <span className="pointer-events-none absolute inset-0 translate-y-[4px] rounded-full bg-[#0369a1]" />
-                      <span className="relative px-6 py-2.5 rounded-full bg-gradient-to-b from-[#38bdf8] via-[#0ea5e9] to-[#0284c7] border-2 border-[#bae6fd] text-white font-black text-sm shadow-[inset_0_2px_2px_rgba(255,255,255,0.55)] transition-transform duration-100 -translate-y-[1px] group-hover/done:-translate-y-[2px] group-active/done:translate-y-[3px]">
-                        Trở về Bản đồ ➔
-                      </span>
-                    </button>
-                  </CoolMode>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="group/done relative inline-flex cursor-pointer border-none bg-transparent p-0 outline-none"
+                  >
+                    <span className="pointer-events-none absolute inset-0 translate-y-[4px] rounded-full bg-[#0369a1]" />
+                    <span className="relative px-6 py-2.5 rounded-full bg-gradient-to-b from-[#38bdf8] via-[#0ea5e9] to-[#0284c7] border-2 border-[#bae6fd] text-white font-black text-sm shadow-[inset_0_2px_2px_rgba(255,255,255,0.55)] transition-transform duration-100 -translate-y-[1px] group-hover/done:-translate-y-[2px] group-active/done:translate-y-[3px]">
+                      Trở về Bản đồ ➔
+                    </span>
+                  </button>
                 )}
               </div>
             </div>

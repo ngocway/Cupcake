@@ -94,7 +94,11 @@ export default async function TeacherHomePage({ searchParams }: { searchParams: 
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      <TeacherDashboardClient initialTab={initialTab} isAuthenticated={isAuthenticated} />
+      <TeacherDashboardClient
+        initialTab={initialTab}
+        isAuthenticated={isAuthenticated}
+        userId={session?.user?.id ?? null}
+      />
     </HomeShell>
   );
 }

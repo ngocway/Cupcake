@@ -1,6 +1,12 @@
 "use client"
 
-import React, { createContext, useContext, useRef, type PropsWithChildren } from "react"
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  type PropsWithChildren,
+} from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 import {
   motion,
@@ -190,9 +196,27 @@ const DockWaveItem = ({
   const resolvedDisable =
     disableMagnification ?? ctx?.disableMagnification ?? false
   const activeMouseX = ctx?.mouseX ?? fallbackMouseX
+  const boundsRef = useRef<{ x: number; width: number }>({ x: 0, width: 0 })
+
+  useEffect(() => {
+    const updateBounds = () => {
+      if (!ref.current) return
+      const rect = ref.current.getBoundingClientRect()
+      boundsRef.current = { x: rect.x, width: rect.width }
+    }
+    updateBounds()
+    const ro =
+      typeof ResizeObserver !== "undefined" ? new ResizeObserver(updateBounds) : null
+    if (ro && ref.current) ro.observe(ref.current)
+    window.addEventListener("resize", updateBounds, { passive: true })
+    return () => {
+      ro?.disconnect()
+      window.removeEventListener("resize", updateBounds)
+    }
+  }, [])
 
   const distanceCalc = useTransform(activeMouseX, (val: number) => {
-    const bounds = ref.current?.getBoundingClientRect() ?? { x: 0, width: 0 }
+    const bounds = boundsRef.current
     return val - bounds.x - bounds.width / 2
   })
 

@@ -1,7 +1,11 @@
+"use client";
+
 import { StickySidebarWrapper } from "@/app/_components/StickySidebarWrapper";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useId } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useTeacherLocale } from "@/i18n/teacher-locale";
+import { ShineBorder } from "@/components/ui/shine-border";
 import {
   PlusCircle,
   ChevronDown,
@@ -47,12 +51,144 @@ interface TeacherHomeSidebarProps {
     quiz: number | null;
     choice: number | null;
   };
+  highlightGlobalSuccess?: boolean;
+  onDismissGlobalSuccessHighlight?: () => void;
+}
+
+interface SpotlightRect {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+function GlobalSuccessSpotlightOverlay({
+  targetRef,
+  active,
+  onSelectTarget,
+  onDismiss,
+}: {
+  targetRef: React.RefObject<HTMLDivElement | null>;
+  active: boolean;
+  onSelectTarget: () => void;
+  onDismiss: () => void;
+}) {
+  const maskId = useId();
+  const [rect, setRect] = useState<SpotlightRect | null>(null);
+
+  useEffect(() => {
+    if (!active || typeof window === "undefined") {
+      setRect(null);
+      return;
+    }
+
+    const measure = () => {
+      const el = targetRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) {
+        setRect({ left: r.left, top: r.top, width: r.width, height: r.height });
+      } else {
+        setRect(null);
+      }
+    };
+
+    const el = targetRef.current;
+    if (el) {
+      const r = el.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) {
+        el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    }
+
+    measure();
+    // Poll briefly during sidebar expand / mobile drawer slide transition (~480ms)
+    const interval = window.setInterval(measure, 30);
+    const stopTimer = window.setTimeout(() => window.clearInterval(interval), 520);
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onDismiss();
+    };
+
+    window.addEventListener("resize", measure);
+    window.addEventListener("scroll", measure, true);
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      window.clearInterval(interval);
+      window.clearTimeout(stopTimer);
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("scroll", measure, true);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [active, targetRef, onDismiss]);
+
+  if (!active || !rect || typeof document === "undefined") return null;
+
+  const pad = 5;
+  const x = Math.max(0, rect.left - pad);
+  const y = Math.max(0, rect.top - pad);
+  const w = rect.width + pad * 2;
+  const h = rect.height + pad * 2;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[230]" aria-live="polite">
+      {/* Full-viewport dark backdrop with rounded cutout around Sách Global Success */}
+      <svg
+        className="fixed inset-0 w-full h-full cursor-pointer"
+        onClick={onDismiss}
+      >
+        <defs>
+          <mask id={maskId}>
+            <rect x="0" y="0" width="100%" height="100%" fill="white" />
+            <rect x={x} y={y} width={w} height={h} rx={18} ry={18} fill="black" />
+          </mask>
+        </defs>
+        <rect
+          x="0"
+          y="0"
+          width="100%"
+          height="100%"
+          fill="rgba(15, 23, 42, 0.68)"
+          mask={`url(#${maskId})`}
+        />
+      </svg>
+
+      {/* Clickable illuminated frame hugging the cutout */}
+      <div
+        role="button"
+        tabIndex={0}
+        aria-label="Mở Sách Global Success"
+        onClick={(e) => {
+          e.stopPropagation();
+          onSelectTarget();
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onSelectTarget();
+          }
+        }}
+        style={{ left: x, top: y, width: w, height: h }}
+        className="fixed rounded-[18px] cursor-pointer ring-4 ring-amber-400/75 shadow-[0_0_32px_6px_rgba(245,158,11,0.45)] transition-transform duration-150 hover:scale-[1.015]"
+      >
+        <ShineBorder
+          borderWidth={2.5}
+          duration={5}
+          shineColor={["#F59E0B", "#EA580C", "#FDE047"]}
+        />
+      </div>
+    </div>,
+    document.body
+  );
 }
 
 export function TeacherHomeSidebar({
   activeTab: propActiveTab,
   onSelectTab,
   libraryCounts,
+  highlightGlobalSuccess = false,
+  onDismissGlobalSuccessHighlight,
 }: TeacherHomeSidebarProps = {}) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -115,7 +251,19 @@ export function TeacherHomeSidebar({
     localStorage.setItem("teacher_library_menu_open", String(next));
   };
 
+  const globalSuccessItemRef = useRef<HTMLDivElement>(null);
+  const showGlobalSuccessSpotlight = highlightGlobalSuccess && activeTab !== "lib-global";
+
+  useEffect(() => {
+    if (highlightGlobalSuccess) {
+      setIsLibraryOpen(true);
+    }
+  }, [highlightGlobalSuccess]);
+
   const handleSelectTab = (tab: TeacherPortalTab) => {
+    if (tab === "lib-global") {
+      onDismissGlobalSuccessHighlight?.();
+    }
     if (onSelectTab) {
       onSelectTab(tab);
       return;
@@ -496,10 +644,15 @@ export function TeacherHomeSidebar({
             <div className="ml-2.5 pl-2.5 py-1 pr-1 border-l-2 border-emerald-200/70 flex flex-col gap-2">
               {/* 1. Sách Giáo Khoa Global Success */}
               <div
+                ref={globalSuccessItemRef}
                 onClick={() => handleSelectTab("lib-global")}
-                className={`teacher-list-item ${activeTab === "lib-global" ? "active quiz-active" : ""}`}
+                className={`teacher-list-item ${
+                  activeTab === "lib-global" || showGlobalSuccessSpotlight
+                    ? "active quiz-active"
+                    : ""
+                }`}
                 style={
-                  activeTab === "lib-global"
+                  activeTab === "lib-global" || showGlobalSuccessSpotlight
                     ? { background: "#FFFBEB", borderColor: "#F59E0B" }
                     : { background: "#FEFCE8" }
                 }
@@ -695,6 +848,13 @@ export function TeacherHomeSidebar({
           </button>
         </div>
       </div>
+
+      <GlobalSuccessSpotlightOverlay
+        targetRef={globalSuccessItemRef}
+        active={showGlobalSuccessSpotlight}
+        onSelectTarget={() => handleSelectTab("lib-global")}
+        onDismiss={() => onDismissGlobalSuccessHighlight?.()}
+      />
     </StickySidebarWrapper>
   );
 }

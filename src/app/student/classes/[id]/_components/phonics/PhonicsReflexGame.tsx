@@ -288,7 +288,7 @@ export function PhonicsReflexGame({
   };
 
   return (
-    <div className="fixed inset-0 z-50 w-screen h-screen overflow-hidden flex flex-col justify-between select-none font-sans bg-gradient-to-b from-[#c7edff] via-[#e5f7ff] to-[#fff6d6]">
+    <div className="fixed inset-0 z-50 w-screen h-dvh overflow-hidden flex flex-col justify-between select-none font-sans bg-gradient-to-b from-[#c7edff] via-[#e5f7ff] to-[#fff6d6]">
       {/* Fredoka Display Typography */}
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700;900&display=swap');
@@ -350,14 +350,14 @@ export function PhonicsReflexGame({
       {/* ========================================================================= */}
       {/* 1. CLEAN FLOATING TOP HUD (Matches Station 1 & 2 Minimalist Chrome)       */}
       {/* ========================================================================= */}
-      <header className="relative z-30 w-full px-3 py-2.5 sm:px-6 sm:py-3.5 flex items-center justify-between gap-2 bg-transparent flex-shrink-0">
+      <header className="relative z-30 w-full px-2.5 py-2 sm:px-6 sm:py-3.5 flex items-center justify-between gap-1.5 sm:gap-2 bg-transparent flex-shrink-0">
         {/* Left: Back to Map */}
-        <div>
+        <div className="flex-shrink-0">
           {onClose && (
             <button
               type="button"
               onClick={onClose}
-              className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-2xl bg-white/95 hover:bg-white text-slate-700 font-bold text-xs sm:text-sm flex items-center gap-1.5 border-2 border-sky-100 shadow-[0_3px_0_#bae6fd,0_6px_14px_rgba(14,165,233,0.12)] active:translate-y-[2px] active:shadow-[0_1px_0_#bae6fd] transition-all cursor-pointer"
+              className="px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-2xl bg-white/95 hover:bg-white text-slate-700 font-bold text-xs sm:text-sm flex items-center gap-1 sm:gap-1.5 border-2 border-sky-100 shadow-[0_3px_0_#bae6fd,0_6px_14px_rgba(14,165,233,0.12)] active:translate-y-[2px] active:shadow-[0_1px_0_#bae6fd] transition-all cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4 text-sky-600" />
               <span className="hidden sm:inline">Quay lại Bản đồ</span>
@@ -368,20 +368,20 @@ export function PhonicsReflexGame({
 
         {/* Center: Round Progress + Animated Score Ticker + Combo Flame */}
         {!isGameOver && (
-          <div className="flex items-center gap-2 sm:gap-3 font-fredoka">
+          <div className="min-w-0 flex flex-wrap items-center justify-center gap-1.5 sm:gap-3 font-fredoka">
             {/* Round Capsule */}
-            <div className="px-3.5 py-1.5 sm:px-4 sm:py-1.5 rounded-full bg-white/90 backdrop-blur-md border-2 border-white shadow-[0_4px_14px_rgba(14,165,233,0.14)] flex items-center gap-2">
-              <span className="text-base leading-none">🫧</span>
-              <span className="text-xs sm:text-sm font-black text-sky-800 tracking-wide">
-                Round {roundIndex + 1} / {TOTAL_ROUNDS}
+            <div className="px-2.5 py-1 sm:px-4 sm:py-1.5 rounded-full bg-white/90 backdrop-blur-md border-2 border-white shadow-[0_4px_14px_rgba(14,165,233,0.14)] flex items-center gap-1.5 sm:gap-2">
+              <span className="text-sm sm:text-base leading-none">🫧</span>
+              <span className="text-[11px] sm:text-sm font-black text-sky-800 tracking-wide whitespace-nowrap">
+                {roundIndex + 1}/{TOTAL_ROUNDS}
               </span>
             </div>
 
             {/* Score Capsule with Magic UI NumberTicker */}
-            <div className="px-3.5 py-1.5 sm:px-4 sm:py-1.5 rounded-full bg-gradient-to-b from-amber-50 to-amber-100/95 border-2 border-white shadow-[0_4px_14px_rgba(245,158,11,0.18)] flex items-center gap-1.5">
-              <Star className="w-4 h-4 fill-amber-400 text-amber-500 flex-shrink-0" />
+            <div className="px-2.5 py-1 sm:px-4 sm:py-1.5 rounded-full bg-gradient-to-b from-amber-50 to-amber-100/95 border-2 border-white shadow-[0_4px_14px_rgba(245,158,11,0.18)] flex items-center gap-1 sm:gap-1.5">
+              <Star className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-amber-400 text-amber-500 flex-shrink-0" />
               {score === 0 ? (
-                <span className="text-xs sm:text-sm font-black text-amber-800 tabular-nums">
+                <span className="text-[11px] sm:text-sm font-black text-amber-800 tabular-nums">
                   0
                 </span>
               ) : (
@@ -389,10 +389,10 @@ export function PhonicsReflexGame({
                   key={gameSessionId}
                   value={score}
                   startValue={0}
-                  className="text-xs sm:text-sm font-black text-amber-800 dark:text-amber-800 tracking-normal"
+                  className="text-[11px] sm:text-sm font-black text-amber-800 dark:text-amber-800 tracking-normal"
                 />
               )}
-              <span className="text-[11px] sm:text-xs font-extrabold text-amber-700">
+              <span className="text-[10px] sm:text-xs font-extrabold text-amber-700">
                 pts
               </span>
             </div>
@@ -406,11 +406,11 @@ export function PhonicsReflexGame({
                   animate={{ scale: 1, opacity: 1, y: 0 }}
                   exit={{ scale: 0.7, opacity: 0 }}
                   transition={{ type: 'spring', stiffness: 420, damping: 18 }}
-                  className="px-3 py-1.5 rounded-full bg-gradient-to-r from-orange-500 via-amber-500 to-rose-500 text-white border-2 border-amber-200 shadow-[0_4px_12px_rgba(249,115,22,0.35)] flex items-center gap-1"
+                  className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-gradient-to-r from-orange-500 via-amber-500 to-rose-500 text-white border-2 border-amber-200 shadow-[0_4px_12px_rgba(249,115,22,0.35)] flex items-center gap-1 whitespace-nowrap"
                 >
-                  <Flame className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-yellow-200 text-yellow-100" />
-                  <span className="text-xs sm:text-sm font-black tracking-wide">
-                    x{combo} Combo!
+                  <Flame className="w-3 h-3 sm:w-4 sm:h-4 fill-yellow-200 text-yellow-100" />
+                  <span className="text-[11px] sm:text-sm font-black tracking-wide">
+                    x{combo}
                   </span>
                 </motion.div>
               )}
@@ -419,11 +419,11 @@ export function PhonicsReflexGame({
         )}
 
         {/* Right: Fullscreen Toggle */}
-        <div>
+        <div className="flex-shrink-0">
           <button
             type="button"
             onClick={toggleFullscreen}
-            className="px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-2xl bg-white/95 hover:bg-white text-slate-700 font-bold text-xs sm:text-sm flex items-center gap-1.5 border-2 border-sky-100 shadow-[0_3px_0_#bae6fd,0_6px_14px_rgba(14,165,233,0.12)] active:translate-y-[2px] active:shadow-[0_1px_0_#bae6fd] transition-all cursor-pointer"
+            className="px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-2xl bg-white/95 hover:bg-white text-slate-700 font-bold text-xs sm:text-sm flex items-center gap-1.5 border-2 border-sky-100 shadow-[0_3px_0_#bae6fd,0_6px_14px_rgba(14,165,233,0.12)] active:translate-y-[2px] active:shadow-[0_1px_0_#bae6fd] transition-all cursor-pointer"
             title="Toggle Fullscreen"
           >
             {isFullscreen ? (
@@ -442,11 +442,11 @@ export function PhonicsReflexGame({
       {/* 2. GAMEPLAY STAGE: RIPPLE SPEAKER ORB + 3 GIANT 3D SOAP BUBBLES           */}
       {/* ========================================================================= */}
       {!isGameOver ? (
-        <main className="relative z-10 flex-1 w-full max-w-5xl mx-auto flex flex-col items-center justify-evenly px-4 pb-4 min-h-0">
+        <main className="relative z-10 flex-1 w-full max-w-5xl mx-auto flex flex-col items-center justify-evenly px-3 sm:px-4 pb-3 sm:pb-4 min-h-0 overflow-y-auto overflow-x-hidden">
           {/* UPPER STAGE: 3D PUSHABLE SPEAKER MEDALLION + MAGIC UI SOUND-WAVE RIPPLE */}
-          <div className="relative flex flex-col items-center justify-center py-2">
+          <div className="relative flex flex-col items-center justify-center py-1 sm:py-2">
             {/* Concentric Sound-Wave Ripple Container */}
-            <div className="relative w-44 h-44 sm:w-52 sm:h-52 flex items-center justify-center">
+            <div className="relative w-32 h-32 sm:w-52 sm:h-52 flex items-center justify-center">
               <Ripple
                 mainCircleSize={106}
                 circleGap={36}
@@ -465,7 +465,7 @@ export function PhonicsReflexGame({
                 <button
                   type="button"
                   onClick={handlePlayPrompt}
-                  className="group/orb relative w-24 h-24 sm:w-28 sm:h-28 rounded-full cursor-pointer border-none bg-transparent p-0 outline-none"
+                  className="group/orb relative w-20 h-20 sm:w-28 sm:h-28 rounded-full cursor-pointer border-none bg-transparent p-0 outline-none"
                   title="Tap to listen again"
                 >
                   {/* 3D Extruded Base */}
@@ -509,7 +509,7 @@ export function PhonicsReflexGame({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: -14 }}
               transition={{ type: 'spring', stiffness: 300, damping: 24 }}
-              className="w-full flex flex-wrap items-center justify-center gap-5 sm:gap-8 md:gap-12 font-fredoka"
+              className="w-full flex flex-wrap items-center justify-center gap-3.5 sm:gap-8 md:gap-12 font-fredoka"
             >
               {currentRound.options.map((opt, idx) => {
                 const isSolvedThis = solvedWord === opt.word;
@@ -560,7 +560,7 @@ export function PhonicsReflexGame({
                             ? 'inset -8px -10px 20px rgba(244,63,94,0.28), inset 8px 10px 20px rgba(255,255,255,0.9), 0 12px 28px rgba(244,63,94,0.25), 0 5px 0 #fb7185'
                             : bubbleStyle.shadow,
                         }}
-                        className={`group/bub relative w-40 h-40 sm:w-52 sm:h-52 md:w-60 md:h-60 rounded-full border-3 ${
+                        className={`group/bub relative w-32 h-32 sm:w-52 sm:h-52 md:w-60 md:h-60 rounded-full border-3 ${
                           isSolvedThis
                             ? 'border-emerald-300 ring-6 ring-emerald-300/50'
                             : isWrongThis
@@ -584,7 +584,7 @@ export function PhonicsReflexGame({
                                 stiffness: 420,
                                 damping: 16,
                               }}
-                              className="relative z-10 w-24 h-24 sm:w-30 sm:h-30 md:w-34 md:h-34 flex items-center justify-center -mb-1 drop-shadow-[0_6px_12px_rgba(16,185,129,0.25)]"
+                              className="relative z-10 w-18 h-18 sm:w-30 sm:h-30 md:w-34 md:h-34 flex items-center justify-center -mb-1 drop-shadow-[0_6px_12px_rgba(16,185,129,0.25)]"
                             >
                               <PhonicsWordIllustration
                                 word={opt.word}
@@ -598,8 +598,8 @@ export function PhonicsReflexGame({
                         <span
                           className={`relative z-10 font-black tracking-wide leading-none transition-all duration-200 ${
                             isSolvedThis
-                              ? 'text-3xl sm:text-4xl md:text-[2.6rem] mt-0.5'
-                              : 'text-4xl sm:text-5xl md:text-[3.5rem] group-hover/bub:scale-108'
+                              ? 'text-2xl sm:text-4xl md:text-[2.6rem] mt-0.5'
+                              : 'text-3xl sm:text-5xl md:text-[3.5rem] group-hover/bub:scale-108'
                           }`}
                         >
                           <span className="text-[#e11d48] drop-shadow-[0_2px_0_rgba(255,255,255,0.9)]">
@@ -649,8 +649,8 @@ export function PhonicsReflexGame({
         /* ========================================================================= */
         /* 3. VICTORY CELEBRATION SCREEN (+20 XP - Consistent with Stations 1 & 2)    */
         /* ========================================================================= */
-        <main className="relative z-20 flex-1 w-full flex flex-col items-center justify-center px-4">
-          <div className="relative w-full max-w-lg bg-white/95 backdrop-blur-md rounded-[34px] border-3 border-sky-200 p-7 sm:p-8 shadow-[0_10px_0_#7dd3fc,0_24px_50px_rgba(14,165,233,0.22)] flex flex-col items-center text-center animate-in zoom-in-95 font-fredoka overflow-hidden">
+        <main className="relative z-20 flex-1 w-full flex flex-col items-center justify-center px-4 py-4 overflow-y-auto">
+          <div className="relative w-full max-w-lg bg-white/95 backdrop-blur-md rounded-[34px] border-3 border-sky-200 p-6 sm:p-8 shadow-[0_10px_0_#7dd3fc,0_24px_50px_rgba(14,165,233,0.22)] flex flex-col items-center text-center animate-in zoom-in-95 font-fredoka overflow-hidden">
             <ShineBorder
               borderWidth={3}
               duration={12}

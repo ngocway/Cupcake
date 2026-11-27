@@ -407,7 +407,7 @@ export function PhonicsDecodableStoryStation({
   };
 
   return (
-    <div className="fixed inset-0 z-50 w-screen h-screen overflow-hidden flex flex-col justify-between select-none font-sans bg-gradient-to-br from-[#c9e6ff] via-[#eaf5ff] to-[#fff9eb]">
+    <div className="fixed inset-0 z-50 w-screen h-dvh overflow-hidden flex flex-col justify-between select-none font-sans bg-gradient-to-br from-[#c9e6ff] via-[#eaf5ff] to-[#fff9eb]">
       {/* Fredoka Display Typography */}
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700;900&display=swap');
@@ -463,12 +463,12 @@ export function PhonicsDecodableStoryStation({
 
         {/* Center: Storybook Title Pill with Magic UI SparklesText */}
         {mode !== 'completed' && (
-          <div className="px-4 py-1.5 rounded-full bg-white/90 backdrop-blur-md border-2 border-white shadow-[0_4px_16px_rgba(2,132,199,0.14)] flex items-center gap-2 font-fredoka">
+          <div className="min-w-0 max-w-[52vw] sm:max-w-md px-3 sm:px-4 py-1.5 rounded-full bg-white/90 backdrop-blur-md border-2 border-white shadow-[0_4px_16px_rgba(2,132,199,0.14)] flex items-center gap-1.5 sm:gap-2 font-fredoka">
             <BookOpen className="w-4 h-4 text-sky-600 flex-shrink-0" />
             <SparklesText
               sparklesCount={5}
               colors={{ first: '#0284c7', second: '#f59e0b' }}
-              className="text-xs sm:text-base font-black text-sky-900 tracking-wide"
+              className="block truncate text-xs sm:text-base font-black text-sky-900 tracking-wide"
             >
               {story.title}
             </SparklesText>
@@ -499,7 +499,7 @@ export function PhonicsDecodableStoryStation({
       {/* 2. OPEN 3D HARDCOVER STORYBOOK STAGE (Story Spread OR Quiz Page)          */}
       {/* ========================================================================= */}
       {mode !== 'completed' ? (
-        <main className="relative z-10 flex-1 w-full max-w-5xl mx-auto flex items-center justify-center px-3 sm:px-6 pb-4 min-h-0">
+        <main className="relative z-10 flex-1 w-full max-w-5xl mx-auto flex items-start lg:items-center justify-center px-3 sm:px-6 pt-1 pb-6 min-h-0 overflow-y-auto overflow-x-hidden">
           {/* Hardcover 3D Book Outer Shell */}
           <div className="relative w-full rounded-[34px] sm:rounded-[38px] bg-gradient-to-b from-[#38bdf8] via-[#0284c7] to-[#0369a1] p-2 sm:p-3 shadow-[0_10px_0_#075985,0_24px_55px_rgba(2,132,199,0.25)] border-2 border-sky-200/90">
             <ShineBorder
@@ -530,7 +530,7 @@ export function PhonicsDecodableStoryStation({
                     {/* LEFT PAGE (5 cols): Dynamic Scene Illustration + Read All 3D Button */}
                     <div className="lg:col-span-5 p-4 sm:p-6 bg-gradient-to-br from-[#f8fbff] via-[#fffdf9] to-[#f0f9ff] border-b lg:border-b-0 lg:border-r border-sky-100 flex flex-col items-center justify-between gap-3">
                       {/* Scene Canvas */}
-                      <div className="w-full h-44 sm:h-56 lg:h-64">
+                      <div className="w-full h-40 sm:h-56 lg:h-64">
                         <AnimatePresence mode="wait">
                           <motion.div
                             key={focusedSceneIndex}
@@ -634,7 +634,7 @@ export function PhonicsDecodableStoryStation({
                               }`}
                             >
                               {/* Sentence Words with Cleanly Separated Punctuation */}
-                              <div className="flex flex-wrap items-baseline gap-x-1.5 sm:gap-x-2 gap-y-1 text-lg sm:text-2xl font-bold leading-snug">
+                              <div className="flex flex-wrap items-baseline gap-x-1.5 sm:gap-x-2 gap-y-1 text-base sm:text-2xl font-bold leading-snug">
                                 {tokens.map((rawToken, wIdx) => {
                                   const { leading, word, trailing } =
                                     splitTokenPunctuation(rawToken);
@@ -727,7 +727,7 @@ export function PhonicsDecodableStoryStation({
                     animate={{ opacity: 1, x: 0, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.96 }}
                     transition={{ type: 'spring', stiffness: 300, damping: 26 }}
-                    className="p-5 sm:p-8 bg-gradient-to-b from-[#f8fbff] via-[#fffdf9] to-[#fefce8] flex flex-col items-center"
+                    className="p-4 sm:p-8 bg-gradient-to-b from-[#f8fbff] via-[#fffdf9] to-[#fefce8] flex flex-col items-center"
                   >
                     {/* Quiz Page Top Controls */}
                     <div className="w-full flex items-center justify-between mb-3">
@@ -854,7 +854,7 @@ export function PhonicsDecodableStoryStation({
         /* ========================================================================= */
         /* 3. DESTINATION STATION CELEBRATION (+20 XP - Final Station Complete!)     */
         /* ========================================================================= */
-        <main className="relative z-20 flex-1 w-full flex flex-col items-center justify-center px-4">
+        <main className="relative z-20 flex-1 w-full flex flex-col items-center justify-center px-4 py-4 overflow-y-auto">
           <div className="relative w-full max-w-lg bg-white/95 backdrop-blur-md rounded-[34px] border-3 border-sky-300 p-7 sm:p-8 shadow-[0_10px_0_#7dd3fc,0_24px_50px_rgba(2,132,199,0.22)] flex flex-col items-center text-center animate-in zoom-in-95 font-fredoka overflow-hidden">
             <ShineBorder
               borderWidth={3}

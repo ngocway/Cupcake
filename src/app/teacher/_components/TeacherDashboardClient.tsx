@@ -19,15 +19,19 @@ import {
 import { LoginModal } from "@/components/LoginButton";
 import { trackEvent } from "@/lib/analytics";
 import { TeacherLocaleSwitch, useTeacherLocale } from "@/i18n/teacher-locale";
+import { GlobalSuccessLaunchModal } from "./GlobalSuccessLaunchModal";
+import { useContentStore } from "@/store/useContentStore";
 
 interface TeacherDashboardClientProps {
   initialTab?: string;
   isAuthenticated: boolean;
+  userId?: string | null;
 }
 
 export function TeacherDashboardClient({
   initialTab = "match",
   isAuthenticated,
+  userId = null,
 }: TeacherDashboardClientProps) {
   const { t, locale, setLocale } = useTeacherLocale();
   const normalizeTab = (tab: string) => (tab === "lib-flip" ? "lib-match" : tab);
@@ -42,11 +46,85 @@ export function TeacherDashboardClient({
   );
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [pendingRedirectUrl, setPendingRedirectUrl] = useState<string>("/teacher");
+  const [showGsLaunchPopup, setShowGsLaunchPopup] = useState(false);
+  const [highlightGlobalSuccess, setHighlightGlobalSuccess] = useState(false);
   const [libraryCounts, setLibraryCounts] = useState<{
     match: number | null;
     quiz: number | null;
     choice: number | null;
   }>({ match: null, quiz: null, choice: null });
+
+  const gsSeenStorageKey = userId ? `dolcake_gs_launch_v1_seen_${userId}` : null;
+
+  // Preview trigger on localhost via ?previewGsPopup=1 (runs once on mount)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const urlParams = new URLSearchParams(window.location.search);
+    const previewParam = urlParams.get("previewGsPopup");
+    if (previewParam === "1" || previewParam === "true") {
+      setShowGsLaunchPopup(true);
+    }
+  }, []);
+
+  // Dismiss sidebar spotlight automatically once the teacher opens Sách Global Success
+  useEffect(() => {
+    if (activeTab === "lib-global") {
+      setHighlightGlobalSuccess(false);
+    }
+  }, [activeTab]);
+
+  // Auto-detect Vietnam IP on first authenticated visit to /teacher
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const urlParams = new URLSearchParams(window.location.search);
+    const previewParam = urlParams.get("previewGsPopup");
+    if (previewParam === "1" || previewParam === "true") return;
+
+    if (!isAuthenticated || !gsSeenStorageKey || activeTab === "lib-global") {
+      return;
+    }
+
+    try {
+      if (localStorage.getItem(gsSeenStorageKey) === "1") {
+        return;
+      }
+    } catch {}
+
+    let cancelled = false;
+    fetch("/api/geo", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (cancelled) return;
+        if (data?.isVietnam === true) {
+          setShowGsLaunchPopup(true);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, gsSeenStorageKey, activeTab]);
+
+  const handleDismissGsPopup = () => {
+    setShowGsLaunchPopup(false);
+    if (gsSeenStorageKey && typeof window !== "undefined") {
+      try {
+        localStorage.setItem(gsSeenStorageKey, "1");
+      } catch {}
+    }
+  };
+
+  const handleConfirmGsPopup = () => {
+    handleDismissGsPopup();
+    setHighlightGlobalSuccess(true);
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      const setMobileSidebarOpen = (useContentStore.getState() as any).setMobileSidebarOpen;
+      if (typeof setMobileSidebarOpen === "function") {
+        setMobileSidebarOpen(true);
+      }
+    }
+  };
 
   const refreshLibraryCountsFromStorage = () => {
     if (typeof window === "undefined") return;
@@ -269,6 +347,8 @@ export function TeacherDashboardClient({
         activeTab={activeTab}
         onSelectTab={handleSelectTab}
         libraryCounts={isAuthenticated ? libraryCounts : undefined}
+        highlightGlobalSuccess={highlightGlobalSuccess}
+        onDismissGlobalSuccessHighlight={() => setHighlightGlobalSuccess(false)}
       />
 
       {/* Main Workspace with Tab Keep-Alive */}
@@ -496,6 +576,13 @@ export function TeacherDashboardClient({
         onClose={() => setLoginModalOpen(false)}
         defaultView="teacherLogin"
         callbackUrl={pendingRedirectUrl}
+      />
+
+      {/* First-login Vietnam IP Global Success Announcement Popup */}
+      <GlobalSuccessLaunchModal
+        isOpen={showGsLaunchPopup}
+        onConfirmExperience={handleConfirmGsPopup}
+        onDismiss={handleDismissGsPopup}
       />
     </div>
   );

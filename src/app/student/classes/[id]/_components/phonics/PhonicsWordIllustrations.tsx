@@ -4,6 +4,7 @@ interface PhonicsIllustrationProps {
   word: string;
   className?: string;
   size?: number;
+  frameless?: boolean;
 }
 
 const PHONICS_WORD_VISUALS: Record<
@@ -209,30 +210,74 @@ const PHONICS_WORD_VISUALS: Record<
 const STAGE_1_R2_BASE = 'https://media.dolcake.com/phonics/words';
 
 const STAGE_1_R2_WORDS = new Set<string>([
-  // Day 1 (-at)
+  // Stage 1: Short A (Days 1–9: 48 words)
   'bat', 'cat', 'fat', 'hat', 'mat', 'rat', 'sat',
-  // Day 2 (-an)
   'can', 'fan', 'man', 'pan', 'ran', 'van',
-  // Day 3 (-ap)
   'cap', 'map', 'nap', 'tap', 'lap', 'gap',
-  // Day 4 (-am)
   'dam', 'ham', 'jam', 'ram', 'yam',
-  // Day 5 (-ad)
   'bad', 'dad', 'lad', 'mad', 'sad',
-  // Day 6 (-ag)
   'bag', 'flag', 'rag', 'tag', 'wag',
-  // Day 7 (-ab)
   'cab', 'crab', 'lab', 'tab',
-  // Day 8 (-ack)
   'back', 'black', 'pack', 'sack', 'track',
-  // Day 9 (-ash)
   'cash', 'dash', 'flash', 'rash', 'splash',
+  // Stage 2: Short E (Days 11–17: 35 words)
+  'jet', 'net', 'pet', 'set', 'vet', 'wet',
+  'den', 'hen', 'men', 'pen', 'ten',
+  'bed', 'fed', 'led', 'red', 'wed',
+  'beg', 'egg', 'leg', 'peg',
+  'bell', 'shell', 'tell', 'well', 'yell',
+  'best', 'nest', 'rest', 'test', 'vest',
+  'bend', 'lend', 'send', 'tent', 'vent',
+  // Stage 3: Short I (Days 19–26: 41 words)
+  'bit', 'fit', 'hit', 'kit', 'pit', 'sit',
+  'bin', 'fin', 'pin', 'tin', 'win',
+  'dip', 'lip', 'rip', 'sip', 'tip', 'zip',
+  'big', 'dig', 'fig', 'pig', 'wig',
+  'kid', 'lid', 'hid', 'swim', 'rim',
+  'fill', 'hill', 'mill', 'pill', 'spill',
+  'brick', 'kick', 'pick', 'sick', 'tick',
+  'dish', 'fish', 'wish', 'swish',
+  // Stage 4: Short O (Days 28–34: 32 words)
+  'cot', 'dot', 'hot', 'lot', 'pot', 'rot',
+  'hop', 'mop', 'pop', 'stop', 'top',
+  'dog', 'fog', 'frog', 'jog', 'log',
+  'box', 'fox', 'ox',
+  'clock', 'lock', 'rock', 'shock', 'sock',
+  'bob', 'cob', 'job', 'sob',
+  'mom', 'nod', 'pod', 'rod',
+  // Stage 5: Short U & Day 45 (Days 36–45: 36 words)
+  'bug', 'hug', 'jug', 'mug', 'rug', 'tug',
+  'bun', 'fun', 'run', 'sun',
+  'cut', 'hut', 'nut', 'shut',
+  'cub', 'rub', 'sub', 'tub',
+  'cup', 'pup', 'bud', 'mud',
+  'duck', 'luck', 'truck', 'stuck',
+  'drum', 'gum', 'hum', 'bump', 'jump',
+  'brush', 'crush', 'flush', 'rush',
+  'star',
 ]);
 
-export function PhonicsWordIllustration({ word, className = '', size = 120 }: PhonicsIllustrationProps) {
+export function PhonicsWordIllustration({
+  word,
+  className = '',
+  size = 120,
+  frameless = false,
+}: PhonicsIllustrationProps) {
   const normalized = (word || '').toLowerCase().trim();
 
   if (STAGE_1_R2_WORDS.has(normalized)) {
+    if (frameless) {
+      return (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img
+          src={`${STAGE_1_R2_BASE}/${normalized}.png`}
+          alt={normalized}
+          className={`w-full h-full object-cover select-none pointer-events-none ${className}`}
+          loading="lazy"
+        />
+      );
+    }
+
     return (
       <div
         style={{ width: size, height: size }}
@@ -557,6 +602,30 @@ export function PhonicsWordIllustration({ word, className = '', size = 120 }: Ph
         accent: '#0284c7',
       };
       const emojiSize = Math.round(size * 0.56);
+
+      if (frameless) {
+        return (
+          <div
+            style={{
+              background: `radial-gradient(circle at 35% 30%, #ffffff 0%, ${visual.bgFrom} 58%, ${visual.bgTo} 100%)`,
+            }}
+            className={`relative w-full h-full flex items-center justify-center select-none ${className}`}
+          >
+            <span
+              style={{ fontSize: emojiSize, lineHeight: 1 }}
+              className="drop-shadow-[0_4px_6px_rgba(15,23,42,0.14)]"
+            >
+              {visual.emoji}
+            </span>
+            <span
+              style={{ color: visual.accent }}
+              className="pointer-events-none absolute top-[12%] right-[14%] text-sm opacity-80"
+            >
+              ✨
+            </span>
+          </div>
+        );
+      }
 
       return (
         <div

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Nunito, JetBrains_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Nunito, JetBrains_Mono, Fredoka } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { SharedBackground } from "@/components/public/SharedBackground";
@@ -23,6 +23,14 @@ const nunito = Nunito({
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-mono",
   subsets: ["latin"],
+  display: "swap",
+  adjustFontFallback: true,
+});
+
+const fredoka = Fredoka({
+  variable: "--font-fredoka",
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
   display: "swap",
   adjustFontFallback: true,
 });
@@ -106,7 +114,7 @@ export default async function RootLayout({
   return (
     <html
       lang={locale}
-      className={`${nunito.variable} ${jetbrainsMono.variable} h-full antialiased`}
+      className={`${nunito.variable} ${jetbrainsMono.variable} ${fredoka.variable} h-full antialiased`}
     >
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />

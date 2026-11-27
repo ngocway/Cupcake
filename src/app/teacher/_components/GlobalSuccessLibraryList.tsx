@@ -6,6 +6,20 @@ import Link from "next/link";
 import { getUnitReviewCountsByGradeAction } from "@/actions/unit-review-actions";
 import { hasUnitGrammarLesson } from "@/data/global-success-grammar";
 import {
+  getUnitLectureSlideCount,
+  getUnitLectureSlideThumbUrl,
+  loadUnitLectureDeck,
+  type UnitLectureDeck,
+} from "@/data/global-success-grammar/lecture-slides";
+import { UnitLectureSlideModal } from "@/components/grammar/UnitLectureSlideModal";
+import { motion } from "motion/react";
+import { TextureCard } from "@/components/ui/texture-card";
+import { ShineBorder } from "@/components/ui/shine-border";
+import { ShimmerButton } from "@/components/ui/shimmer-button";
+import { GlareHover } from "@/components/ui/glare-hover";
+import { NumberTicker } from "@/components/ui/number-ticker";
+import { SparklesText } from "@/components/ui/sparkles-text";
+import {
   BookOpen,
   Gamepad2,
   Eye,
@@ -27,6 +41,7 @@ import {
   Plus,
   Play,
   Volume2,
+  Presentation,
 } from "lucide-react";
 import {
   MatchGameShareModal,
@@ -318,6 +333,19 @@ const CACHE_VERSION = "v2";
 const UI_STATE_KEY = "global_success_ui_state_v3";
 export const GRADE_COUNTS_CACHE_KEY = "cached_gs_grade_counts_v2";
 
+function formatQuizPreviewPrompt(raw?: string | null): { isFillBlank: boolean; text: string } {
+  const val = (raw || "").trim();
+  if (!val) return { isFillBlank: false, text: "..." };
+  const stripped = val.replace(/^Câu\s+/i, "").trim();
+  if (/^_+/.test(stripped)) {
+    return {
+      isFillBlank: true,
+      text: `[ _ ] ${stripped.replace(/^_+/, "")}`,
+    };
+  }
+  return { isFillBlank: false, text: val };
+}
+
 let memoryCachedGradeData: Record<number, LibrarySetItem[]> = {};
 let memoryCachedGradeCounts: GradeCountItem[] | null = null;
 const inflightGradeRequests: Partial<Record<number, Promise<LibrarySetItem[] | null>>> = {};
@@ -414,6 +442,24 @@ export function GlobalSuccessLibraryList() {
     unitNumber: number;
     unitHeader: string;
   } | null>(null);
+  const [activeLectureDeck, setActiveLectureDeck] = useState<UnitLectureDeck | null>(null);
+  const [lectureModalOpen, setLectureModalOpen] = useState(false);
+  const [isLoadingLecture, setIsLoadingLecture] = useState(false);
+  const [collapsedUnits, setCollapsedUnits] = useState<Record<string, boolean>>({});
+
+  const toggleUnitCollapse = (unitKey: string) => {
+    setCollapsedUnits((prev) => ({ ...prev, [unitKey]: !prev[unitKey] }));
+  };
+
+  const handleOpenLectureSlides = (gradeNum: number, unitNum: number) => {
+    setLectureModalOpen(true);
+    if (activeLectureDeck?.grade === gradeNum && activeLectureDeck?.unit === unitNum) return;
+    setActiveLectureDeck(null);
+    setIsLoadingLecture(true);
+    loadUnitLectureDeck(gradeNum, unitNum)
+      .then((res) => setActiveLectureDeck(res))
+      .finally(() => setIsLoadingLecture(false));
+  };
   const hasRestoredUiRef = useRef(false);
   const pendingShareIdRef = useRef<string | null>(null);
   const [loadingViewId, setLoadingViewId] = useState<string | null>(null);
@@ -1078,10 +1124,10 @@ export function GlobalSuccessLibraryList() {
                     </span>
                   ) : (
                     <>
-                      <span className="font-headline font-black text-xs text-slate-900 dark:text-white leading-none">
+                      <span className="font-headline font-black text-xs text-slate-900 dark:text-white leading-none whitespace-nowrap">
                         {t.library.gradeLabel} {selectedGrade}
                       </span>
-                      <span className="px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-800 dark:text-amber-300 text-[9px] font-extrabold leading-none">
+                      <span className="px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-800 dark:text-amber-300 text-[9px] font-extrabold leading-none whitespace-nowrap shrink-0">
                         {gradeCounts[selectedGrade] || 0} {locale === "vi" ? "bộ" : "sets"}
                       </span>
                     </>
@@ -1512,492 +1558,797 @@ export function GlobalSuccessLibraryList() {
 
           {/* Unit Sections */}
           <div className="space-y-6">
-            {groupedUnits.map((unitGroup) => (
-              <div
-                key={unitGroup.unitKey}
-                className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl rounded-[8px] border border-amber-200/70 dark:border-slate-800 p-5 sm:p-6 shadow-xs space-y-4"
-              >
-                {/* Unit Section Header */}
-                <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-headline font-black text-xs shadow-xs shrink-0">
-                      {t.library.gradeLabel} {selectedGrade}
-                    </div>
-                    <h3 className="font-headline font-black text-lg text-slate-800 dark:text-white truncate">
-                      📘 {unitGroup.unitHeader}
-                    </h3>
-                  </div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {selectedGrade !== null && hasUnitGrammarLesson(selectedGrade, unitGroup.unitNumber) && (
-                      <div className="inline-flex items-center gap-1">
-                        <Link
-                          href={`/student/unit-grammar?grade=${selectedGrade}&unit=${unitGroup.unitNumber}&returnUrl=${encodeURIComponent("/teacher?tab=lib-global")}`}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-extrabold text-xs shadow-sm shadow-indigo-500/20 hover:shadow-md transition-all active:scale-95"
-                          title={
-                            selectedGrade <= 2
-                              ? locale === "vi"
-                                ? "Xem tóm tắt mẫu câu trọng tâm & làm bài tập"
-                                : "Review key sentences & practice"
-                              : locale === "vi"
-                                ? "Xem tóm tắt ngữ pháp & làm bài tập"
-                                : "Review unit grammar & practice"
-                          }
-                        >
-                          <BookOpen className="w-3.5 h-3.5" />
-                          <span>
-                            {selectedGrade <= 2
-                              ? locale === "vi"
-                                ? "Mẫu câu trọng tâm"
-                                : "Key Sentences"
-                              : locale === "vi"
-                                ? "Ôn tập Ngữ pháp"
-                                : "Grammar Review"}
-                          </span>
-                        </Link>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setSharingGrammar({
-                              grade: selectedGrade,
-                              unitNumber: unitGroup.unitNumber,
-                              unitHeader: unitGroup.unitHeader,
-                            })
-                          }
-                          className="w-8 h-8 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/60 border border-indigo-200/80 dark:border-indigo-800 text-indigo-600 dark:text-indigo-300 flex items-center justify-center transition-all cursor-pointer active:scale-95"
-                          title={
-                            locale === "vi"
-                              ? "Chia sẻ link & mã QR ôn tập ngữ pháp cho học sinh"
-                              : "Share grammar review link & QR code"
-                          }
-                        >
-                          <Share2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    )}
-                    <span className="px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[11px] font-extrabold">
-                      {unitGroup.items.length} {locale === "vi" ? "bộ câu hỏi" : "question sets"}
-                    </span>
-                  </div>
-                </div>
+            {groupedUnits.map((unitGroup) => {
+              const slideCount =
+                selectedGrade !== null
+                  ? getUnitLectureSlideCount(selectedGrade, unitGroup.unitNumber)
+                  : null;
+              const hasGrammar =
+                selectedGrade !== null &&
+                hasUnitGrammarLesson(selectedGrade, unitGroup.unitNumber);
+              const hasLectureCard = slideCount !== null || hasGrammar;
+              const isCollapsed =
+                selectedUnitKey === "all" && Boolean(collapsedUnits[unitGroup.unitKey]);
+              const reviewCount = unitReviewCounts[unitGroup.unitNumber];
 
-                {/* Cards Grid for this Unit (3 items / row on desktop) */}
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {unitGroup.items.map(({ raw: setItem, shortTitle }) => {
-                    const badge = getSubTypeBadge(setItem.subType, shortTitle);
-                    const previewItems = setItem.items.slice(0, 3);
-                    const isPairs =
-                      setItem.subType === "image-text" ||
-                      setItem.subType === "image-image" ||
-                      setItem.subType === "text-text";
-
-                    return (
-                      <div
-                        key={setItem.id}
-                        className={`rounded-2xl border ${badge.topBorder} p-4 hover:-translate-y-1 transition-all flex flex-col justify-between gap-3 ${badge.cardBg}`}
-                      >
-                        <div
-                          onClick={() => handleOpenViewModal(setItem)}
-                          title={t.library.viewBtn}
-                          className="space-y-2.5 cursor-pointer group/card"
-                        >
-                          {/* Title & Badges */}
-                          <div className="flex items-start justify-between gap-2.5">
-                            <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                              <div
-                                className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-2xs font-black text-base ${badge.iconBg}`}
-                              >
-                                {badge.iconEmoji}
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <h4
-                                  className={`font-headline font-black text-[15px] sm:text-base leading-tight truncate transition-colors ${badge.titleColor}`}
-                                >
-                                  {shortTitle}
-                                </h4>
-                                <p className="text-[11px] font-semibold text-slate-500/90 dark:text-slate-400 truncate mt-0.5">
-                                  {badge.subTitleText}
-                                </p>
-                              </div>
-                            </div>
-                            <span
-                              className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border shrink-0 ${badge.cls}`}
-                            >
-                              {badge.label}
-                            </span>
+              return (
+                <motion.div
+                  key={unitGroup.unitKey}
+                  initial={{ opacity: 0, y: 12 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.05 }}
+                  transition={{ duration: 0.25, ease: "easeOut" }}
+                >
+                  <TextureCard
+                    style={{ "--radius": "1.25rem" } as React.CSSProperties}
+                    className="bg-amber-50/50 dark:bg-slate-900/90 border-amber-200/80 dark:border-slate-800 shadow-xs"
+                  >
+                    <div className="bg-white/95 dark:bg-slate-900/95 rounded-[calc(1.25rem-4px)] p-4 sm:p-6 space-y-4">
+                      {/* Unit Section Header */}
+                      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-headline font-black text-xs shadow-xs shrink-0 whitespace-nowrap">
+                            {t.library.gradeLabel} {selectedGrade}
                           </div>
-
-                          {/* Count Badge & View Button Row */}
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/95 dark:bg-slate-900 border border-white/80 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-bold shadow-2xs">
-                              <Layers className={`w-3 h-3 ${badge.iconColor}`} />
-                              {setItem.totalItems}{" "}
-                              {isPairs ? t.common.pairsCount : t.common.questionsCount}
-                            </span>
-
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleOpenViewModal(setItem);
-                              }}
-                              disabled={loadingViewId === setItem.id}
-                              className="px-2.5 py-1 rounded-lg bg-white/95 hover:bg-white dark:bg-slate-900 dark:hover:bg-slate-800 border border-white/80 hover:border-amber-300 dark:border-slate-700 text-slate-700 hover:text-amber-700 dark:text-slate-200 font-bold text-[11px] flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs disabled:opacity-50"
-                            >
-                              {loadingViewId === setItem.id ? (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-600" />
-                              ) : (
-                                <Eye className="w-3.5 h-3.5 text-slate-500" />
-                              )}
-                              <span>{t.library.viewBtn}</span>
-                            </button>
-                          </div>
-
-                          {/* Mini Preview Strip */}
-                          <div className="grid grid-cols-3 gap-1.5 pt-0.5">
-                            {previewItems.map((item, idx) => {
-                              if (badge.category === "vocabulary") {
-                                return (
-                                  <div
-                                    key={item.id || idx}
-                                    className={`rounded-xl bg-white/95 dark:bg-slate-900 border p-1.5 flex flex-col items-center justify-between text-center min-h-[76px] transition-all hover:scale-105 ${badge.previewBorder}`}
-                                  >
-                                    <div className="w-10 h-10 flex items-center justify-center p-0.5 rounded-lg bg-slate-50 dark:bg-slate-800/80 shrink-0">
-                                      {item.imageUrl ? (
-                                        <img
-                                          src={item.imageUrl}
-                                          alt={item.word || "item"}
-                                          className="w-full h-full object-contain rounded-md"
-                                        />
-                                      ) : (
-                                        <ImageIcon className="w-5 h-5 text-slate-400" />
-                                      )}
-                                    </div>
-                                    <div className="w-full flex items-center justify-center gap-1 mt-1">
-                                      <Volume2 className="w-2.5 h-2.5 text-sky-500 shrink-0 opacity-70" />
-                                      <span className="text-[11px] font-black text-slate-800 dark:text-slate-100 truncate">
-                                        {item.word}
-                                      </span>
-                                    </div>
-                                  </div>
-                                );
-                              }
-
-                              if (badge.category === "en-vi") {
-                                return (
-                                  <div
-                                    key={item.id || idx}
-                                    className={`rounded-xl bg-white/95 dark:bg-slate-900 border p-2 flex flex-col items-center justify-center text-center min-h-[76px] transition-all hover:scale-105 ${badge.previewBorder}`}
-                                  >
-                                    <div className="flex items-center gap-1 w-full justify-center min-w-0">
-                                      <span className="text-[8px] font-black uppercase px-1 py-0.2 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 shrink-0">
-                                        EN
-                                      </span>
-                                      <span className="text-[11px] font-black text-slate-800 dark:text-slate-100 truncate">
-                                        {item.word}
-                                      </span>
-                                    </div>
-                                    <div className="w-3/4 border-t border-dashed border-slate-200 dark:border-slate-700 my-1" />
-                                    <div className="flex items-center gap-1 w-full justify-center min-w-0">
-                                      <span className="text-[8px] font-black uppercase px-1 py-0.2 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 shrink-0">
-                                        VI
-                                      </span>
-                                      <span className="text-[10.5px] font-bold text-emerald-700 dark:text-emerald-300 truncate">
-                                        {item.labelB || "..."}
-                                      </span>
-                                    </div>
-                                  </div>
-                                );
-                              }
-
-                              if (badge.category === "conversations") {
-                                return (
-                                  <div
-                                    key={item.id || idx}
-                                    className={`rounded-xl bg-white/95 dark:bg-slate-900 border p-1.5 flex flex-col justify-center gap-1 min-h-[76px] transition-all hover:scale-105 text-left ${badge.previewBorder}`}
-                                  >
-                                    <div className="px-1.5 py-0.5 rounded-md bg-teal-50 dark:bg-teal-950/70 border border-teal-200/60 dark:border-teal-800/60 flex items-center gap-1 min-w-0">
-                                      <span className="text-[9px] shrink-0">🗣️</span>
-                                      <span className="text-[10px] font-bold text-teal-900 dark:text-teal-200 truncate">
-                                        {item.word}
-                                      </span>
-                                    </div>
-                                    <div className="px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200/70 dark:border-slate-700 flex items-center gap-1 min-w-0">
-                                      <span className="text-[9px] shrink-0">💬</span>
-                                      <span className="text-[10px] font-medium text-slate-700 dark:text-slate-300 truncate">
-                                        {item.labelB || "..."}
-                                      </span>
-                                    </div>
-                                  </div>
-                                );
-                              }
-
-                              if (badge.category === "quiz") {
-                                let correctAnswer = "";
-                                if (item.labelB) {
-                                  try {
-                                    const parsed = JSON.parse(item.labelB);
-                                    if (Array.isArray(parsed.options)) {
-                                      const correct = parsed.options.find((o: any) => o.isCorrect);
-                                      if (correct) correctAnswer = correct.text;
-                                    }
-                                  } catch {
-                                    correctAnswer = item.labelB;
-                                  }
-                                }
-
-                                return (
-                                  <div
-                                    key={item.id || idx}
-                                    className={`rounded-xl bg-white/95 dark:bg-slate-900 border p-1.5 flex flex-col justify-between text-left min-h-[76px] transition-all hover:scale-105 ${badge.previewBorder}`}
-                                  >
-                                    <div className="flex items-center gap-1 min-w-0">
-                                      {item.imageUrl ? (
-                                        <img
-                                          src={item.imageUrl}
-                                          alt="q"
-                                          className="w-5 h-5 object-contain rounded shrink-0 bg-slate-50 dark:bg-slate-800"
-                                        />
-                                      ) : (
-                                        <span className="text-[9px] font-black text-amber-600 bg-amber-50 dark:bg-amber-950/60 px-1 py-0.2 rounded shrink-0">
-                                          Q
-                                        </span>
-                                      )}
-                                      <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200 truncate">
-                                        {item.word}
-                                      </span>
-                                    </div>
-                                    <div className="px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/80 dark:border-emerald-800/80 flex items-center gap-1 min-w-0">
-                                      <Check className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                                      <span className="text-[9.5px] font-black text-emerald-700 dark:text-emerald-300 truncate">
-                                        {correctAnswer || item.labelB || "..."}
-                                      </span>
-                                    </div>
-                                  </div>
-                                );
-                              }
-
-                              return (
-                                <div
-                                  key={item.id || idx}
-                                  className={`rounded-[10px] bg-white/95 dark:bg-slate-900 border p-2 flex flex-col items-center justify-center text-center gap-1 min-h-[62px] transition-colors ${badge.previewBorder}`}
-                                >
-                                  {item.imageUrl ? (
-                                    <img
-                                      src={item.imageUrl}
-                                      alt={item.word || "item"}
-                                      className="w-8 h-8 object-contain rounded-lg"
-                                    />
-                                  ) : null}
-                                  {item.word ? (
-                                    <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 line-clamp-2 break-words leading-tight">
-                                      {item.word}
-                                    </span>
-                                  ) : null}
-                                  {item.labelB ? (
-                                    <span
-                                      className={`text-[10px] font-semibold line-clamp-1 ${badge.pairTextCls}`}
-                                    >
-                                      ↔ {item.labelB}
-                                    </span>
-                                  ) : null}
-                                </div>
-                              );
-                            })}
-                          </div>
+                          <h3 className="font-headline font-black text-lg text-slate-800 dark:text-white truncate">
+                            📘 {unitGroup.unitHeader}
+                          </h3>
                         </div>
 
-                        {/* Footer Actions: Create Game (Left, Secondary) | Share Game (Right, Primary) */}
-                        <div className={`pt-2.5 border-t ${badge.dividerBorder} grid grid-cols-2 gap-2`}>
-                          {/* Left: Tạo Game (Secondary) */}
-                          <div className="relative group/btn w-full">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {slideCount !== null && selectedGrade !== null && (
                             <button
                               type="button"
-                              onClick={() => handleOpenCreateGame(setItem)}
-                              className="w-full py-2 px-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200/90 dark:border-slate-700 font-bold text-xs shadow-2xs flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer hover:border-slate-300"
+                              onClick={() =>
+                                handleOpenLectureSlides(selectedGrade, unitGroup.unitNumber)
+                              }
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-300 hover:bg-amber-200 text-indigo-950 border border-amber-400/70 font-extrabold text-xs shadow-xs hover:shadow-sm transition-all active:scale-95 cursor-pointer"
+                              title={
+                                locale === "vi"
+                                  ? `Mở bảng trình chiếu bài giảng (${slideCount} slides)`
+                                  : `Open lecture slides (${slideCount} slides)`
+                              }
                             >
-                              <Gamepad2 className="w-3.5 h-3.5 shrink-0 text-slate-500 dark:text-slate-400" />
-                              <span className="whitespace-nowrap">{t.library.createGameBtn}</span>
-                            </button>
-                            <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/btn:flex flex-col items-center z-30 transition-all duration-200 animate-in fade-in zoom-in-95">
-                              <div className="bg-slate-900 text-white text-[11px] py-1.5 px-3 rounded-xl shadow-xl whitespace-nowrap flex flex-col gap-0.5 border border-slate-700 text-left">
-                                <div className="flex items-center gap-1.5 font-bold text-slate-100">
-                                  <span>🎮</span>
-                                  <span>
-                                    {locale === "vi"
-                                      ? "Chỉnh sửa nội dung & chọn mẫu game"
-                                      : "Customize questions & choose game format"}
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-1.5 font-medium text-slate-400 text-[10px]">
-                                  <span>📁</span>
-                                  <span>
-                                    {locale === "vi"
-                                      ? "Game sau khi tạo sẽ nằm trong mục Game của tôi"
-                                      : "Created games will be saved in 'My games'"}
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="w-2 h-2 bg-slate-900 border-r border-b border-slate-700 rotate-45 -mt-1" />
-                            </div>
-                          </div>
-
-                          {/* Right: Chia sẻ Game (Primary, Emerald Gradient & Glow) */}
-                          <div className="relative group/btn w-full">
-                            <button
-                              type="button"
-                              onClick={() => setSharingSet(setItem)}
-                              className="w-full py-2 px-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold text-xs shadow-md shadow-emerald-500/25 hover:shadow-lg hover:shadow-emerald-500/35 border border-emerald-400/30 flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer"
-                            >
-                              <Share2 className="w-3.5 h-3.5 shrink-0 text-emerald-100" />
-                              <span className="whitespace-nowrap">
-                                {locale === "vi" ? "Chia sẻ Game" : "Share Game"}
+                              <Presentation className="w-3.5 h-3.5" />
+                              <span>
+                                {locale === "vi"
+                                  ? `Bài giảng (${slideCount} slides)`
+                                  : `Slides (${slideCount})`}
                               </span>
                             </button>
-                            <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/btn:flex flex-col items-center z-30 transition-all duration-200 animate-in fade-in zoom-in-95">
-                              <div className="bg-slate-900 text-white text-[10px] font-semibold py-1 px-2.5 rounded-lg shadow-xl whitespace-nowrap flex items-center gap-1 border border-slate-700">
-                                <span>⚡</span>
+                          )}
+
+                          {hasGrammar && selectedGrade !== null && (
+                            <div className="inline-flex items-center gap-1">
+                              <Link
+                                href={`/student/unit-grammar?grade=${selectedGrade}&unit=${unitGroup.unitNumber}&returnUrl=${encodeURIComponent("/teacher?tab=lib-global")}`}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-extrabold text-xs shadow-xs shadow-indigo-500/20 hover:shadow-sm transition-all active:scale-95"
+                                title={
+                                  selectedGrade <= 2
+                                    ? locale === "vi"
+                                      ? "Xem tóm tắt mẫu câu trọng tâm & làm bài tập"
+                                      : "Review key sentences & practice"
+                                    : locale === "vi"
+                                      ? "Xem tóm tắt ngữ pháp & làm bài tập"
+                                      : "Review unit grammar & practice"
+                                }
+                              >
+                                <BookOpen className="w-3.5 h-3.5" />
                                 <span>
-                                  {locale === "vi"
-                                    ? "Lấy link & mã QR cho học sinh chơi ngay"
-                                    : "Get link & QR for students to play instantly"}
+                                  {selectedGrade <= 2
+                                    ? locale === "vi"
+                                      ? "Mẫu câu trọng tâm"
+                                      : "Key Sentences"
+                                    : locale === "vi"
+                                      ? "Ôn tập Ngữ pháp"
+                                      : "Grammar Review"}
+                                </span>
+                              </Link>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setSharingGrammar({
+                                    grade: selectedGrade,
+                                    unitNumber: unitGroup.unitNumber,
+                                    unitHeader: unitGroup.unitHeader,
+                                  })
+                                }
+                                className="w-8 h-8 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/60 border border-indigo-200/80 dark:border-indigo-800 text-indigo-600 dark:text-indigo-300 flex items-center justify-center transition-all cursor-pointer active:scale-95"
+                                title={
+                                  locale === "vi"
+                                    ? "Chia sẻ link & mã QR ôn tập ngữ pháp cho học sinh"
+                                    : "Share grammar review link & QR code"
+                                }
+                              >
+                                <Share2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
+
+                          <span className="px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-[11px] font-extrabold inline-flex items-center gap-1 whitespace-nowrap">
+                            <NumberTicker
+                              value={unitGroup.items.length}
+                              className="text-amber-700 dark:text-amber-300 font-extrabold"
+                            />
+                            <span>{locale === "vi" ? "bộ câu hỏi" : "question sets"}</span>
+                          </span>
+
+                          {selectedUnitKey === "all" && (
+                            <button
+                              type="button"
+                              onClick={() => toggleUnitCollapse(unitGroup.unitKey)}
+                              className="w-8 h-8 rounded-xl bg-slate-100 hover:bg-amber-100/80 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-colors cursor-pointer"
+                              title={
+                                isCollapsed
+                                  ? locale === "vi"
+                                    ? "Mở rộng Unit"
+                                    : "Expand Unit"
+                                  : locale === "vi"
+                                    ? "Thu gọn Unit"
+                                    : "Collapse Unit"
+                              }
+                            >
+                              <ChevronDown
+                                className={`w-4 h-4 transition-transform duration-200 ${
+                                  isCollapsed ? "-rotate-90" : ""
+                                }`}
+                              />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Bento 6-Card Grid for this Unit (3 items / row on desktop) */}
+                      {!isCollapsed && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                          {unitGroup.items.map(({ raw: setItem, shortTitle }) => {
+                            const badge = getSubTypeBadge(setItem.subType, shortTitle);
+                            const previewItems = setItem.items.slice(0, 3);
+                            const isPairs =
+                              setItem.subType === "image-text" ||
+                              setItem.subType === "image-image" ||
+                              setItem.subType === "text-text";
+
+                            return (
+                              <GlareHover
+                                key={setItem.id}
+                                width="100%"
+                                height="100%"
+                                opacity={0.3}
+                                duration={550}
+                                angle={-35}
+                                style={{ display: "block" }}
+                                className={`rounded-2xl border ${badge.topBorder} hover:-translate-y-0.5 transition-all cursor-default ${badge.cardBg}`}
+                              >
+                                <div className="p-4 h-full flex flex-col justify-between gap-3">
+                                  <div
+                                    onClick={() => handleOpenViewModal(setItem)}
+                                    title={t.library.viewBtn}
+                                    className="space-y-2.5 cursor-pointer group/card"
+                                  >
+                                    {/* Title & Badges */}
+                                    <div className="flex items-start justify-between gap-2.5">
+                                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                        <div
+                                          className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-2xs font-black text-base ${badge.iconBg}`}
+                                        >
+                                          {badge.iconEmoji}
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                          <h4
+                                            className={`font-headline font-black text-[15px] sm:text-base leading-tight truncate transition-colors ${badge.titleColor}`}
+                                          >
+                                            {shortTitle}
+                                          </h4>
+                                          <p className="text-[11px] font-semibold text-slate-500/90 dark:text-slate-400 truncate mt-0.5">
+                                            {badge.subTitleText}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <span
+                                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border shrink-0 ${badge.cls}`}
+                                      >
+                                        {badge.label}
+                                      </span>
+                                    </div>
+
+                                    {/* Count Badge & View Button Row */}
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/95 dark:bg-slate-900 border border-white/80 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-bold shadow-2xs">
+                                        <Layers className={`w-3 h-3 ${badge.iconColor}`} />
+                                        <NumberTicker
+                                          value={setItem.totalItems}
+                                          className="text-slate-800 dark:text-slate-200 font-bold"
+                                        />
+                                        <span>
+                                          {isPairs ? t.common.pairsCount : t.common.questionsCount}
+                                        </span>
+                                      </span>
+
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleOpenViewModal(setItem);
+                                        }}
+                                        disabled={loadingViewId === setItem.id}
+                                        className="px-2.5 py-1 rounded-lg bg-white/95 hover:bg-white dark:bg-slate-900 dark:hover:bg-slate-800 border border-white/80 hover:border-amber-300 dark:border-slate-700 text-slate-700 hover:text-amber-700 dark:text-slate-200 font-bold text-[11px] flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs disabled:opacity-50"
+                                      >
+                                        {loadingViewId === setItem.id ? (
+                                          <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-600" />
+                                        ) : (
+                                          <Eye className="w-3.5 h-3.5 text-slate-500" />
+                                        )}
+                                        <span>{t.library.viewBtn}</span>
+                                      </button>
+                                    </div>
+
+                                    {/* Mini Preview Strip */}
+                                    <div className="grid grid-cols-3 gap-1.5 pt-0.5">
+                                      {previewItems.map((item, idx) => {
+                                        if (badge.category === "vocabulary") {
+                                          return (
+                                            <div
+                                              key={item.id || idx}
+                                              className={`rounded-xl bg-white/95 dark:bg-slate-900 border p-1.5 flex flex-col items-center justify-between text-center min-h-[76px] transition-all hover:scale-[1.03] ${badge.previewBorder}`}
+                                            >
+                                              <div className="w-10 h-10 flex items-center justify-center p-0.5 rounded-lg bg-slate-50 dark:bg-slate-800/80 shrink-0">
+                                                {item.imageUrl ? (
+                                                  <img
+                                                    src={item.imageUrl}
+                                                    alt={item.word || "item"}
+                                                    className="w-full h-full object-contain rounded-md"
+                                                  />
+                                                ) : (
+                                                  <ImageIcon className="w-5 h-5 text-slate-400" />
+                                                )}
+                                              </div>
+                                              <div className="w-full flex items-center justify-center gap-1 mt-1">
+                                                <Volume2 className="w-2.5 h-2.5 text-sky-500 shrink-0 opacity-70" />
+                                                <span className="text-[11px] font-black text-slate-800 dark:text-slate-100 truncate">
+                                                  {item.word}
+                                                </span>
+                                              </div>
+                                            </div>
+                                          );
+                                        }
+
+                                        if (badge.category === "en-vi") {
+                                          return (
+                                            <div
+                                              key={item.id || idx}
+                                              className={`rounded-xl bg-white/95 dark:bg-slate-900 border p-2 flex flex-col items-center justify-center text-center min-h-[76px] transition-all hover:scale-[1.03] ${badge.previewBorder}`}
+                                            >
+                                              <div className="flex items-center gap-1 w-full justify-center min-w-0">
+                                                <span className="text-[8px] font-black uppercase px-1 py-0.2 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 shrink-0">
+                                                  EN
+                                                </span>
+                                                <span className="text-[11px] font-black text-slate-800 dark:text-slate-100 truncate">
+                                                  {item.word}
+                                                </span>
+                                              </div>
+                                              <div className="w-3/4 border-t border-dashed border-slate-200 dark:border-slate-700 my-1" />
+                                              <div className="flex items-center gap-1 w-full justify-center min-w-0">
+                                                <span className="text-[8px] font-black uppercase px-1 py-0.2 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 shrink-0">
+                                                  VI
+                                                </span>
+                                                <span className="text-[10.5px] font-bold text-emerald-700 dark:text-emerald-300 truncate">
+                                                  {item.labelB || "..."}
+                                                </span>
+                                              </div>
+                                            </div>
+                                          );
+                                        }
+
+                                        if (badge.category === "conversations") {
+                                          return (
+                                            <div
+                                              key={item.id || idx}
+                                              className={`rounded-xl bg-white/95 dark:bg-slate-900 border p-1.5 flex flex-col justify-center gap-1 min-h-[76px] transition-all hover:scale-[1.03] text-left ${badge.previewBorder}`}
+                                            >
+                                              <div className="px-1.5 py-0.5 rounded-md bg-teal-50 dark:bg-teal-950/70 border border-teal-200/60 dark:border-teal-800/60 flex items-center gap-1 min-w-0">
+                                                <span className="text-[9px] shrink-0">🗣️</span>
+                                                <span className="text-[10px] font-bold text-teal-900 dark:text-teal-200 truncate">
+                                                  {item.word}
+                                                </span>
+                                              </div>
+                                              <div className="px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200/70 dark:border-slate-700 flex items-center gap-1 min-w-0">
+                                                <span className="text-[9px] shrink-0">💬</span>
+                                                <span className="text-[10px] font-medium text-slate-700 dark:text-slate-300 truncate">
+                                                  {item.labelB || "..."}
+                                                </span>
+                                              </div>
+                                            </div>
+                                          );
+                                        }
+
+                                        if (badge.category === "quiz") {
+                                          let correctAnswer = "";
+                                          if (item.labelB) {
+                                            try {
+                                              const parsed = JSON.parse(item.labelB);
+                                              if (Array.isArray(parsed.options)) {
+                                                const correct = parsed.options.find(
+                                                  (o: any) => o.isCorrect
+                                                );
+                                                if (correct) correctAnswer = correct.text;
+                                              }
+                                            } catch {
+                                              correctAnswer = item.labelB;
+                                            }
+                                          }
+                                          const quizPrompt = formatQuizPreviewPrompt(item.word);
+
+                                          return (
+                                            <div
+                                              key={item.id || idx}
+                                              className={`rounded-xl bg-white/95 dark:bg-slate-900 border p-1.5 flex flex-col justify-between text-left min-h-[76px] transition-all hover:scale-[1.03] ${badge.previewBorder}`}
+                                            >
+                                              <div className="flex items-center gap-1 min-w-0">
+                                                {item.imageUrl ? (
+                                                  <img
+                                                    src={item.imageUrl}
+                                                    alt="q"
+                                                    className="w-5 h-5 object-contain rounded shrink-0 bg-slate-50 dark:bg-slate-800"
+                                                  />
+                                                ) : (
+                                                  <span className="text-[9px] font-black text-amber-700 bg-amber-100/80 dark:bg-amber-950/60 px-1 py-0.2 rounded shrink-0">
+                                                    {quizPrompt.isFillBlank ? "🔤" : "Q"}
+                                                  </span>
+                                                )}
+                                                <span
+                                                  className={`text-[10px] font-bold text-slate-800 dark:text-slate-200 truncate ${
+                                                    quizPrompt.isFillBlank ? "font-mono tracking-tight" : ""
+                                                  }`}
+                                                >
+                                                  {quizPrompt.text}
+                                                </span>
+                                              </div>
+                                              <div className="px-1.5 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/80 dark:border-emerald-800/80 flex items-center gap-1 min-w-0">
+                                                <Check className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                                <span className="text-[9.5px] font-black text-emerald-700 dark:text-emerald-300 truncate">
+                                                  {correctAnswer || item.labelB || "..."}
+                                                </span>
+                                              </div>
+                                            </div>
+                                          );
+                                        }
+
+                                        return (
+                                          <div
+                                            key={item.id || idx}
+                                            className={`rounded-[10px] bg-white/95 dark:bg-slate-900 border p-2 flex flex-col items-center justify-center text-center gap-1 min-h-[62px] transition-colors ${badge.previewBorder}`}
+                                          >
+                                            {item.imageUrl ? (
+                                              <img
+                                                src={item.imageUrl}
+                                                alt={item.word || "item"}
+                                                className="w-8 h-8 object-contain rounded-lg"
+                                              />
+                                            ) : null}
+                                            {item.word ? (
+                                              <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 line-clamp-2 break-words leading-tight">
+                                                {item.word}
+                                              </span>
+                                            ) : null}
+                                            {item.labelB ? (
+                                              <span
+                                                className={`text-[10px] font-semibold line-clamp-1 ${badge.pairTextCls}`}
+                                              >
+                                                ↔ {item.labelB}
+                                              </span>
+                                            ) : null}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+
+                                  {/* Footer Actions: Create Game (Left, Secondary) | Share Game (Right, Primary) */}
+                                  <div className={`pt-2.5 border-t ${badge.dividerBorder} grid grid-cols-2 gap-2`}>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleOpenCreateGame(setItem)}
+                                      title={
+                                        locale === "vi"
+                                          ? "Chỉnh sửa nội dung & chọn mẫu game (lưu trong Game của tôi)"
+                                          : "Customize questions & choose game format"
+                                      }
+                                      className="w-full py-2 px-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200/90 dark:border-slate-700 font-bold text-xs shadow-2xs flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer hover:border-slate-300"
+                                    >
+                                      <Gamepad2 className="w-3.5 h-3.5 shrink-0 text-slate-500 dark:text-slate-400" />
+                                      <span className="whitespace-nowrap">{t.library.createGameBtn}</span>
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => setSharingSet(setItem)}
+                                      title={
+                                        locale === "vi"
+                                          ? "Lấy link & mã QR cho học sinh chơi ngay"
+                                          : "Get link & QR for students to play instantly"
+                                      }
+                                      className="w-full py-2 px-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold text-xs shadow-md shadow-emerald-500/25 hover:shadow-lg hover:shadow-emerald-500/35 border border-emerald-400/30 flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                                    >
+                                      <Share2 className="w-3.5 h-3.5 shrink-0 text-emerald-100" />
+                                      <span className="whitespace-nowrap">
+                                        {locale === "vi" ? "Chia sẻ Game" : "Share Game"}
+                                      </span>
+                                    </button>
+                                  </div>
+                                </div>
+                              </GlareHover>
+                            );
+                          })}
+
+                          {/* 5th Card: Unit Review Test Bento Spotlight Card */}
+                          <div
+                            className={`relative overflow-hidden rounded-2xl border border-purple-200/90 dark:border-purple-800/70 p-4 hover:-translate-y-0.5 transition-all flex flex-col justify-between gap-3 bg-gradient-to-br from-purple-50/95 via-fuchsia-50/50 to-indigo-50/80 dark:from-purple-950/40 dark:via-slate-800/70 dark:to-indigo-950/30 shadow-xs hover:shadow-md ${
+                              !hasLectureCard ? "md:col-span-2 xl:col-span-2" : ""
+                            }`}
+                          >
+                            <ShineBorder
+                              borderWidth={1.5}
+                              duration={10}
+                              shineColor={["#9333EA", "#6366F1", "#EC4899"]}
+                            />
+                            <div
+                              onClick={() => {
+                                router.push(
+                                  `/student/unit-review?grade=${selectedGrade}&unit=${unitGroup.unitNumber}`
+                                );
+                              }}
+                              title={locale === "vi" ? "Xem ngay ôn tập Unit" : "View Unit Review"}
+                              className="space-y-2.5 cursor-pointer group/card relative z-10"
+                            >
+                              {/* Title & Badges */}
+                              <div className="flex items-start justify-between gap-2.5">
+                                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                  <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-2xs font-black text-base bg-gradient-to-br from-purple-500 to-indigo-600 text-white shadow-purple-500/20">
+                                    👑
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <SparklesText
+                                      sparklesCount={4}
+                                      colors={{ first: "#A855F7", second: "#EC4899" }}
+                                      className="font-headline font-black text-[15px] sm:text-base leading-tight text-purple-950 dark:text-purple-100 group-hover/card:text-purple-600 dark:group-hover/card:text-purple-400"
+                                    >
+                                      {locale === "vi" ? "Ôn tập Unit" : "Unit Review"}
+                                    </SparklesText>
+                                    <p className="text-[11px] font-semibold text-slate-500/90 dark:text-slate-400 truncate mt-0.5">
+                                      {locale === "vi"
+                                        ? "Đề luyện tập tổng hợp toàn diện Unit"
+                                        : "Comprehensive Unit practice test"}
+                                    </p>
+                                  </div>
+                                </div>
+                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border shrink-0 bg-white/95 text-purple-700 border-purple-200 shadow-2xs">
+                                  {locale === "vi" ? "Đề tổng hợp" : "Full Review"}
                                 </span>
                               </div>
-                              <div className="w-2 h-2 bg-slate-900 border-r border-b border-slate-700 rotate-45 -mt-1" />
+
+                              {/* Count Badge & Quick Start Row */}
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/95 dark:bg-slate-900 border border-white/80 dark:border-slate-700 text-purple-700 dark:text-purple-300 text-[11px] font-bold shadow-2xs">
+                                  <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+                                  <span>
+                                    {typeof reviewCount === "number" ? (
+                                      <NumberTicker
+                                        value={reviewCount}
+                                        className="text-purple-700 dark:text-purple-300 font-bold"
+                                      />
+                                    ) : (
+                                      reviewCount ?? "20+"
+                                    )}{" "}
+                                    {locale === "vi" ? "câu hỏi" : "questions"}
+                                  </span>
+                                </span>
+
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-100/80 dark:bg-purple-900/40 text-purple-800 dark:text-purple-200 text-[11px] font-bold">
+                                  <Clock className="w-3 h-3 text-purple-600" />
+                                  <span>15 - 20 {locale === "vi" ? "phút" : "mins"}</span>
+                                </span>
+                              </div>
+
+                              {/* Mini Preview Strip: 3 feature badges */}
+                              <div className="grid grid-cols-3 gap-1.5 pt-0.5">
+                                <div className="rounded-xl bg-white/95 dark:bg-slate-900 border border-purple-200/80 dark:border-slate-700 p-1.5 flex flex-col items-center justify-center text-center gap-1 min-h-[76px] transition-all hover:scale-[1.03]">
+                                  <div className="w-7 h-7 rounded-lg bg-purple-100 dark:bg-purple-950 flex items-center justify-center text-sm">
+                                    🎧
+                                  </div>
+                                  <span className="text-[10px] font-black text-purple-900 dark:text-purple-200 leading-tight">
+                                    {locale === "vi" ? "Nhìn & Nghe" : "Look & Listen"}
+                                  </span>
+                                </div>
+
+                                <div className="rounded-xl bg-white/95 dark:bg-slate-900 border border-purple-200/80 dark:border-slate-700 p-1.5 flex flex-col items-center justify-center text-center gap-1 min-h-[76px] transition-all hover:scale-[1.03]">
+                                  <div className="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-950 flex items-center justify-center text-sm">
+                                    💬
+                                  </div>
+                                  <span className="text-[10px] font-black text-indigo-900 dark:text-indigo-200 leading-tight">
+                                    {locale === "vi" ? "Xếp câu" : "Sentence"}
+                                  </span>
+                                </div>
+
+                                <div className="rounded-xl bg-white/95 dark:bg-slate-900 border border-purple-200/80 dark:border-slate-700 p-1.5 flex flex-col items-center justify-center text-center gap-1 min-h-[76px] transition-all hover:scale-[1.03]">
+                                  <div className="w-7 h-7 rounded-lg bg-fuchsia-100 dark:bg-fuchsia-950 flex items-center justify-center text-sm">
+                                    🎯
+                                  </div>
+                                  <span className="text-[10px] font-black text-fuchsia-900 dark:text-fuchsia-200 leading-tight">
+                                    {locale === "vi" ? "Trắc nghiệm" : "Quiz Test"}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Footer Actions */}
+                            <div className="pt-2.5 border-t border-purple-200/60 dark:border-slate-700/70 grid grid-cols-2 gap-2 relative z-10">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSharingReview({
+                                    grade: selectedGrade,
+                                    unitNumber: unitGroup.unitNumber,
+                                    unitHeader: unitGroup.unitHeader,
+                                  });
+                                }}
+                                title={
+                                  locale === "vi"
+                                    ? "Lấy link & mã QR cho học sinh ôn tập tại nhà"
+                                    : "Get link & QR code for students to practice"
+                                }
+                                className="w-full py-2 px-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200/90 dark:border-slate-700 font-bold text-xs shadow-2xs flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer hover:border-slate-300"
+                              >
+                                <Share2 className="w-3.5 h-3.5 shrink-0 text-purple-600" />
+                                <span className="whitespace-nowrap">
+                                  {locale === "vi" ? "Chia sẻ đề" : "Share Test"}
+                                </span>
+                              </button>
+
+                              <ShimmerButton
+                                type="button"
+                                borderRadius="12px"
+                                shimmerDuration="2.8s"
+                                background="linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%)"
+                                onClick={() => {
+                                  router.push(
+                                    `/student/unit-review?grade=${selectedGrade}&unit=${unitGroup.unitNumber}`
+                                  );
+                                }}
+                                className="w-full py-2 px-2.5 text-xs font-bold shadow-md shadow-purple-500/25 gap-1.5"
+                              >
+                                <Sparkles className="w-3.5 h-3.5 shrink-0 text-purple-200" />
+                                <span className="whitespace-nowrap">
+                                  {locale === "vi" ? "Xem ngay" : "View Now"}
+                                </span>
+                              </ShimmerButton>
                             </div>
                           </div>
+
+                          {/* 6th Card: Lecture Slides & Key Grammar Bento Card (completes the 3x2 grid) */}
+                          {hasLectureCard && selectedGrade !== null && (
+                            <div className="relative overflow-hidden rounded-2xl border border-amber-200/90 dark:border-amber-800/70 p-4 hover:-translate-y-0.5 transition-all flex flex-col justify-between gap-3 bg-gradient-to-br from-amber-50/95 via-orange-50/50 to-indigo-50/75 dark:from-amber-950/35 dark:via-slate-800/70 dark:to-indigo-950/30 shadow-xs hover:shadow-md">
+                              <ShineBorder
+                                borderWidth={1.5}
+                                duration={12}
+                                shineColor={["#F59E0B", "#EA580C", "#6366F1"]}
+                              />
+
+                              <div
+                                onClick={() => {
+                                  if (slideCount !== null) {
+                                    handleOpenLectureSlides(
+                                      selectedGrade,
+                                      unitGroup.unitNumber
+                                    );
+                                  } else if (hasGrammar) {
+                                    router.push(
+                                      `/student/unit-grammar?grade=${selectedGrade}&unit=${unitGroup.unitNumber}&returnUrl=${encodeURIComponent("/teacher?tab=lib-global")}`
+                                    );
+                                  }
+                                }}
+                                title={
+                                  slideCount !== null
+                                    ? locale === "vi"
+                                      ? "Mở slide bài giảng & kịch bản dạy học"
+                                      : "Open lecture slide deck"
+                                    : locale === "vi"
+                                      ? "Mở tóm tắt ngữ pháp"
+                                      : "Open grammar lesson"
+                                }
+                                className="space-y-2.5 cursor-pointer group/card relative z-10"
+                              >
+                                {/* Title & Badges */}
+                                <div className="flex items-start justify-between gap-2.5">
+                                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                    <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-2xs font-black text-base bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-amber-500/20">
+                                      <Presentation className="w-4 h-4" />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <h4 className="font-headline font-black text-[15px] sm:text-base leading-tight truncate transition-colors text-amber-950 dark:text-amber-100 group-hover/card:text-orange-600 dark:group-hover/card:text-amber-300">
+                                        {locale === "vi"
+                                          ? "Bài giảng & Mẫu câu"
+                                          : "Slides & Grammar"}
+                                      </h4>
+                                      <p className="text-[11px] font-semibold text-slate-500/90 dark:text-slate-400 truncate mt-0.5">
+                                        {locale === "vi"
+                                          ? "Slide trình chiếu lớp & tóm tắt ngữ pháp"
+                                          : "Classroom deck & key grammar notes"}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border shrink-0 bg-white/95 text-amber-800 border-amber-200 shadow-2xs">
+                                    {locale === "vi" ? "Bài giảng" : "Deck"}
+                                  </span>
+                                </div>
+
+                                {/* Count Badge & Grammar QR Share */}
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/95 dark:bg-slate-900 border border-white/80 dark:border-slate-700 text-amber-800 dark:text-amber-300 text-[11px] font-bold shadow-2xs">
+                                    <Presentation className="w-3.5 h-3.5 text-amber-600" />
+                                    {slideCount !== null ? (
+                                      <span>
+                                        <NumberTicker
+                                          value={slideCount}
+                                          className="text-amber-800 dark:text-amber-300 font-bold"
+                                        />{" "}
+                                        slides
+                                      </span>
+                                    ) : (
+                                      <span>
+                                        {locale === "vi" ? "Tóm tắt ngữ pháp" : "Grammar guide"}
+                                      </span>
+                                    )}
+                                  </span>
+
+                                  {hasGrammar && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSharingGrammar({
+                                          grade: selectedGrade,
+                                          unitNumber: unitGroup.unitNumber,
+                                          unitHeader: unitGroup.unitHeader,
+                                        });
+                                      }}
+                                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-100/80 hover:bg-indigo-200/80 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-200 text-[11px] font-bold transition-colors cursor-pointer"
+                                      title={
+                                        locale === "vi"
+                                          ? "Chia sẻ link & QR ngữ pháp cho học sinh"
+                                          : "Share grammar link & QR"
+                                      }
+                                    >
+                                      <Share2 className="w-3 h-3 text-indigo-600" />
+                                      <span>QR</span>
+                                    </button>
+                                  )}
+                                </div>
+
+                                {/* Slide Thumbnails Strip (real Cover + Grammar rule preview) */}
+                                {slideCount !== null ? (
+                                  <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+                                    {[
+                                      {
+                                        num: 1,
+                                        tag: locale === "vi" ? "Slide 1 · Bìa" : "Slide 1 · Cover",
+                                      },
+                                      {
+                                        num: 4,
+                                        tag:
+                                          selectedGrade <= 2
+                                            ? locale === "vi"
+                                              ? "Slide 4 · Mẫu câu"
+                                              : "Slide 4 · Pattern"
+                                            : locale === "vi"
+                                              ? "Slide 4 · Công thức"
+                                              : "Slide 4 · Grammar",
+                                      },
+                                    ].map((thumb) => (
+                                      <div
+                                        key={thumb.num}
+                                        className="relative aspect-video rounded-xl overflow-hidden bg-white dark:bg-slate-900 border border-amber-200/80 dark:border-slate-700 shadow-2xs transition-transform group-hover/card:scale-[1.02]"
+                                      >
+                                        <img
+                                          src={getUnitLectureSlideThumbUrl(
+                                            selectedGrade,
+                                            unitGroup.unitNumber,
+                                            thumb.num
+                                          )}
+                                          alt={thumb.tag}
+                                          loading="lazy"
+                                          className="w-full h-full object-cover"
+                                        />
+                                        <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded bg-slate-950/75 text-white text-[9px] font-extrabold backdrop-blur-xs">
+                                          {thumb.tag}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <div className="rounded-xl bg-white/95 dark:bg-slate-900 border border-indigo-200/80 dark:border-slate-700 p-3 flex items-center gap-2.5 min-h-[76px]">
+                                    <BookOpen className="w-5 h-5 text-indigo-600 shrink-0" />
+                                    <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                                      {locale === "vi"
+                                        ? "Tóm tắt công thức & ví dụ minh họa của Unit"
+                                        : "Unit grammar formulas & examples"}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Footer Actions */}
+                              <div className="pt-2.5 border-t border-amber-200/60 dark:border-slate-700/70 grid grid-cols-2 gap-2 relative z-10">
+                                {hasGrammar ? (
+                                  <Link
+                                    href={`/student/unit-grammar?grade=${selectedGrade}&unit=${unitGroup.unitNumber}&returnUrl=${encodeURIComponent("/teacher?tab=lib-global")}`}
+                                    className="w-full py-2 px-2.5 rounded-xl bg-slate-50 hover:bg-indigo-50 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-indigo-700 dark:text-indigo-200 border border-indigo-200/80 dark:border-slate-700 font-bold text-xs shadow-2xs flex items-center justify-center gap-1.5 transition-all active:scale-95"
+                                  >
+                                    <BookOpen className="w-3.5 h-3.5 shrink-0 text-indigo-600 dark:text-indigo-300" />
+                                    <span className="whitespace-nowrap">
+                                      {selectedGrade <= 2
+                                        ? locale === "vi"
+                                          ? "Mẫu câu"
+                                          : "Sentences"
+                                        : locale === "vi"
+                                          ? "Ngữ pháp"
+                                          : "Grammar"}
+                                    </span>
+                                  </Link>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleOpenLectureSlides(
+                                        selectedGrade,
+                                        unitGroup.unitNumber
+                                      )
+                                    }
+                                    className="w-full py-2 px-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer"
+                                  >
+                                    <Eye className="w-3.5 h-3.5" />
+                                    <span>{locale === "vi" ? "Xem trước" : "Preview"}</span>
+                                  </button>
+                                )}
+
+                                {slideCount !== null ? (
+                                  <ShimmerButton
+                                    type="button"
+                                    borderRadius="12px"
+                                    shimmerDuration="2.8s"
+                                    background="linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)"
+                                    onClick={() =>
+                                      handleOpenLectureSlides(
+                                        selectedGrade,
+                                        unitGroup.unitNumber
+                                      )
+                                    }
+                                    className="w-full py-2 px-2.5 text-xs font-bold shadow-md shadow-amber-500/25 gap-1.5"
+                                  >
+                                    <Presentation className="w-3.5 h-3.5 shrink-0 text-amber-100" />
+                                    <span className="whitespace-nowrap">
+                                      {locale === "vi" ? "Mở Slide" : "Open Slides"}
+                                    </span>
+                                  </ShimmerButton>
+                                ) : (
+                                  <Link
+                                    href={`/student/unit-grammar?grade=${selectedGrade}&unit=${unitGroup.unitNumber}&returnUrl=${encodeURIComponent("/teacher?tab=lib-global")}`}
+                                    className="w-full py-2 px-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-bold text-xs flex items-center justify-center gap-1.5"
+                                  >
+                                    <Sparkles className="w-3.5 h-3.5" />
+                                    <span>{locale === "vi" ? "Xem ngay" : "Open"}</span>
+                                  </Link>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    );
-                  })}
-
-                  {/* 5th Card: Unit Review Test Card */}
-                  <div className="rounded-2xl border border-t-[3.5px] border-t-purple-600 border-purple-200/90 dark:border-purple-800/70 p-4 hover:-translate-y-1 transition-all flex flex-col justify-between gap-3 bg-gradient-to-br from-purple-50/95 via-fuchsia-50/50 to-indigo-50/80 dark:from-purple-950/40 dark:via-slate-800/70 dark:to-indigo-950/30 shadow-xs hover:shadow-md">
-                    <div
-                      onClick={() => {
-                        router.push(
-                          `/student/unit-review?grade=${selectedGrade}&unit=${unitGroup.unitNumber}`
-                        );
-                      }}
-                      title={locale === "vi" ? "Xem ngay ôn tập Unit" : "View Unit Review"}
-                      className="space-y-2.5 cursor-pointer group/card"
-                    >
-                      {/* Title & Badges */}
-                      <div className="flex items-start justify-between gap-2.5">
-                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                          <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 shadow-2xs font-black text-base bg-gradient-to-br from-purple-500 to-indigo-600 text-white shadow-purple-500/20">
-                            👑
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <h4 className="font-headline font-black text-[15px] sm:text-base leading-tight truncate transition-colors text-purple-950 dark:text-purple-100 group-hover/card:text-purple-600 dark:group-hover/card:text-purple-400">
-                              {locale === "vi" ? "Ôn tập Unit" : "Unit Review"}
-                            </h4>
-                            <p className="text-[11px] font-semibold text-slate-500/90 dark:text-slate-400 truncate mt-0.5">
-                              {locale === "vi"
-                                ? "Đề luyện tập tổng hợp toàn diện Unit"
-                                : "Comprehensive Unit practice test"}
-                            </p>
-                          </div>
-                        </div>
-                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold border shrink-0 bg-white/95 text-purple-700 border-purple-200 shadow-2xs">
-                          {locale === "vi" ? "Đề tổng hợp" : "Full Review"}
-                        </span>
-                      </div>
-
-                      {/* Count Badge & Quick Start Row */}
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/95 dark:bg-slate-900 border border-white/80 dark:border-slate-700 text-purple-700 dark:text-purple-300 text-[11px] font-bold shadow-2xs">
-                          <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-                          <span>{unitReviewCounts[unitGroup.unitNumber] ?? "20+"} {locale === "vi" ? "câu hỏi" : "questions"}</span>
-                        </span>
-
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-100/80 dark:bg-purple-900/40 text-purple-800 dark:text-purple-200 text-[11px] font-bold">
-                          <Clock className="w-3 h-3 text-purple-600" />
-                          <span>15 - 20 {locale === "vi" ? "phút" : "mins"}</span>
-                        </span>
-                      </div>
-
-                      {/* Mini Preview Strip: 3 feature badges */}
-                      <div className="grid grid-cols-3 gap-1.5 pt-0.5">
-                        <div className="rounded-xl bg-white/95 dark:bg-slate-900 border border-purple-200/80 dark:border-slate-700 p-1.5 flex flex-col items-center justify-center text-center gap-1 min-h-[76px] transition-all hover:scale-105">
-                          <div className="w-7 h-7 rounded-lg bg-purple-100 dark:bg-purple-950 flex items-center justify-center text-sm">
-                            🎧
-                          </div>
-                          <span className="text-[10px] font-black text-purple-900 dark:text-purple-200 leading-tight">
-                            {locale === "vi" ? "Nhìn & Nghe" : "Look & Listen"}
-                          </span>
-                        </div>
-
-                        <div className="rounded-xl bg-white/95 dark:bg-slate-900 border border-purple-200/80 dark:border-slate-700 p-1.5 flex flex-col items-center justify-center text-center gap-1 min-h-[76px] transition-all hover:scale-105">
-                          <div className="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-950 flex items-center justify-center text-sm">
-                            💬
-                          </div>
-                          <span className="text-[10px] font-black text-indigo-900 dark:text-indigo-200 leading-tight">
-                            {locale === "vi" ? "Xếp câu" : "Sentence"}
-                          </span>
-                        </div>
-
-                        <div className="rounded-xl bg-white/95 dark:bg-slate-900 border border-purple-200/80 dark:border-slate-700 p-1.5 flex flex-col items-center justify-center text-center gap-1 min-h-[76px] transition-all hover:scale-105">
-                          <div className="w-7 h-7 rounded-lg bg-fuchsia-100 dark:bg-fuchsia-950 flex items-center justify-center text-sm">
-                            🎯
-                          </div>
-                          <span className="text-[10px] font-black text-fuchsia-900 dark:text-fuchsia-200 leading-tight">
-                            {locale === "vi" ? "Trắc nghiệm" : "Quiz Test"}
-                          </span>
-                        </div>
-                      </div>
+                      )}
                     </div>
-
-                    {/* Footer Actions: Chia sẻ (Left) | Ôn tập ngay (Right, Primary Purple) */}
-                    <div className="pt-2.5 border-t border-purple-200/60 dark:border-slate-700/70 grid grid-cols-2 gap-2">
-                      <div className="relative group/btn w-full">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSharingReview({
-                              grade: selectedGrade,
-                              unitNumber: unitGroup.unitNumber,
-                              unitHeader: unitGroup.unitHeader,
-                            });
-                          }}
-                          className="w-full py-2 px-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200/90 dark:border-slate-700 font-bold text-xs shadow-2xs flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer hover:border-slate-300"
-                        >
-                          <Share2 className="w-3.5 h-3.5 shrink-0 text-purple-600" />
-                          <span className="whitespace-nowrap">
-                            {locale === "vi" ? "Chia sẻ đề" : "Share Test"}
-                          </span>
-                        </button>
-                        <div className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover/btn:flex flex-col items-center z-30 transition-all duration-200 animate-in fade-in zoom-in-95">
-                          <div className="bg-slate-900 text-white text-[10px] font-semibold py-1 px-2.5 rounded-lg shadow-xl whitespace-nowrap flex items-center gap-1 border border-slate-700">
-                            <span>🔗</span>
-                            <span>
-                              {locale === "vi"
-                                ? "Lấy link & mã QR cho học sinh ôn tập tại nhà"
-                                : "Get link & QR code for students to practice"}
-                            </span>
-                          </div>
-                          <div className="w-2 h-2 bg-slate-900 border-r border-b border-slate-700 rotate-45 -mt-1" />
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          router.push(
-                            `/student/unit-review?grade=${selectedGrade}&unit=${unitGroup.unitNumber}`
-                          );
-                        }}
-                        className="w-full py-2 px-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs shadow-md shadow-purple-500/25 hover:shadow-lg hover:shadow-purple-500/35 border border-purple-400/30 flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer"
-                      >
-                        <Sparkles className="w-3.5 h-3.5 shrink-0 text-purple-200" />
-                        <span className="whitespace-nowrap">
-                          {locale === "vi" ? "Xem ngay" : "View Now"}
-                        </span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
+                  </TextureCard>
+                </motion.div>
+              );
+            })}
           </div>
         </>
       )}
@@ -2457,6 +2808,16 @@ export function GlobalSuccessLibraryList() {
           subType="quiz"
         />
       )}
+
+      {/* MODAL 3.7: INTERACTIVE UNIT LECTURE SLIDE PRESENTER */}
+      <UnitLectureSlideModal
+        isOpen={lectureModalOpen}
+        onClose={() => setLectureModalOpen(false)}
+        deck={activeLectureDeck}
+        isLoading={isLoadingLecture}
+        isVi={locale === "vi"}
+        canViewTeacherTools={true}
+      />
 
       {/* MODAL 4: CLONE CONFIRMATION & REDIRECT LOADING POPUP */}
       {transitionModal && (

@@ -31,21 +31,8 @@ import { SparklesText } from '@/components/ui/sparkles-text';
 import { Particles } from '@/components/ui/particles';
 import { NumberTicker } from '@/components/ui/number-ticker';
 import { Dock, DockWaveItem } from '@/components/ui/dock';
-import { CoolMode, type CoolParticleOptions } from '@/components/ui/cool-mode';
 import { GlareHover } from '@/components/ui/glare-hover';
 import { Ripple } from '@/components/ui/ripple';
-
-const STATION_COOL_OPTIONS: CoolParticleOptions = {
-  particles: ['⭐', '✨', '🌟', '🫧'],
-  particleCount: 6,
-  size: 18,
-};
-
-const ISLAND_COOL_OPTIONS: CoolParticleOptions = {
-  particles: ['⭐', '✨', '🌟', '🎈'],
-  particleCount: 7,
-  size: 19,
-};
 
 const SKY_BG_IMAGE =
   'https://media.dolcake.com/assests/Vocab/dolcake_15_islands/background_2to1.jpg';
@@ -837,70 +824,48 @@ export function Phonics45DaysMap({
       </motion.button>
     );
 
-    if (isSpotlight) {
-      return (
-        <CoolMode options={ISLAND_COOL_OPTIONS} className="inline-flex">
-          {cardNode}
-        </CoolMode>
-      );
-    }
     return cardNode;
   };
 
   return (
     <div className="relative w-full min-h-screen lg:h-screen lg:overflow-hidden select-none flex flex-col justify-between bg-gradient-to-b from-[#7dd3fc] via-[#bae6fd] to-[#fef3c7] text-slate-800">
-      {/* Fredoka Display Typography + Flowing Road Keyframes */}
-      <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700;900&display=swap');
-        .font-fredoka {
-          font-family: 'Fredoka', 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-        }
-        @keyframes skyRoadDash {
-          from {
-            stroke-dashoffset: 56;
-          }
-          to {
-            stroke-dashoffset: 0;
-          }
-        }
-        .animate-sky-road {
-          animation: skyRoadDash 2.2s linear infinite;
-        }
-      `}</style>
-
       {/* ========================================================================= */}
-      {/* 1. BRIGHT WHIMSICAL SKY BACKDROP (Fixed z-0 — No longer hidden behind -z!) */}
+      {/* 1. BRIGHT WHIMSICAL SKY BACKDROP (Paused/hidden while a station is open!) */}
       {/* ========================================================================= */}
-      <div
-        className="pointer-events-none fixed inset-0 z-0 bg-cover bg-center opacity-85 transition-all duration-700"
-        style={{ backgroundImage: `url(${SKY_BG_IMAGE})` }}
-      />
-      <div
-        className={`pointer-events-none fixed inset-0 z-0 bg-gradient-to-b ${currentStageTheme.skyVeil} transition-colors duration-500`}
-      />
+      {!activeStation && (
+        <>
+          <div
+            className="pointer-events-none fixed inset-0 z-0 bg-cover bg-center opacity-85 transition-all duration-700"
+            style={{ backgroundImage: `url(${SKY_BG_IMAGE})` }}
+          />
+          <div
+            className={`pointer-events-none fixed inset-0 z-0 bg-gradient-to-b ${currentStageTheme.skyVeil} transition-colors duration-500`}
+          />
 
-      {/* Twinkling Sky & Stage-Colored Magic UI Particles */}
-      <Particles
-        className="pointer-events-none fixed inset-0 z-0"
-        quantity={45}
-        staticity={45}
-        ease={60}
-        size={1.8}
-        color="#ffffff"
-      />
-      <Particles
-        className="pointer-events-none fixed inset-0 z-0"
-        quantity={30}
-        staticity={50}
-        ease={65}
-        size={1.9}
-        color={currentStageTheme.particleColor}
-      />
+          {/* Twinkling Sky & Stage-Colored Magic UI Particles */}
+          <Particles
+            className="pointer-events-none fixed inset-0 z-0"
+            quantity={32}
+            staticity={45}
+            ease={60}
+            size={1.8}
+            color="#ffffff"
+          />
+          <Particles
+            className="pointer-events-none fixed inset-0 z-0"
+            quantity={20}
+            staticity={50}
+            ease={65}
+            size={1.9}
+            color={currentStageTheme.particleColor}
+          />
+        </>
+      )}
 
       {/* ========================================================================= */}
       {/* 2. SINGLE-ROW TOP 3D GAME HUD (No Line Wrapping, Zero Clipping!)          */}
       {/* ========================================================================= */}
-      <header className="relative z-30 w-full max-w-[1440px] mx-auto px-3 sm:px-4 lg:px-5 pt-3 sm:pt-4 flex flex-col lg:flex-row items-center justify-between gap-2 lg:gap-2.5 flex-shrink-0 font-fredoka">
+      <header className={activeStation ? 'hidden' : 'relative z-30 w-full max-w-[1440px] mx-auto px-3 sm:px-4 lg:px-5 pt-3 sm:pt-4 flex flex-col lg:flex-row items-center justify-between gap-2 lg:gap-2.5 flex-shrink-0 font-fredoka'}>
         {/* Top Row on Mobile (< lg), Left Cluster on Desktop (lg+) */}
         <div className="w-full lg:w-auto flex items-center justify-between gap-2 shrink-0">
           {/* Left: 3D Back Button + Single-Line Course Title */}
@@ -1014,7 +979,7 @@ export function Phonics45DaysMap({
       {/* ========================================================================= */}
       {/* 3. PANORAMIC WINDING SKY MAP (Phương án 2 + Cách A: 3D Phonics Islands!)  */}
       {/* ========================================================================= */}
-      <main className="relative z-10 w-full max-w-7xl mx-auto flex-1 flex flex-col items-center justify-center px-3 sm:px-6 pb-4 pt-1 min-h-0">
+      <main className={activeStation ? 'hidden' : 'relative z-10 w-full max-w-7xl mx-auto flex-1 flex flex-col items-center justify-center px-3 sm:px-6 pb-4 pt-1 min-h-0'}>
         <AnimatePresence mode="wait">
           <motion.div
             key={selectedStage}
@@ -1101,7 +1066,7 @@ export function Phonics45DaysMap({
             </div>
 
             {/* MOBILE / TABLET PORTRAIT DUOLINGO-STYLE WINDING SNAKE TRAIL (< lg) */}
-            <div className="flex lg:hidden flex-col items-center gap-5 w-full max-w-md py-6">
+            <div className="flex lg:hidden flex-col items-center gap-5 w-full max-w-md py-6 overflow-x-hidden">
               {stageDays.map((dayItem, idx) => {
                 const waveOffsets = [
                   'translate-x-0',
@@ -1126,9 +1091,9 @@ export function Phonics45DaysMap({
       </main>
 
       {/* ========================================================================= */}
-      {/* MODAL 1: HÀNH TRÌNH 4 TRẠM HÔM NAY (Centered max-w-3xl + 2x2 3D Grid)     */}
+      {/* MODAL 1: HÀNH TRÌNH 4 TRẠM HÔM NAY (Unmounted while inside a station!)    */}
       {/* ========================================================================= */}
-      {openDay && (
+      {openDay && !activeStation && (
         <div
           onClick={() => {
             setOpenDay(null);
@@ -1160,7 +1125,7 @@ export function Phonics45DaysMap({
             </button>
 
             {/* Clean, Airy Header (No cluttered word-list subtitle) */}
-            <div className="text-center mb-4 sm:mb-5">
+            <div className="text-center mb-4 sm:mb-5 px-10 sm:px-12">
               <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500 text-white font-black text-xs shadow-[0_3px_10px_rgba(168,85,247,0.3)] border border-white/60 uppercase tracking-wider">
                 <Sparkles className="w-3.5 h-3.5" />
                 Chặng {openDay.stage} • Ngày {openDay.day}
@@ -1293,45 +1258,40 @@ export function Phonics45DaysMap({
                             </div>
                           </div>
 
-                          {/* Bottom Row: XP Pill + Uiverse 3D Pushable CTA Button with Magic UI CoolMode */}
+                          {/* Bottom Row: XP Pill + Uiverse 3D Pushable CTA Button */}
                           <div className="relative z-10 flex items-center justify-between gap-2 pt-3 border-t border-slate-900/[0.06] dark:border-white/10">
                             <span className="inline-flex items-center gap-1 text-xs font-black text-amber-700 dark:text-amber-300 bg-amber-100/90 dark:bg-amber-950/70 px-2.5 py-1 rounded-full border border-amber-300/80 whitespace-nowrap">
                               ⭐ +{st.xp} XP
                             </span>
 
-                            <CoolMode
-                              options={STATION_COOL_OPTIONS}
-                              className="inline-flex"
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveStation(st.key);
+                                playPopSound();
+                              }}
+                              className="group/btn relative inline-flex cursor-pointer select-none border-none bg-transparent p-0 outline-none"
                             >
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setActiveStation(st.key);
-                                  playPopSound();
-                                }}
-                                className="group/btn relative inline-flex cursor-pointer select-none border-none bg-transparent p-0 outline-none"
-                              >
-                                {/* 3D Extruded Shadow Base */}
-                                <span
-                                  className={`pointer-events-none absolute inset-0 translate-y-[3.5px] rounded-full ${
-                                    isDone ? 'bg-[#065f46]' : st.btnEdge
-                                  }`}
-                                />
+                              {/* 3D Extruded Shadow Base */}
+                              <span
+                                className={`pointer-events-none absolute inset-0 translate-y-[3.5px] rounded-full ${
+                                  isDone ? 'bg-[#065f46]' : st.btnEdge
+                                }`}
+                              />
 
-                                {/* 3D Pushable Front Face */}
-                                <span
-                                  className={`relative inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs sm:text-[13px] font-black text-white border transition-transform duration-100 -translate-y-[1px] group-hover/btn:-translate-y-[2.5px] group-active/btn:translate-y-[2.5px] shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.45)] whitespace-nowrap ${
-                                    isDone
-                                      ? 'bg-gradient-to-b from-emerald-400 via-emerald-500 to-teal-600 border-emerald-200'
-                                      : st.btnFront
-                                  }`}
-                                >
-                                  <span>{isDone ? 'Chơi lại' : 'Vào trạm'}</span>
-                                  <ArrowRight className="w-3.5 h-3.5 stroke-[2.8]" />
-                                </span>
-                              </button>
-                            </CoolMode>
+                              {/* 3D Pushable Front Face */}
+                              <span
+                                className={`relative inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-xs sm:text-[13px] font-black text-white border transition-transform duration-100 -translate-y-[1px] group-hover/btn:-translate-y-[2.5px] group-active/btn:translate-y-[2.5px] shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.45)] whitespace-nowrap ${
+                                  isDone
+                                    ? 'bg-gradient-to-b from-emerald-400 via-emerald-500 to-teal-600 border-emerald-200'
+                                    : st.btnFront
+                                }`}
+                              >
+                                <span>{isDone ? 'Chơi lại' : 'Vào trạm'}</span>
+                                <ArrowRight className="w-3.5 h-3.5 stroke-[2.8]" />
+                              </span>
+                            </button>
                           </div>
                         </div>
                       );
@@ -1340,7 +1300,7 @@ export function Phonics45DaysMap({
 
                   {/* Celebration Star Chest Banner when 4/4 completed */}
                   {doneCount >= 4 && (
-                    <div className="mt-5 p-4 rounded-2xl bg-gradient-to-r from-amber-100 via-yellow-50 to-amber-100 dark:from-amber-950/60 dark:to-amber-900/40 border-2 border-amber-300 flex items-center justify-between gap-3 animate-in fade-in">
+                    <div className="mt-5 p-4 rounded-2xl bg-gradient-to-r from-amber-100 via-yellow-50 to-amber-100 dark:from-amber-950/60 dark:to-amber-900/40 border-2 border-amber-300 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in">
                       <div className="flex items-center gap-3">
                         <div className="w-11 h-11 rounded-2xl bg-amber-400 text-amber-950 flex items-center justify-center text-2xl shadow-md flex-shrink-0">
                           🎁

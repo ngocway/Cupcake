@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import {
   ArrowLeft,
   BookOpen,
@@ -14,6 +15,7 @@ import {
   ArrowRight,
   Lightbulb,
   AlertCircle,
+  Presentation,
 } from "lucide-react";
 import {
   loadUnitGrammarLesson,
@@ -23,6 +25,12 @@ import {
   type GrammarPoint,
   type UnitGrammarLesson,
 } from "@/data/global-success-grammar";
+import {
+  getUnitLectureSlideCount,
+  loadUnitLectureDeck,
+  type UnitLectureDeck,
+} from "@/data/global-success-grammar/lecture-slides";
+import { UnitLectureSlideModal, PresenterStageWindow } from "@/components/grammar/UnitLectureSlideModal";
 import { useTeacherLocale, TeacherLocaleSwitch } from "@/i18n/teacher-locale";
 import { MatchGameShareModal } from "@/app/teacher/_components/MatchGameShareModal";
 import KidTeenQuizRunner from "../assignments/[id]/run/quiz/KidTeenQuizRunner";
@@ -174,6 +182,7 @@ function GrammarSummaryCards({
 function UnitGrammarContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { data: session } = useSession();
   const { locale } = useTeacherLocale();
   const isVi = locale !== "en";
 
@@ -181,6 +190,14 @@ function UnitGrammarContent() {
   const unit = parseInt(searchParams.get("unit") || "1", 10) || 1;
   const returnUrl = searchParams.get("returnUrl") || "/teacher?tab=lib-global";
   const isEmbedded = searchParams.get("embedded") === "true";
+  const presenterStage = searchParams.get("presenterStage") === "1";
+  const initialStageSlide = parseInt(searchParams.get("slide") || "0", 10) || 0;
+
+  const userRole = (session?.user as { role?: string } | undefined)?.role;
+  const canViewTeacherTools = userRole === "TEACHER" || userRole === "ADMIN";
+  const lectureSlideCount = getUnitLectureSlideCount(grade, unit);
+  const [lectureDeck, setLectureDeck] = useState<UnitLectureDeck | null>(null);
+  const [isLoadingLectureDeck, setIsLoadingLectureDeck] = useState(false);
 
   const [lesson, setLesson] = useState<UnitGrammarLesson | null>(null);
   const [isLoadingLesson, setIsLoadingLesson] = useState(true);
@@ -210,6 +227,7 @@ function UnitGrammarContent() {
   const [practiceRetryKey, setPracticeRetryKey] = useState(0);
   const [showFormulaModal, setShowFormulaModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [showLectureModal, setShowLectureModal] = useState(false);
   const [playingKey, setPlayingKey] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -226,6 +244,25 @@ function UnitGrammarContent() {
     }
     setPlayingKey(null);
   }, []);
+
+  const openLectureModal = useCallback(() => {
+    stopAudio();
+    setShowLectureModal(true);
+    if (lectureDeck?.grade === grade && lectureDeck?.unit === unit) return;
+    setIsLoadingLectureDeck(true);
+    loadUnitLectureDeck(grade, unit)
+      .then((res) => setLectureDeck(res))
+      .finally(() => setIsLoadingLectureDeck(false));
+  }, [stopAudio, lectureDeck, grade, unit]);
+
+  useEffect(() => {
+    setLectureDeck(null);
+    if (!presenterStage || lectureSlideCount === null) return;
+    setIsLoadingLectureDeck(true);
+    loadUnitLectureDeck(grade, unit)
+      .then((res) => setLectureDeck(res))
+      .finally(() => setIsLoadingLectureDeck(false));
+  }, [grade, unit, presenterStage, lectureSlideCount]);
 
   useEffect(() => {
     return () => stopAudio();
@@ -311,6 +348,22 @@ function UnitGrammarContent() {
 
   const emptyPromise = useMemo(() => Promise.resolve({}), []);
   const emptyArrayPromise = useMemo(() => Promise.resolve([]), []);
+
+  if (presenterStage && lectureSlideCount !== null) {
+    if (isLoadingLectureDeck || !lectureDeck) {
+      return (
+        <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-4">
+          <div className="text-center space-y-3">
+            <div className="w-10 h-10 rounded-full border-4 border-violet-400/30 border-t-violet-400 animate-spin mx-auto" />
+            <p className="font-headline font-bold text-sm">
+              {isVi ? "Đang tải màn hình trình chiếu..." : "Loading stage view..."}
+            </p>
+          </div>
+        </div>
+      );
+    }
+    return <PresenterStageWindow deck={lectureDeck} initialSlide={initialStageSlide} />;
+  }
 
   if (isLoadingLesson) {
     return (
@@ -429,18 +482,34 @@ function UnitGrammarContent() {
                     : `Review the ${lesson.summaryPoints.length} key point(s) below, then start practicing ${lesson.questions.length} questions!`}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={handleStartPractice}
-                className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-white hover:bg-amber-50 text-indigo-700 font-headline font-black text-sm shadow-lg hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer shrink-0"
-              >
-                <PenLine className="w-4 h-4" />
-                <span>
-                  {isVi
-                    ? `Làm bài tập (${lesson.questions.length} câu)`
-                    : `Start Practice (${lesson.questions.length} Qs)`}
-                </span>
-              </button>
+              <div className="w-full sm:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0">
+                {lectureSlideCount !== null && (
+                  <button
+                    type="button"
+                    onClick={openLectureModal}
+                    className="w-full sm:w-auto px-5 py-3.5 rounded-2xl bg-amber-300 hover:bg-amber-200 text-indigo-950 font-headline font-black text-sm shadow-lg hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer shrink-0"
+                  >
+                    <Presentation className="w-4 h-4" />
+                    <span>
+                      {isVi
+                        ? `Bài giảng (${lectureSlideCount} slides)`
+                        : `Slides (${lectureSlideCount})`}
+                    </span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={handleStartPractice}
+                  className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-white hover:bg-amber-50 text-indigo-700 font-headline font-black text-sm shadow-lg hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer shrink-0"
+                >
+                  <PenLine className="w-4 h-4" />
+                  <span>
+                    {isVi
+                      ? `Làm bài tập (${lesson.questions.length} câu)`
+                      : `Start Practice (${lesson.questions.length} Qs)`}
+                  </span>
+                </button>
+              </div>
             </div>
 
             {/* Grammar Points */}
@@ -623,6 +692,18 @@ function UnitGrammarContent() {
           isGlobalSuccess
           gradeLevel={`grade-${lesson.grade}`}
           subType="quiz"
+        />
+      )}
+
+      {/* Interactive Lecture Slide Presenter Modal */}
+      {lectureSlideCount !== null && (
+        <UnitLectureSlideModal
+          isOpen={showLectureModal}
+          onClose={() => setShowLectureModal(false)}
+          deck={lectureDeck}
+          isLoading={isLoadingLectureDeck}
+          isVi={isVi}
+          canViewTeacherTools={canViewTeacherTools}
         />
       )}
     </div>

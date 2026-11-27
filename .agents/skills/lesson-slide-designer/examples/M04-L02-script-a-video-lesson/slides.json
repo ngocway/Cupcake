@@ -1,0 +1,327 @@
+{
+  "course": "Package and publish your first online course",
+  "organization": "Example course for teachers and trainers",
+  "lesson_code": "Module 4 · Lesson 2",
+  "lesson_title": "Design and script a video lesson",
+  "instructor": "Your name",
+  "contact": "yoursite.com",
+  "language": "en",
+  "theme": "navy",
+  "title_case": "upper",
+  "file_name": "M04-L02-script-a-video-lesson",
+  "videos": [
+    {
+      "number": 1,
+      "title": "Why slides are not a script",
+      "minutes": 1.2
+    },
+    {
+      "number": 2,
+      "title": "Six principles of a video lesson",
+      "minutes": 1.2
+    },
+    {
+      "number": 3,
+      "title": "Open, body, close",
+      "minutes": 0.8
+    },
+    {
+      "number": 4,
+      "title": "Six steps to a script",
+      "minutes": 1.6
+    }
+  ],
+  "slides": [
+    {
+      "type": "title",
+      "video": 1,
+      "icon": "video",
+      "narration": "Before we start, I want you to do one short thing.\nIn the last lesson you picked a format for every video in your course.\nToday you have everything you need to record the first one."
+    },
+    {
+      "type": "question",
+      "video": 1,
+      "label": "Try it before the lesson",
+      "question": "Write the first five sentences you will say when you hit record.",
+      "instructions": "Write them exactly as you will say them. Use the slides you built in Module 3.",
+      "timer": "2 minutes",
+      "narration": "Open the slides you built in module three.\nGrab a blank page,\nand write the first five sentences you will say when you hit record.\nExactly as you will say them.\nPause the video now, you have two minutes.",
+      "notes": "Silence 5 seconds after the narration, show a countdown."
+    },
+    {
+      "type": "objectives",
+      "video": 1,
+      "items": [
+        "Name the six principles of a video lesson",
+        "Spot the open, body and close in any script",
+        "Write a five to ten minute script for your lesson",
+        "Check your script against a ten-point list"
+      ],
+      "icons": [
+        "book-open",
+        "search",
+        "pen-tool",
+        "clipboard-check"
+      ],
+      "narration": "By the end of this lesson you can do four things.\nName the six principles of a video lesson.\nSpot the open, the body and the close in any script.\nWrite a five to ten minute script for your own lesson.\nAnd check that script against a ten-point list before you record."
+    },
+    {
+      "type": "agenda",
+      "video": 1,
+      "current": 1,
+      "items": [
+        "Six principles of a video lesson",
+        "Open, body, close",
+        "Six steps to a script"
+      ],
+      "narration": "Three parts.\nWe start with the six principles."
+    },
+    {
+      "type": "section",
+      "video": 2,
+      "number": 1,
+      "label": "Part 1",
+      "title": "Six principles of a video lesson",
+      "subtitle": "Each one comes with a warning sign you can spot yourself",
+      "icon": "lightbulb",
+      "narration": "Part one.\nSix principles.\nFor each one I give you a warning sign, so you can check your own videos."
+    },
+    {
+      "type": "cards",
+      "video": 2,
+      "label": "Part 1",
+      "title": "Six principles of a video lesson",
+      "cards": [
+        {
+          "icon": "target",
+          "title": "One video, one idea",
+          "text": "Under ten minutes, its own open and close"
+        },
+        {
+          "icon": "image",
+          "title": "Show, don't read",
+          "text": "Never read the slide out loud"
+        },
+        {
+          "icon": "scissors",
+          "title": "Cut the extras",
+          "text": "Music, fly-ins, decorative text"
+        },
+        {
+          "icon": "zoom-in",
+          "title": "Point at the key part",
+          "text": "Circle, zoom, highlight as you speak"
+        },
+        {
+          "icon": "user",
+          "title": "Talk to one person",
+          "text": "Say you, keep it short"
+        },
+        {
+          "icon": "hand",
+          "title": "Learners must act",
+          "text": "A question and a pause in each video"
+        }
+      ],
+      "narration": "Here are the six.\nOne video teaches one idea.\nPictures add to your words, they do not repeat them.\nCut everything that does not serve the objective.\nPoint at exactly what you are talking about.\nTalk to one person, as if they were sitting next to you.\nAnd make the learner do something, not just listen.",
+      "notes": "Reveal the cards one by one with the narration."
+    },
+    {
+      "type": "compare",
+      "video": 2,
+      "label": "Part 1 · Two clips",
+      "title": "Two clips, same content",
+      "left": {
+        "title": "Clip A",
+        "items": [
+          "Nine lines of text, read aloud",
+          "Background music and fly-ins",
+          "Talks to a crowd",
+          "No question at all"
+        ]
+      },
+      "right": {
+        "title": "Clip B",
+        "items": [
+          "One line and one simple diagram",
+          "The pointer lands on the right spot",
+          "Says you, tells a story",
+          "Stops for a pause question"
+        ]
+      },
+      "narration": "You just watched two clips.\nWhat does clip A have that clip B does not?\nA wall of text read word for word, music, fly-ins, and not one question.\nClip B is the opposite.\nOne idea, a picture that adds to the words, and a pause where you have to think."
+    },
+    {
+      "type": "chart",
+      "video": 2,
+      "label": "Part 1 · Evidence",
+      "title": "Learners who act remember more",
+      "chart_type": "column",
+      "categories": [
+        "Hear",
+        "See",
+        "Hear and see",
+        "Also say",
+        "Also do"
+      ],
+      "values": [
+        20,
+        30,
+        50,
+        70,
+        90
+      ],
+      "unit": "%",
+      "highlight": 5,
+      "icon": "trending-up",
+      "takeaway": "Hear and see stops at fifty. To reach ninety, give learners something to do.",
+      "source": "Learning retention pyramid",
+      "narration": "Look at the last column.\nOnly listening, people keep about twenty percent.\nListening and watching, fifty.\nDoing something with it, ninety.\nSo what is your video asking the learner to do?",
+      "notes": "Columns appear left to right with the narration; the highlighted column appears on the word ninety."
+    },
+    {
+      "type": "section",
+      "video": 3,
+      "number": 2,
+      "label": "Part 2",
+      "title": "Open, body, close",
+      "subtitle": "The shape of one video",
+      "icon": "layers",
+      "narration": "Part two.\nThe shape of a single video."
+    },
+    {
+      "type": "two-column",
+      "video": 3,
+      "label": "Part 2 · Structure",
+      "title": "The open: three jobs in thirty seconds",
+      "icon": "play-circle",
+      "items": [
+        "Hook: a mistake everyone makes",
+        "Promise: what you can do by the end",
+        "Route: the two or three stops ahead"
+      ],
+      "narration": "The open has three jobs, and thirty seconds to do them.\nA hook, a mistake everyone makes, so the learner wants to keep watching.\nA promise, what they can do by the end of the video.\nAnd the route, the two or three stops ahead.\nNo long hello. No life story."
+    },
+    {
+      "type": "table",
+      "video": 3,
+      "label": "Part 2 · Structure",
+      "title": "How the time splits",
+      "columns": [
+        "Part",
+        "What it must contain",
+        "Share"
+      ],
+      "widths": [
+        1,
+        3,
+        1
+      ],
+      "rows": [
+        [
+          "Open",
+          "Hook, promise, route",
+          "10%"
+        ],
+        [
+          "Body",
+          "Two to four ideas, each with an example and a pause",
+          "75%"
+        ],
+        [
+          "Close",
+          "Three takeaways, one action, a bridge to the next video",
+          "15%"
+        ]
+      ],
+      "narration": "Here is how the time splits.\nThe open takes about ten percent.\nThe body takes three quarters, two to four ideas, each with an example and a pause.\nThe close takes the last fifteen percent, three takeaways and one thing to do next."
+    },
+    {
+      "type": "section",
+      "video": 4,
+      "number": 3,
+      "label": "Part 3",
+      "title": "Six steps to a video script",
+      "icon": "pen-tool",
+      "narration": "Part three.\nSix steps to a finished script."
+    },
+    {
+      "type": "process",
+      "video": 4,
+      "label": "Part 3 · Process",
+      "title": "Six steps to a script",
+      "steps": [
+        {
+          "title": "Fix the objective",
+          "text": "One sentence, one outcome"
+        },
+        {
+          "title": "Cut into segments",
+          "text": "Eight to fifteen of them"
+        },
+        {
+          "title": "Write the voice",
+          "text": "Spoken words, short lines"
+        },
+        {
+          "title": "Pair each segment",
+          "text": "One slide or screen shot"
+        },
+        {
+          "title": "Add interaction",
+          "text": "At least two pauses"
+        },
+        {
+          "title": "Read aloud, time it",
+          "text": "Five to ten minutes"
+        }
+      ],
+      "narration": "Six steps.\nFix the objective in one sentence.\nCut the lesson into eight to fifteen segments.\nWrite what you will say, in spoken words.\nPair each segment with one slide.\nAdd at least two pauses where the learner does something.\nThen read it out loud and time it.",
+      "notes": "Reveal each step with its arrow as the narration reaches it."
+    },
+    {
+      "type": "question",
+      "video": 4,
+      "label": "Quick check",
+      "question": "Your script runs twelve minutes when you read it aloud. What do you do?",
+      "options": [
+        "Talk faster to fit ten minutes",
+        "Cut content or split it into two videos",
+        "Keep it, twelve minutes is fine"
+      ],
+      "timer": "30 seconds",
+      "narration": "Quick check.\nYour script runs twelve minutes when you read it aloud.\nWhat do you do?\nPause the video and pick one, thirty seconds.",
+      "notes": "Silence 3 seconds, then circle answer B."
+    },
+    {
+      "type": "key-message",
+      "video": 4,
+      "label": "Remember",
+      "message": "Over ten minutes? Cut,\ndo not talk faster.",
+      "subtitle": "Speed loses the learner; cutting keeps the objective.",
+      "narration": "The answer is B.\nOver ten minutes, cut or split the video.\nTalking faster only loses the learner."
+    },
+    {
+      "type": "summary",
+      "video": 4,
+      "keywords": [
+        "Six principles",
+        "Open, body, close",
+        "Read it aloud"
+      ],
+      "items": [
+        "One idea per video, pictures add to words",
+        "Hook in thirty seconds, example in the body, action at the close",
+        "A script is done only when read aloud and checked"
+      ],
+      "narration": "Three keywords for this lesson.\nSix principles: one idea per video, and pictures that add to your words.\nOpen, body, close: a hook in thirty seconds, an example in the body, an action at the close.\nRead it aloud: a script is done only when you have read it out loud and checked it.\nRemember those three and you can write your first script tonight."
+    },
+    {
+      "type": "closing",
+      "video": 4,
+      "action": "Write the script for one lesson of your course, then check it against the ten-point list within seven days.",
+      "next_lesson": "Module 4, Lesson 3: record and edit",
+      "narration": "Your next step.\nOpen the script template and write the script for one lesson of your course.\nRead it aloud, time it, then check it against the ten-point list.\nYou have seven days.\nIn the next lesson we record and edit exactly this script."
+    }
+  ]
+}

@@ -534,27 +534,64 @@ export function sentenceToAudioSlug(text: string): string {
     .replace(/^_+|_+$/g, '');
 }
 
-export function preloadJollyPhonicsAudio(letters: string[] = ['a', 'b', 'c', 'f', 'h', 'm', 'r', 's', 't']) {
+function enqueuePreloadUrl(url: string) {
+  if (typeof window === 'undefined' || audioCache.has(url)) return;
+  try {
+    const audio = new Audio(url);
+    audio.preload = 'auto';
+    audio.load();
+    audioCache.set(url, audio);
+  } catch {}
+}
+
+export function preloadJollyPhonicsAudio(
+  letters: string[] = ['a', 'b', 'c', 'f', 'h', 'm', 'r', 's', 't'],
+  words: string[] = []
+) {
   if (typeof window === 'undefined') return;
-  const urls: string[] = [];
+  const urls = new Set<string>();
+
   for (const letter of letters) {
-    const clean = letter.toLowerCase().trim();
-    urls.push(`/audio/phonics/jolly/uk/${clean}.mp3?v=${AUDIO_VERSION}`);
+    const clean = normalizeGeminatePhoneme(letter.toLowerCase().trim().replace(/[^a-z]/g, ''));
+    if (!clean) continue;
+    if (JOLLY_AVAILABLE_PHONEMES.has(clean)) {
+      urls.add(`/audio/phonics/jolly/uk/${clean}.mp3?v=${AUDIO_VERSION}`);
+    } else {
+      let i = 0;
+      while (i < clean.length) {
+        const two = clean.slice(i, i + 2);
+        if (JOLLY_AVAILABLE_PHONEMES.has(two)) {
+          urls.add(`/audio/phonics/jolly/uk/${two}.mp3?v=${AUDIO_VERSION}`);
+          i += 2;
+        } else {
+          const one = clean[i];
+          if (JOLLY_AVAILABLE_PHONEMES.has(one)) {
+            urls.add(`/audio/phonics/jolly/uk/${one}.mp3?v=${AUDIO_VERSION}`);
+          }
+          i += 1;
+        }
+      }
+    }
   }
-  // Preload blended word audio files (Authentic Human Studio Voice)
-  const words = ['bat', 'cat', 'fat', 'hat', 'mat', 'rat', 'sat'];
-  for (const w of words) {
-    urls.push(`/audio/phonics/human_oxford/${w}.mp3?v=${AUDIO_VERSION}`);
+
+  // Preload active day's blended word audio files (fallback to Day 1 defaults)
+  const targetWords = words.length > 0 ? words : Array.from(DAY_1_STUDIO_WORDS);
+  for (const rawWord of targetWords) {
+    const cleanWord = rawWord.trim().toLowerCase().replace(/[^a-z]/g, '');
+    if (!cleanWord) continue;
+    if (DAY_1_STUDIO_WORDS.has(cleanWord)) {
+      urls.add(`/audio/phonics/human_oxford/${cleanWord}.mp3?v=${AUDIO_VERSION}`);
+    } else if (R2_STUDIO_WORDS.has(cleanWord)) {
+      urls.add(`${R2_AUDIO_BASE}/${cleanWord}.mp3?v=${AUDIO_VERSION}`);
+    } else if (ALICE_STUDIO_WORDS.has(cleanWord)) {
+      urls.add(`${R2_AUDIO_BASE}/alice/${cleanWord}.mp3?v=${AUDIO_VERSION}`);
+    } else if (DEEPGRAM_STUDIO_WORDS.has(cleanWord)) {
+      urls.add(`${R2_AUDIO_BASE}/deepgram/${cleanWord}.mp3?v=${AUDIO_VERSION}`);
+    }
   }
 
   for (const url of urls) {
-    if (!audioCache.has(url)) {
-      try {
-        const audio = new Audio(url);
-        audio.preload = 'auto';
-        audioCache.set(url, audio);
-      } catch {}
-    }
+    enqueuePreloadUrl(url);
   }
 }
 
@@ -678,7 +715,18 @@ function playAudioFromUrl(
       stopSpokenAudio();
     }
 
-    const audio = new Audio(url);
+    const cached = audioCache.get(url);
+    const canReuseCached = Boolean(cached && !cached.error && cached.paused && cached.readyState >= 2);
+    const audio = canReuseCached ? (cached as HTMLAudioElement) : new Audio(url);
+    if (!canReuseCached && !audioCache.has(url)) {
+      audio.preload = 'auto';
+      audioCache.set(url, audio);
+    }
+    if (canReuseCached) {
+      try {
+        audio.currentTime = 0;
+      } catch {}
+    }
     audio.volume = 1.0;
     audio.playbackRate = options?.playbackRate ?? 1.0;
     if ('preservesPitch' in audio) {

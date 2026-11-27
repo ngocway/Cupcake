@@ -224,7 +224,7 @@ export function PhonicsFlashcardsStation({
   };
 
   return (
-    <div className="fixed inset-0 z-50 w-screen h-screen overflow-hidden flex flex-col justify-between select-none font-sans bg-gradient-to-br from-[#d9f9ee] via-[#f4fce8] to-[#fff6db]">
+    <div className="fixed inset-0 z-50 w-screen h-dvh overflow-hidden flex flex-col justify-between select-none font-sans bg-gradient-to-br from-[#d9f9ee] via-[#f4fce8] to-[#fff6db]">
       {/* Fredoka Display Typography */}
       <style jsx global>{`
         @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700;900&display=swap');
@@ -309,7 +309,7 @@ export function PhonicsFlashcardsStation({
       {/* 2. MAIN SINGLE-SIDED 3D STACKED FLASHCARD STAGE (Cách 2C)                 */}
       {/* ========================================================================= */}
       {mode === 'study' && (
-        <main className="relative z-10 flex-1 w-full flex flex-col items-center justify-center px-4 py-1 min-h-0">
+        <main className="relative z-10 flex-1 w-full flex flex-col items-center justify-center px-3 sm:px-4 py-1 min-h-0 overflow-y-auto overflow-x-hidden">
           <div className="relative w-full max-w-xl">
             {/* Uiverse Stacked Toy Deck Background Layers */}
             <div className="pointer-events-none absolute inset-0 translate-y-3.5 -rotate-[2.2deg] scale-[0.96] rounded-[36px] bg-gradient-to-b from-amber-50 to-amber-100/90 border-2 border-amber-200/90 shadow-[0_6px_0_#fcd34d]" />
@@ -434,7 +434,7 @@ export function PhonicsFlashcardsStation({
       {/* MODE 2: CELEBRATION SCREEN (+10 XP - Matches Station 1 Celebration)       */}
       {/* ========================================================================= */}
       {mode === 'completed' && (
-        <main className="relative z-20 flex-1 w-full flex flex-col items-center justify-center px-4">
+        <main className="relative z-20 flex-1 w-full flex flex-col items-center justify-center px-4 py-4 overflow-y-auto">
           <div className="relative w-full max-w-lg bg-white/95 backdrop-blur-md rounded-[34px] border-3 border-emerald-300 p-7 sm:p-8 shadow-[0_10px_0_#6ee7b7,0_24px_50px_rgba(16,185,129,0.2)] flex flex-col items-center text-center animate-in zoom-in-95 font-fredoka overflow-hidden">
             <ShineBorder
               borderWidth={3}
@@ -512,7 +512,7 @@ export function PhonicsFlashcardsStation({
               className="group/prev relative inline-flex cursor-pointer select-none border-none bg-transparent p-0 outline-none disabled:opacity-40 disabled:cursor-not-allowed flex-shrink-0"
             >
               <span className="pointer-events-none absolute inset-0 translate-y-[4px] rounded-2xl bg-[#94a3b8]" />
-              <span className="relative inline-flex items-center gap-1.5 rounded-2xl bg-gradient-to-b from-white to-slate-100 border-2 border-white text-slate-700 px-4 py-2.5 sm:px-5 sm:py-3 text-xs sm:text-sm font-black shadow-[inset_0_2px_2px_rgba(255,255,255,0.9)] transition-transform duration-100 -translate-y-[1px] group-hover/prev:enabled:-translate-y-[2px] group-active/prev:enabled:translate-y-[3px]">
+              <span className="relative inline-flex items-center gap-1 sm:gap-1.5 rounded-2xl bg-gradient-to-b from-white to-slate-100 border-2 border-white text-slate-700 px-3 py-2 sm:px-5 sm:py-3 text-xs sm:text-sm font-black shadow-[inset_0_2px_2px_rgba(255,255,255,0.9)] transition-transform duration-100 -translate-y-[1px] group-hover/prev:enabled:-translate-y-[2px] group-active/prev:enabled:translate-y-[3px]">
                 <ChevronLeft className="w-4 h-4 stroke-[2.8]" />
                 <span>Trước</span>
               </span>
@@ -590,7 +590,7 @@ export function PhonicsFlashcardsStation({
 
                 {/* 3D Pushable Front */}
                 <span
-                  className={`relative inline-flex items-center gap-1.5 rounded-2xl px-4 py-2.5 sm:px-6 sm:py-3 text-xs sm:text-sm font-black border-2 transition-transform duration-100 -translate-y-[1.5px] group-hover/next:-translate-y-[3px] group-active/next:translate-y-[3px] overflow-hidden ${
+                  className={`relative inline-flex items-center gap-1 sm:gap-1.5 rounded-2xl px-3.5 py-2 sm:px-6 sm:py-3 text-xs sm:text-sm font-black border-2 transition-transform duration-100 -translate-y-[1.5px] group-hover/next:-translate-y-[3px] group-active/next:translate-y-[3px] overflow-hidden ${
                     isLastCard
                       ? 'bg-gradient-to-b from-[#fde047] via-[#fbbf24] to-[#f59e0b] border-[#fef9c3] text-amber-950 shadow-[inset_0_2px_2px_rgba(255,255,255,0.85),0_0_20px_rgba(251,191,36,0.55)]'
                       : 'bg-gradient-to-b from-[#34d399] via-[#10b981] to-[#059669] border-[#a7f3d0] text-white shadow-[inset_0_2px_2px_rgba(255,255,255,0.55)]'

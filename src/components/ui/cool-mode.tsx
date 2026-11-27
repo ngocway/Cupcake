@@ -117,7 +117,6 @@ const applyParticleEffect = (
     content.style.lineHeight = "1"
     content.style.textAlign = "center"
     content.style.userSelect = "none"
-    content.style.filter = "drop-shadow(0 2px 4px rgba(0,0,0,0.18))"
 
     particle.appendChild(content)
   }
@@ -160,6 +159,9 @@ const applyParticleEffect = (
     }
 
     particle.style.position = "absolute"
+    particle.style.top = "0px"
+    particle.style.left = "0px"
+    particle.style.willChange = "transform,opacity"
     particle.style.transform = `translate3d(${left}px, ${top}px, 0px) rotate(${spinVal}deg)`
 
     container.appendChild(particle)
@@ -179,7 +181,12 @@ const applyParticleEffect = (
   }
 
   function refreshParticles() {
-    particles.forEach((p) => {
+    if (particles.length === 0) return
+    const maxBottom = Math.max(window.innerHeight, document.body.clientHeight)
+    const remaining: CoolParticle[] = []
+
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i]
       p.left = p.left - p.speedHorz * p.direction
       p.top = p.top - p.speedUp
       p.speedUp = Math.max(-12, p.speedUp - 0.75)
@@ -188,35 +195,29 @@ const applyParticleEffect = (
         p.opacity = Math.max(0, p.opacity - 0.035)
       }
 
-      if (
-        p.opacity <= 0 ||
-        p.top >=
-          Math.max(window.innerHeight, document.body.clientHeight) + p.size
-      ) {
-        particles = particles.filter((o) => o !== p)
+      if (p.opacity <= 0 || p.top >= maxBottom + p.size) {
         p.element.remove()
-        return
+        continue
       }
 
-      p.element.setAttribute(
-        "style",
-        [
-          "position:absolute",
-          "will-change:transform,opacity",
-          `opacity:${p.opacity.toFixed(2)}`,
-          `top:${p.top}px`,
-          `left:${p.left}px`,
-          `transform:rotate(${p.spinVal}deg)`,
-        ].join(";")
-      )
-    })
+      p.element.style.opacity = p.opacity.toFixed(2)
+      p.element.style.transform = `translate3d(${p.left}px, ${p.top}px, 0px) rotate(${p.spinVal}deg)`
+      remaining.push(p)
+    }
+
+    particles = remaining
   }
 
   let animationFrame: number | undefined
   let lastParticleTimestamp = 0
+  let isDisposed = false
   const particleGenerationDelay = 40
 
   function loop() {
+    if (isDisposed) {
+      animationFrame = undefined
+      return
+    }
     const currentTime = performance.now()
     if (
       autoAddParticle &&
@@ -228,10 +229,20 @@ const applyParticleEffect = (
     }
 
     refreshParticles()
-    animationFrame = requestAnimationFrame(loop)
+
+    // On-demand rAF: stop immediately when no active particles remain
+    if (particles.length > 0 || autoAddParticle) {
+      animationFrame = requestAnimationFrame(loop)
+    } else {
+      animationFrame = undefined
+    }
   }
 
-  loop()
+  function ensureLoopRunning() {
+    if (!isDisposed && animationFrame === undefined) {
+      animationFrame = requestAnimationFrame(loop)
+    }
+  }
 
   const isTouchInteraction = "ontouchstart" in window
   const tap = isTouchInteraction ? "touchstart" : "mousedown"
@@ -256,6 +267,7 @@ const applyParticleEffect = (
     }
     lastParticleTimestamp = performance.now()
     autoAddParticle = true
+    ensureLoopRunning()
   }
 
   const disableAutoAddParticle = () => {
@@ -270,22 +282,27 @@ const applyParticleEffect = (
   })
 
   return () => {
+    isDisposed = true
     disableAutoAddParticle()
     element.removeEventListener(move, updateMousePosition)
     element.removeEventListener(tap, tapHandler)
     element.removeEventListener(tapEnd, disableAutoAddParticle)
     element.removeEventListener("mouseleave", disableAutoAddParticle)
 
-    const interval = setInterval(() => {
-      if (animationFrame && particles.length === 0) {
-        cancelAnimationFrame(animationFrame)
-        clearInterval(interval)
+    if (animationFrame !== undefined) {
+      cancelAnimationFrame(animationFrame)
+      animationFrame = undefined
+    }
 
-        if (--instanceCounter === 0) {
-          container.remove()
-        }
-      }
-    }, 500)
+    // Remove any remaining particle nodes created by this instance immediately
+    for (let i = 0; i < particles.length; i++) {
+      particles[i].element.remove()
+    }
+    particles = []
+
+    if (--instanceCounter === 0) {
+      container.remove()
+    }
   }
 }
 
